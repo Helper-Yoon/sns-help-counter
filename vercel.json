@@ -1,8 +1,16 @@
-// vercel.json
 {
+  "functions": {
+    "api/index.js": {
+      "maxDuration": 30
+    }
+  },
+  "rewrites": [
+    { "source": "/api/(.*)", "destination": "/api" },
+    { "source": "/(.*)", "destination": "/index.html" }
+  ],
   "crons": [
     {
-      "path": "/api/sync-messages",
+      "path": "/api/cron",
       "schedule": "*/5 * * * *"
     }
   ]
