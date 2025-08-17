@@ -1,8 +1,5 @@
-import { createClient } from '@supabase/supabase-js';
-import axios from 'axios';
-
 export default async function handler(req, res) {
-  // CORS
+  // CORS 처리
   if (req.method === 'OPTIONS') {
     return res.status(200).end();
   }
@@ -20,10 +17,12 @@ export default async function handler(req, res) {
       lookbackHours = 24 
     } = req.body;
 
-    // Supabase 클라이언트
+    // 동적 import
+    const { createClient } = await import('@supabase/supabase-js');
+    const axios = (await import('axios')).default;
+
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // ChannelTalk API 클라이언트
     const channelAPI = axios.create({
       baseURL: 'https://api.channel.io/open',
       headers: {
@@ -84,7 +83,7 @@ export default async function handler(req, res) {
               const msg = sortedMessages[i];
               if (msg.personType === 'manager') {
                 // Supabase에 저장
-                await supabase
+                const { data, error } = await supabase
                   .from('manager_responses')
                   .upsert({
                     manager_id: msg.personId || 'unknown',
@@ -97,12 +96,10 @@ export default async function handler(req, res) {
                       analyzed_at: new Date().toISOString(),
                       chat_state: chat.state
                     }
-                  }, {
-                    onConflict: 'chat_id,manager_id',
-                    ignoreDuplicates: true
-                  });
+                  })
+                  .select();
                 
-                processed++;
+                if (!error) processed++;
                 break;
               }
             }
@@ -125,9 +122,10 @@ export default async function handler(req, res) {
 
   } catch (error) {
     console.error('Analysis error:', error);
-    return res.status(500).json({ 
-      error: 'Analysis failed', 
-      details: error.message 
+    return res.status(200).json({ 
+      success: false,
+      error: error.message || 'Analysis failed',
+      details: error.response?.data || error.toString()
     });
   }
 }
