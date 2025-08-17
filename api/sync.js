@@ -1,7 +1,5 @@
-import { createClient } from '@supabase/supabase-js';
-import axios from 'axios';
-
 export default async function handler(req, res) {
+  // CORS 처리
   if (req.method === 'OPTIONS') {
     return res.status(200).end();
   }
@@ -12,6 +10,10 @@ export default async function handler(req, res) {
 
   try {
     const { channelKey, channelSecret, supabaseUrl, supabaseKey } = req.body;
+
+    // 동적 import 사용 (Vercel 호환성)
+    const { createClient } = await import('@supabase/supabase-js');
+    const axios = (await import('axios')).default;
 
     const supabase = createClient(supabaseUrl, supabaseKey);
 
@@ -40,7 +42,7 @@ export default async function handler(req, res) {
       // 미답변 상담만 처리
       if (chat.frontUpdatedAt > chat.deskUpdatedAt || !chat.firstRepliedAtAfterOpen) {
         // 빠른 동기화를 위해 상세 분석 없이 기본 정보만 저장
-        await supabase
+        const { data, error } = await supabase
           .from('manager_responses')
           .upsert({
             manager_id: 'pending_analysis',
@@ -54,12 +56,10 @@ export default async function handler(req, res) {
               front_updated: chat.frontUpdatedAt,
               desk_updated: chat.deskUpdatedAt
             }
-          }, {
-            onConflict: 'chat_id',
-            ignoreDuplicates: false
-          });
+          })
+          .select();
         
-        synced++;
+        if (!error) synced++;
       }
     }
 
@@ -72,9 +72,10 @@ export default async function handler(req, res) {
 
   } catch (error) {
     console.error('Sync error:', error);
-    return res.status(500).json({ 
-      error: 'Sync failed', 
-      details: error.message 
+    return res.status(200).json({ 
+      success: false,
+      error: error.message || 'Sync failed',
+      details: error.response?.data || error.toString()
     });
   }
 }
