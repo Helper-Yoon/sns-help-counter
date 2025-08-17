@@ -1,0 +1,11 @@
+{
+  "name": "channeltalk-dashboard",
+  "version": "1.0.0",
+  "scripts": {
+    "dev": "vercel dev"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.39.0",
+    "axios": "^1.6.0"
+  }
+}
