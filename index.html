@@ -3,36 +3,44 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>채널톡 미답변 상담 대시보드</title>
+    <title>채널톡 미답변 상담 대시보드 | OGD</title>
     
     <!-- Supabase Client -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <!-- Axios for API calls -->
-    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
     
     <style>
         :root {
-            --primary: #667eea;
-            --primary-dark: #764ba2;
-            --secondary: #f093fb;
-            --secondary-dark: #f5576c;
-            --success: #00d2ff;
-            --success-dark: #3a7bd5;
-            --warning: #ffecd2;
-            --warning-dark: #fcb69f;
-            --dark: #1a202c;
-            --light: #ffffff;
-            --gray-100: #f7fafc;
-            --gray-200: #edf2f7;
-            --gray-300: #e2e8f0;
-            --gray-400: #cbd5e0;
-            --gray-500: #a0aec0;
-            --gray-600: #718096;
-            --gray-700: #4a5568;
-            --gray-800: #2d3748;
-            --gray-900: #1a202c;
+            /* OGD Blue Color Palette */
+            --ogd-blue: #1B6EC2;
+            --ogd-blue-light: #2B7ED2;
+            --ogd-blue-lighter: #4B9EF2;
+            --ogd-blue-dark: #0B5EB2;
+            
+            /* Dark Mode Colors */
+            --bg-primary: #0a0a0a;
+            --bg-secondary: #141414;
+            --bg-tertiary: #1a1a1a;
+            --bg-card: #1e1e1e;
+            --bg-hover: #252525;
+            
+            /* Text Colors */
+            --text-primary: #ffffff;
+            --text-secondary: #a0a0a0;
+            --text-tertiary: #707070;
+            
+            /* Status Colors */
+            --success: #10b981;
+            --warning: #f59e0b;
+            --error: #ef4444;
+            
+            /* Border & Shadow */
+            --border-color: #2a2a2a;
+            --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.5);
+            --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.6);
+            --shadow-lg: 0 10px 30px rgba(0, 0, 0, 0.7);
+            --shadow-xl: 0 20px 40px rgba(0, 0, 0, 0.8);
         }
 
         * {
@@ -43,23 +51,59 @@
 
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            background: var(--bg-primary);
+            color: var(--text-primary);
             min-height: 100vh;
             padding: 20px;
+            position: relative;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 500px;
+            background: linear-gradient(180deg, var(--ogd-blue-dark) 0%, transparent 100%);
+            opacity: 0.1;
+            pointer-events: none;
+            z-index: 0;
         }
 
         .container {
             max-width: 1600px;
             margin: 0 auto;
+            position: relative;
+            z-index: 1;
         }
 
         /* Header Styles */
         .header {
-            background: rgba(255, 255, 255, 0.98);
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
             border-radius: 24px;
             padding: 40px;
             margin-bottom: 30px;
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            box-shadow: var(--shadow-xl);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, var(--ogd-blue), var(--ogd-blue-lighter), var(--ogd-blue));
+            animation: shimmer 3s ease-in-out infinite;
+        }
+
+        @keyframes shimmer {
+            0%, 100% { opacity: 0.5; }
+            50% { opacity: 1; }
         }
 
         .header-content {
@@ -70,7 +114,7 @@
         }
 
         .header h1 {
-            color: var(--gray-800);
+            color: var(--text-primary);
             font-size: 2.5rem;
             font-weight: 700;
             display: flex;
@@ -81,6 +125,17 @@
         .logo {
             font-size: 2.5rem;
             animation: float 3s ease-in-out infinite;
+        }
+
+        .ogd-badge {
+            background: var(--ogd-blue);
+            color: white;
+            padding: 4px 12px;
+            border-radius: 8px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            letter-spacing: 1px;
+            margin-left: 15px;
         }
 
         @keyframes float {
@@ -95,8 +150,9 @@
         }
 
         .status-item {
-            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
-            color: white;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            color: var(--text-secondary);
             padding: 12px 24px;
             border-radius: 12px;
             display: flex;
@@ -104,38 +160,41 @@
             gap: 10px;
             font-size: 0.9rem;
             font-weight: 500;
-            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+            transition: all 0.3s ease;
         }
 
         .status-item.connected {
-            background: linear-gradient(135deg, var(--success) 0%, var(--success-dark) 100%);
+            border-color: var(--success);
+            color: var(--success);
         }
 
         .status-item.syncing {
-            background: linear-gradient(135deg, var(--secondary) 0%, var(--secondary-dark) 100%);
+            border-color: var(--ogd-blue);
+            color: var(--ogd-blue-lighter);
         }
 
         .pulse {
             width: 8px;
             height: 8px;
-            background: white;
+            background: currentColor;
             border-radius: 50%;
             animation: pulse 2s infinite;
         }
 
         @keyframes pulse {
-            0% { box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.7); }
-            70% { box-shadow: 0 0 0 10px rgba(255, 255, 255, 0); }
-            100% { box-shadow: 0 0 0 0 rgba(255, 255, 255, 0); }
+            0% { box-shadow: 0 0 0 0 currentColor; opacity: 1; }
+            70% { box-shadow: 0 0 0 10px transparent; opacity: 0.7; }
+            100% { box-shadow: 0 0 0 0 transparent; opacity: 1; }
         }
 
         /* Control Panel */
         .controls {
-            background: rgba(255, 255, 255, 0.98);
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
             border-radius: 20px;
             padding: 30px;
             margin-bottom: 30px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            box-shadow: var(--shadow-lg);
         }
 
         .control-buttons {
@@ -145,7 +204,7 @@
         }
 
         button {
-            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            background: var(--ogd-blue);
             color: white;
             border: none;
             padding: 14px 28px;
@@ -157,12 +216,32 @@
             display: flex;
             align-items: center;
             gap: 8px;
-            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+            position: relative;
+            overflow: hidden;
+        }
+
+        button::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.2);
+            transform: translate(-50%, -50%);
+            transition: width 0.5s, height 0.5s;
+        }
+
+        button:hover::before {
+            width: 300px;
+            height: 300px;
         }
 
         button:hover {
+            background: var(--ogd-blue-light);
             transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+            box-shadow: 0 6px 20px rgba(27, 110, 194, 0.4);
         }
 
         button:active {
@@ -170,16 +249,39 @@
         }
 
         button.secondary {
-            background: linear-gradient(135deg, var(--secondary) 0%, var(--secondary-dark) 100%);
+            background: transparent;
+            border: 2px solid var(--ogd-blue);
+            color: var(--ogd-blue-lighter);
+        }
+
+        button.secondary:hover {
+            background: var(--ogd-blue);
+            color: white;
         }
 
         button.success {
-            background: linear-gradient(135deg, var(--success) 0%, var(--success-dark) 100%);
+            background: var(--success);
+        }
+
+        button.success:hover {
+            background: #0ea968;
+        }
+
+        button.danger {
+            background: transparent;
+            border: 2px solid var(--error);
+            color: var(--error);
+        }
+
+        button.danger:hover {
+            background: var(--error);
+            color: white;
         }
 
         button:disabled {
-            opacity: 0.6;
+            opacity: 0.5;
             cursor: not-allowed;
+            pointer-events: none;
         }
 
         /* Stats Grid */
@@ -191,10 +293,11 @@
         }
 
         .stat-card {
-            background: rgba(255, 255, 255, 0.98);
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
             border-radius: 20px;
             padding: 30px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            box-shadow: var(--shadow-lg);
             transition: all 0.3s ease;
             position: relative;
             overflow: hidden;
@@ -206,17 +309,25 @@
             top: 0;
             left: 0;
             right: 0;
-            height: 4px;
-            background: linear-gradient(90deg, var(--primary) 0%, var(--primary-dark) 100%);
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--ogd-blue), transparent);
+            transform: translateX(-100%);
+            animation: slide 3s ease-in-out infinite;
+        }
+
+        @keyframes slide {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
         }
 
         .stat-card:hover {
             transform: translateY(-5px);
-            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.15);
+            border-color: var(--ogd-blue);
+            box-shadow: 0 15px 40px rgba(27, 110, 194, 0.2);
         }
 
         .stat-label {
-            color: var(--gray-600);
+            color: var(--text-tertiary);
             font-size: 0.9rem;
             text-transform: uppercase;
             letter-spacing: 1px;
@@ -227,32 +338,31 @@
         .stat-value {
             font-size: 3rem;
             font-weight: 700;
-            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
+            color: var(--ogd-blue-lighter);
+            text-shadow: 0 0 20px rgba(27, 110, 194, 0.5);
         }
 
         .stat-change {
             margin-top: 10px;
             font-size: 0.95rem;
-            color: var(--success-dark);
+            color: var(--success);
             display: flex;
             align-items: center;
             gap: 5px;
         }
 
         .stat-change.negative {
-            color: #f56565;
+            color: var(--error);
         }
 
         /* Chart Container */
         .chart-container {
-            background: rgba(255, 255, 255, 0.98);
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
             border-radius: 20px;
             padding: 30px;
             margin-bottom: 30px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            box-shadow: var(--shadow-lg);
         }
 
         .chart-header {
@@ -264,7 +374,7 @@
 
         .chart-title {
             font-size: 1.5rem;
-            color: var(--gray-800);
+            color: var(--text-primary);
             font-weight: 600;
         }
 
@@ -283,14 +393,15 @@
 
         /* Manager List */
         .manager-list {
-            background: rgba(255, 255, 255, 0.98);
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
             border-radius: 20px;
             padding: 30px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            box-shadow: var(--shadow-lg);
         }
 
         .manager-list h2 {
-            color: var(--gray-800);
+            color: var(--text-primary);
             margin-bottom: 25px;
             font-size: 1.5rem;
             font-weight: 600;
@@ -302,16 +413,17 @@
             align-items: center;
             padding: 20px;
             border-radius: 12px;
-            background: var(--gray-100);
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
             margin-bottom: 15px;
             transition: all 0.3s ease;
-            border-left: 4px solid transparent;
         }
 
         .manager-item:hover {
             transform: translateX(5px);
-            background: var(--gray-200);
-            border-left-color: var(--primary);
+            background: var(--bg-hover);
+            border-color: var(--ogd-blue);
+            box-shadow: 0 0 20px rgba(27, 110, 194, 0.2);
         }
 
         .manager-info {
@@ -324,47 +436,61 @@
             width: 48px;
             height: 48px;
             border-radius: 50%;
-            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            background: linear-gradient(135deg, var(--ogd-blue), var(--ogd-blue-lighter));
             display: flex;
             align-items: center;
             justify-content: center;
             color: white;
             font-weight: 600;
             font-size: 1.2rem;
+            box-shadow: 0 0 15px rgba(27, 110, 194, 0.5);
         }
 
         .manager-details h3 {
-            color: var(--gray-800);
+            color: var(--text-primary);
             font-size: 1.1rem;
             margin-bottom: 4px;
         }
 
         .manager-details p {
-            color: var(--gray-600);
+            color: var(--text-tertiary);
             font-size: 0.9rem;
         }
 
         .manager-count {
             font-size: 2rem;
             font-weight: 700;
-            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
+            color: var(--ogd-blue-lighter);
+            text-shadow: 0 0 10px rgba(27, 110, 194, 0.5);
         }
 
         /* Activity Feed */
         .activity-feed {
-            background: rgba(255, 255, 255, 0.98);
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
             border-radius: 20px;
             padding: 30px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            box-shadow: var(--shadow-lg);
             max-height: 600px;
             overflow-y: auto;
         }
 
+        .activity-feed::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .activity-feed::-webkit-scrollbar-track {
+            background: var(--bg-secondary);
+            border-radius: 10px;
+        }
+
+        .activity-feed::-webkit-scrollbar-thumb {
+            background: var(--ogd-blue);
+            border-radius: 10px;
+        }
+
         .activity-feed h2 {
-            color: var(--gray-800);
+            color: var(--text-primary);
             margin-bottom: 25px;
             font-size: 1.5rem;
             font-weight: 600;
@@ -372,26 +498,27 @@
 
         .activity-item {
             padding: 15px;
-            border-left: 3px solid var(--primary);
-            background: var(--gray-100);
+            border-left: 3px solid var(--ogd-blue);
+            background: var(--bg-secondary);
             border-radius: 8px;
             margin-bottom: 12px;
             transition: all 0.3s ease;
         }
 
         .activity-item:hover {
-            background: var(--gray-200);
+            background: var(--bg-hover);
             transform: translateX(3px);
+            box-shadow: 0 0 10px rgba(27, 110, 194, 0.2);
         }
 
         .activity-time {
-            color: var(--gray-500);
+            color: var(--text-tertiary);
             font-size: 0.85rem;
             margin-bottom: 5px;
         }
 
         .activity-message {
-            color: var(--gray-800);
+            color: var(--text-secondary);
             font-size: 0.95rem;
             line-height: 1.5;
         }
@@ -400,14 +527,14 @@
         .loading {
             text-align: center;
             padding: 50px;
-            color: var(--gray-600);
+            color: var(--text-tertiary);
         }
 
         .spinner {
             width: 50px;
             height: 50px;
-            border: 3px solid var(--gray-300);
-            border-top-color: var(--primary);
+            border: 3px solid var(--bg-hover);
+            border-top-color: var(--ogd-blue);
             border-radius: 50%;
             animation: spin 1s linear infinite;
             margin: 0 auto 20px;
@@ -422,10 +549,11 @@
             position: fixed;
             top: 20px;
             right: 20px;
-            background: white;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
             padding: 16px 24px;
             border-radius: 12px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            box-shadow: var(--shadow-xl);
             display: flex;
             align-items: center;
             gap: 12px;
@@ -446,15 +574,15 @@
         }
 
         .notification.success {
-            border-left: 4px solid #48bb78;
+            border-left: 4px solid var(--success);
         }
 
         .notification.error {
-            border-left: 4px solid #f56565;
+            border-left: 4px solid var(--error);
         }
 
         .notification.info {
-            border-left: 4px solid #4299e1;
+            border-left: 4px solid var(--ogd-blue);
         }
 
         /* Scrollbar Styles */
@@ -464,23 +592,27 @@
         }
 
         ::-webkit-scrollbar-track {
-            background: var(--gray-200);
+            background: var(--bg-secondary);
             border-radius: 10px;
         }
 
         ::-webkit-scrollbar-thumb {
-            background: var(--primary);
+            background: var(--ogd-blue);
             border-radius: 10px;
         }
 
         ::-webkit-scrollbar-thumb:hover {
-            background: var(--primary-dark);
+            background: var(--ogd-blue-light);
         }
 
         /* Responsive Design */
         @media (max-width: 768px) {
             .header h1 {
                 font-size: 1.8rem;
+            }
+            
+            .ogd-badge {
+                display: none;
             }
             
             .stats-grid {
@@ -500,6 +632,19 @@
                 font-size: 2.5rem;
             }
         }
+
+        /* OGD Branding */
+        .ogd-watermark {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            opacity: 0.3;
+            font-size: 3rem;
+            color: var(--ogd-blue);
+            font-weight: bold;
+            pointer-events: none;
+            z-index: 0;
+        }
     </style>
 </head>
 <body>
@@ -507,7 +652,11 @@
         <!-- Header -->
         <div class="header">
             <div class="header-content">
-                <h1><span class="logo">💬</span> 채널톡 미답변 상담 대시보드</h1>
+                <h1>
+                    <span class="logo">💬</span> 
+                    채널톡 미답변 상담 대시보드
+                    <span class="ogd-badge">OGD</span>
+                </h1>
             </div>
             <div class="status-bar">
                 <div class="status-item connected">
@@ -536,10 +685,10 @@
                 <button onclick="syncNow()" class="success" id="syncBtn">
                     <span>🔗</span> 즉시 동기화
                 </button>
-                <button onclick="exportData()" id="exportBtn">
+                <button onclick="exportData()" class="secondary" id="exportBtn">
                     <span>📥</span> 데이터 내보내기
                 </button>
-                <button onclick="clearAll()" id="clearBtn">
+                <button onclick="clearAll()" class="danger" id="clearBtn">
                     <span>🗑️</span> 초기화
                 </button>
             </div>
@@ -611,18 +760,21 @@
         </div>
     </div>
 
-    <!-- Vercel API와 통합된 스크립트 -->
+    <!-- OGD Watermark -->
+    <div class="ogd-watermark">OGD</div>
+
+    <!-- JavaScript -->
     <script>
-        // ============= 설정 (환경변수로 관리 권장) =============
+        // ============= 설정 =============
         const CONFIG = {
-            // Vercel API 엔드포인트 (현재 도메인 사용)
+            // API 엔드포인트
             API_BASE: window.location.origin + '/api',
             
-            // Supabase 설정 (프로덕션에서는 환경변수 사용)
+            // Supabase 설정
             SUPABASE_URL: 'https://bhtqjipygkawoyieidgp.supabase.co',
             SUPABASE_ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJodHFqaXB5Z2thd295aWVpZGdwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ0ODg5NjgsImV4cCI6MjA3MDA2NDk2OH0.hu2EAj9RCq436QBtfbEVF4aGOau4WWomLMDKahN4iAA',
             
-            // ChannelTalk API 설정 (프로덕션에서는 환경변수 사용)
+            // ChannelTalk API 설정
             CHANNEL_ACCESS_KEY: '688a26176fcb19aebf8b',
             CHANNEL_SECRET: 'a0db6c38b95c8ec4d9bb46e7c653b3e2'
         };
@@ -632,7 +784,6 @@
         let realtimeChannel = null;
         let hourlyChart = null;
         let activityLog = [];
-        let managerData = {};
 
         // ============= 초기화 =============
         document.addEventListener('DOMContentLoaded', async () => {
@@ -672,7 +823,6 @@
         // ============= Supabase 테이블 설정 =============
         async function setupDatabase() {
             try {
-                // API를 통해 테이블 생성 (첫 실행시)
                 const response = await fetch(`${CONFIG.API_BASE}/setup`, {
                     method: 'POST',
                     headers: {
@@ -724,6 +874,12 @@
         // ============= 차트 초기화 =============
         function initializeChart() {
             const ctx = document.getElementById('hourlyChart').getContext('2d');
+            
+            // 그라데이션 생성
+            const gradient = ctx.createLinearGradient(0, 0, 0, 400);
+            gradient.addColorStop(0, 'rgba(27, 110, 194, 0.4)');
+            gradient.addColorStop(1, 'rgba(27, 110, 194, 0.05)');
+            
             hourlyChart = new Chart(ctx, {
                 type: 'line',
                 data: {
@@ -731,12 +887,16 @@
                     datasets: [{
                         label: '답변 수',
                         data: Array(24).fill(0),
-                        borderColor: '#667eea',
-                        backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                        borderColor: '#4B9EF2',
+                        backgroundColor: gradient,
+                        borderWidth: 2,
                         tension: 0.4,
                         fill: true,
                         pointRadius: 4,
-                        pointHoverRadius: 6
+                        pointHoverRadius: 6,
+                        pointBackgroundColor: '#4B9EF2',
+                        pointBorderColor: '#1B6EC2',
+                        pointBorderWidth: 2
                     }]
                 },
                 options: {
@@ -749,20 +909,27 @@
                     plugins: {
                         legend: { display: false },
                         tooltip: {
-                            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                            backgroundColor: 'rgba(30, 30, 30, 0.9)',
                             padding: 12,
                             cornerRadius: 8,
                             titleColor: '#fff',
-                            bodyColor: '#fff'
+                            bodyColor: '#a0a0a0',
+                            borderColor: '#1B6EC2',
+                            borderWidth: 1
                         }
                     },
                     scales: {
                         y: {
                             beginAtZero: true,
-                            grid: { color: 'rgba(0, 0, 0, 0.05)' }
+                            grid: { 
+                                color: 'rgba(255, 255, 255, 0.05)',
+                                drawBorder: false
+                            },
+                            ticks: { color: '#707070' }
                         },
                         x: {
-                            grid: { display: false }
+                            grid: { display: false },
+                            ticks: { color: '#707070' }
                         }
                     }
                 }
@@ -774,7 +941,6 @@
             try {
                 setButtonLoading('refreshBtn', true);
                 
-                // Supabase에서 데이터 가져오기
                 const { data, error } = await supabase
                     .from('manager_responses')
                     .select('*')
@@ -782,12 +948,9 @@
 
                 if (error) throw error;
 
-                // 통계 계산 및 업데이트
                 updateStats(data || []);
                 updateManagerList(data || []);
                 updateHourlyChart(data || []);
-                
-                // 마지막 업데이트 시간
                 updateLastUpdateTime();
                 
             } catch (error) {
@@ -818,6 +981,11 @@
                     })
                 });
 
+                if (!response.ok) {
+                    const text = await response.text();
+                    throw new Error(`Server error: ${text}`);
+                }
+
                 const result = await response.json();
                 
                 if (result.success) {
@@ -836,7 +1004,7 @@
             }
         }
 
-        // ============= 즉시 동기화 =============
+        // ============= 즉시 동기화 (수정됨) =============
         async function syncNow() {
             try {
                 setButtonLoading('syncBtn', true);
@@ -854,6 +1022,11 @@
                         supabaseKey: CONFIG.SUPABASE_ANON_KEY
                     })
                 });
+
+                if (!response.ok) {
+                    const text = await response.text();
+                    throw new Error(`Server error: ${text}`);
+                }
 
                 const result = await response.json();
                 
@@ -951,17 +1124,14 @@
             };
 
             data.forEach(item => {
-                // 오늘 카운트
                 if (new Date(item.created_at).toDateString() === today) {
                     stats.todayCount++;
                 }
                 
-                // 웹훅 카운트
                 if (item.source === 'webhook') {
                     stats.webhookCount++;
                 }
                 
-                // 매니저별 집계
                 const managerId = item.manager_id;
                 if (!stats.managers[managerId]) {
                     stats.managers[managerId] = {
@@ -974,13 +1144,11 @@
                 stats.managers[managerId].count++;
             });
 
-            // UI 업데이트
             document.getElementById('total-responses').textContent = stats.total;
             document.getElementById('today-count').textContent = stats.todayCount;
             document.getElementById('active-managers').textContent = Object.keys(stats.managers).length;
             document.getElementById('webhook-count').textContent = stats.webhookCount;
             
-            // 응답률 계산 (예시)
             const responseRate = Math.min(100, Math.round((stats.total / Math.max(1, stats.total + 20)) * 100));
             document.getElementById('response-rate').textContent = responseRate + '%';
             
@@ -1009,7 +1177,7 @@
             const container = document.getElementById('manager-list-content');
             
             if (sortedManagers.length === 0) {
-                container.innerHTML = '<p style="text-align: center; color: #718096;">아직 데이터가 없습니다</p>';
+                container.innerHTML = '<p style="text-align: center; color: #707070;">아직 데이터가 없습니다</p>';
                 return;
             }
 
@@ -1063,7 +1231,6 @@
             
             container.insertBefore(item, container.firstChild);
             
-            // 최대 20개 유지
             while (container.children.length > 20) {
                 container.removeChild(container.lastChild);
             }
@@ -1090,7 +1257,7 @@
             if (button) {
                 button.disabled = loading;
                 if (loading) {
-                    button.style.opacity = '0.6';
+                    button.style.opacity = '0.5';
                 } else {
                     button.style.opacity = '1';
                 }
@@ -1107,7 +1274,6 @@
             };
 
             data.forEach(item => {
-                // By manager
                 const managerId = item.manager_id;
                 if (!summary.byManager[managerId]) {
                     summary.byManager[managerId] = {
@@ -1117,15 +1283,12 @@
                 }
                 summary.byManager[managerId].count++;
 
-                // By day
                 const day = new Date(item.created_at).toDateString();
                 summary.byDay[day] = (summary.byDay[day] || 0) + 1;
 
-                // By hour
                 const hour = new Date(item.created_at).getHours();
                 summary.byHour[hour]++;
 
-                // By source
                 const source = item.source || 'api';
                 summary.bySource[source]++;
             });
@@ -1135,13 +1298,13 @@
 
         // ============= Webhook 정보 표시 =============
         window.addEventListener('load', () => {
-            console.log('=================================');
-            console.log('📡 Webhook URL for ChannelTalk:');
-            console.log(`${window.location.origin}/api/webhook`);
-            console.log('=================================');
-            console.log('Register this URL in ChannelTalk Admin');
-            console.log('Settings → Developer → Webhooks');
-            console.log('=================================');
+            console.log('%c=================================', 'color: #1B6EC2; font-weight: bold');
+            console.log('%c📡 Webhook URL for ChannelTalk:', 'color: #4B9EF2; font-size: 14px');
+            console.log(`%c${window.location.origin}/api/webhook`, 'color: #ffffff; background: #1B6EC2; padding: 4px 8px; border-radius: 4px');
+            console.log('%c=================================', 'color: #1B6EC2; font-weight: bold');
+            console.log('%cRegister this URL in ChannelTalk Admin', 'color: #a0a0a0');
+            console.log('%cSettings → Developer → Webhooks', 'color: #a0a0a0');
+            console.log('%c=================================', 'color: #1B6EC2; font-weight: bold');
         });
     </script>
 </body>
