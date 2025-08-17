@@ -64,7 +64,19 @@
 
         .header-actions {
             display: flex;
+            align-items: center;
             gap: 12px;
+        }
+
+        #current-time {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            padding: 8px 16px;
+            background: var(--bg-hover);
+            border-radius: 6px;
+            border: 1px solid var(--border-color);
+            margin-right: 10px;
+            font-family: monospace;
         }
 
         /* 버튼 */
@@ -422,6 +434,16 @@
                 gap: 15px;
             }
 
+            .header-actions {
+                width: 100%;
+                flex-wrap: wrap;
+            }
+
+            #current-time {
+                width: 100%;
+                margin-bottom: 10px;
+            }
+
             .date-selector {
                 flex-direction: column;
                 align-items: stretch;
@@ -451,6 +473,7 @@
         <div class="header">
             <h1>SNS 채널톡 답변현황 대시보드</h1>
             <div class="header-actions">
+                <span id="current-time" style="color: #888; margin-right: 20px; font-size: 0.9rem;"></span>
                 <button onclick="refreshData()">새로고침</button>
                 <button onclick="analyzeAll()" class="primary">전체 분석</button>
                 <button onclick="exportToImage()">이미지 저장</button>
@@ -562,48 +585,103 @@
             const { createClient } = window.supabase;
             supabase = createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY);
             
+            // KST 시간 정보 출력
+            const kstNow = getKSTDate();
+            console.log(`시스템 시작 - KST: ${kstNow.toLocaleString('ko-KR')}`);
+            console.log(`오늘 날짜 (KST): ${getKSTDateString()}`);
+            
             setToday();
             await refreshData();
             
+            // 현재 시간 표시 시작
+            updateCurrentTime();
+            setInterval(updateCurrentTime, 1000);
+            
             // 5분마다 자동 새로고침
             setInterval(refreshData, 5 * 60 * 1000);
+            
+            // 자정 체크 (1분마다)
+            setInterval(checkMidnight, 60 * 1000);
         });
+
+        // 현재 KST 시간 표시
+        function updateCurrentTime() {
+            const kstNow = getKSTDate();
+            const timeString = kstNow.toLocaleString('ko-KR', {
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                hour12: false
+            });
+            const timeElement = document.getElementById('current-time');
+            if (timeElement) {
+                timeElement.textContent = `KST ${timeString}`;
+            }
+        }
 
         // 데이터 새로고침
         async function refreshData() {
-    try {
-        console.log('데이터 새로고침 시작...');
-        
-        const { data, error } = await supabase
-            .from('manager_responses')
-            .select('*')
-            .order('created_at', { ascending: false });
+            try {
+                const { data, error } = await supabase
+                    .from('manager_responses')
+                    .select('*')
+                    .order('created_at', { ascending: false });
 
-        console.log('조회된 데이터:', data);
-        console.log('에러:', error);
-        
-        if (error) throw error;
+                if (error) throw error;
 
-        allData = data || [];
-        console.log('전체 데이터 수:', allData.length);
-        
-        filterByDate();
-        
-    } catch (error) {
-        console.error('Error:', error);
-        showNotification('데이터 로드 실패', 'error');
-    }
-}
+                allData = data || [];
+                filterByDate();
+                
+            } catch (error) {
+                console.error('Error:', error);
+                showNotification('데이터 로드 실패', 'error');
+            }
+        }
 
-        // 날짜 필터링
+        // KST 시간 가져오기
+        function getKSTDate(date = new Date()) {
+            const utc = date.getTime() + (date.getTimezoneOffset() * 60000);
+            return new Date(utc + (9 * 3600000)); // KST = UTC+9
+        }
+
+        // KST 기준 날짜 문자열 (YYYY-MM-DD)
+        function getKSTDateString(date = new Date()) {
+            const kstDate = getKSTDate(date);
+            const year = kstDate.getFullYear();
+            const month = String(kstDate.getMonth() + 1).padStart(2, '0');
+            const day = String(kstDate.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+
+        // 자정 체크 및 날짜 자동 변경
+        let lastDateCheck = getKSTDateString();
+        
+        function checkMidnight() {
+            const currentDate = getKSTDateString();
+            const kstNow = getKSTDate();
+            
+            if (currentDate !== lastDateCheck) {
+                console.log(`[KST ${kstNow.toLocaleTimeString('ko-KR')}] 자정이 지났습니다. 날짜를 변경합니다.`);
+                console.log(`이전 날짜: ${lastDateCheck} → 새 날짜: ${currentDate}`);
+                lastDateCheck = currentDate;
+                setToday();
+                showNotification('날짜가 변경되었습니다', 'success');
+            }
+        }
+
+        // 날짜 필터링 (KST 기준)
         function filterByDate() {
             const dateInput = document.getElementById('dateFilter').value;
             
             if (dateInput) {
-                const selectedDate = new Date(dateInput).toDateString();
-                filteredData = allData.filter(item => 
-                    new Date(item.created_at).toDateString() === selectedDate
-                );
+                // 선택된 날짜를 KST 기준으로 필터링
+                filteredData = allData.filter(item => {
+                    const itemDate = getKSTDateString(new Date(item.created_at));
+                    return itemDate === dateInput;
+                });
             } else {
                 filteredData = allData;
             }
@@ -694,11 +772,13 @@
                 `;
             } else {
                 detailTableBody.innerHTML = filteredData.slice(0, 100).map(item => {
-                    const time = new Date(item.created_at).toLocaleString('ko-KR', {
+                    const kstDate = getKSTDate(new Date(item.created_at));
+                    const time = kstDate.toLocaleString('ko-KR', {
                         month: '2-digit',
                         day: '2-digit',
                         hour: '2-digit',
-                        minute: '2-digit'
+                        minute: '2-digit',
+                        hour12: false
                     });
                     
                     return `
@@ -713,9 +793,9 @@
             }
         }
 
-        // 날짜 설정 함수들
+        // 날짜 설정 함수들 (KST 기준)
         function setToday() {
-            const today = new Date().toISOString().split('T')[0];
+            const today = getKSTDateString();
             document.getElementById('dateFilter').value = today;
             filterByDate();
         }
@@ -723,18 +803,22 @@
         function setYesterday() {
             const yesterday = new Date();
             yesterday.setDate(yesterday.getDate() - 1);
-            document.getElementById('dateFilter').value = yesterday.toISOString().split('T')[0];
+            const yesterdayKST = getKSTDateString(yesterday);
+            document.getElementById('dateFilter').value = yesterdayKST;
             filterByDate();
         }
 
         function setThisWeek() {
             document.getElementById('dateFilter').value = '';
-            const weekStart = new Date();
-            weekStart.setDate(weekStart.getDate() - weekStart.getDay());
+            const kstNow = getKSTDate();
+            const weekStart = new Date(kstNow);
+            weekStart.setDate(kstNow.getDate() - kstNow.getDay()); // 일요일 시작
+            weekStart.setHours(0, 0, 0, 0);
             
-            filteredData = allData.filter(item => 
-                new Date(item.created_at) >= weekStart
-            );
+            filteredData = allData.filter(item => {
+                const itemKST = getKSTDate(new Date(item.created_at));
+                return itemKST >= weekStart;
+            });
             
             updateDisplay();
         }
@@ -794,7 +878,7 @@
 
                 // 내보낼 테이블 생성
                 const exportDiv = document.getElementById('exportCanvas');
-                const dateText = document.getElementById('dateFilter').value || '전체 기간';
+                const dateText = document.getElementById('dateFilter').value || `전체 기간 (${getKSTDateString()})`;
                 document.getElementById('exportDate').textContent = `날짜: ${dateText}`;
                 
                 const totalCount = filteredData.length;
@@ -855,7 +939,7 @@
                 
                 // 다운로드
                 const link = document.createElement('a');
-                link.download = `채널톡_답변현황_${new Date().toISOString().split('T')[0]}.jpg`;
+                link.download = `채널톡_답변현황_${getKSTDateString()}.jpg`;
                 link.href = canvas.toDataURL('image/jpeg', 0.95);
                 link.click();
                 
@@ -876,9 +960,14 @@
         function showNotification(message, type = 'success') {
             const notification = document.createElement('div');
             notification.className = `notification ${type}`;
+            const kstTime = getKSTDate().toLocaleTimeString('ko-KR', { 
+                hour: '2-digit', 
+                minute: '2-digit',
+                hour12: false 
+            });
             notification.innerHTML = `
                 <span>${type === 'success' ? '✓' : '✕'}</span>
-                <span>${message}</span>
+                <span>${message} (${kstTime})</span>
             `;
             
             document.body.appendChild(notification);
