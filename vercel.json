@@ -1,4 +1,6 @@
 {
+  "buildCommand": "echo 'No build required'",
+  "outputDirectory": "public",
   "functions": {
     "api/index.js": {
       "maxDuration": 30
