@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ChannelTalk 상담 도움 대시보드</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 100%);
+      color: #fff;
+      min-height: 100vh;
+      padding: 20px;
+    }
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+    .header {
+      text-align: center;
+      margin-bottom: 40px;
+    }
+    h1 {
+      font-size: 3rem;
+      margin-bottom: 10px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .subtitle {
+      color: #888;
+      font-size: 1.1rem;
+    }
+    .controls {
+      display: flex;
+      gap: 20px;
+      justify-content: center;
+      margin-bottom: 30px;
+    }
+    button {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      border: none;
+      color: white;
+      padding: 12px 30px;
+      border-radius: 30px;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: transform 0.2s;
+    }
+    button:hover {
+      transform: scale(1.05);
+    }
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 20px;
+      margin-bottom: 40px;
+    }
+    .stat-card {
+      background: rgba(255,255,255,0.05);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 20px;
+      padding: 25px;
+      text-align: center;
+    }
+    .stat-label {
+      color: #888;
+      font-size: 0.9rem;
+      margin-bottom: 10px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    .stat-value {
+      font-size: 2.5rem;
+      font-weight: bold;
+      background: linear-gradient(135deg, #4ade80 0%, #22d3ee 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .table-container {
+      background: rgba(255,255,255,0.05);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 20px;
+      overflow: hidden;
+    }
+    table {
+      width: 100%;
+    }
+    th {
+      background: rgba(0,0,0,0.3);
+      padding: 20px;
+      text-align: left;
+      font-weight: 600;
+      color: #888;
+      font-size: 0.9rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    td {
+      padding: 20px;
+      border-top: 1px solid rgba(255,255,255,0.05);
+    }
+    tr:hover {
+      background: rgba(255,255,255,0.02);
+    }
+    .rank {
+      font-size: 1.8rem;
+      font-weight: bold;
+    }
+    .rank-1 { color: #ffd700; }
+    .rank-2 { color: #c0c0c0; }
+    .rank-3 { color: #cd7f32; }
+    .help-count {
+      display: inline-block;
+      background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+      padding: 8px 20px;
+      border-radius: 25px;
+      font-weight: 600;
+      font-size: 1.1rem;
+    }
+    .loading {
+      text-align: center;
+      padding: 50px;
+      color: #666;
+    }
+    .spinner {
+      display: inline-block;
+      width: 40px;
+      height: 40px;
+      border: 3px solid rgba(255,255,255,0.1);
+      border-top-color: #667eea;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    .last-sync {
+      text-align: center;
+      color: #666;
+      font-size: 0.9rem;
+      margin-top: 30px;
+    }
+    .pulse {
+      display: inline-block;
+      width: 10px;
+      height: 10px;
+      background: #4ade80;
+      border-radius: 50%;
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0% { box-shadow: 0 0 0 0 rgba(74, 222, 128, 0.7); }
+      70% { box-shadow: 0 0 0 10px rgba(74, 222, 128, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(74, 222, 128, 0); }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>🚀 ChannelTalk 실시간 상담 도움 순위</h1>
+      <p class="subtitle">고객 메시지 후 상담사 답변 자동 추적 시스템</p>
+    </div>
+    
+    <div class="controls">
+      <button onclick="fetchStats()">🔄 새로고침</button>
+      <button onclick="syncNow()" id="syncBtn">📊 수동 동기화</button>
+    </div>
+    
+    <div class="stats-grid" id="statsGrid">
+      <div class="stat-card">
+        <div class="stat-label">오늘 총 도움 횟수</div>
+        <div class="stat-value" id="totalHelps">0</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">활동 상담사 수</div>
+        <div class="stat-value" id="activeCounselors">0</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">평균 도움 횟수</div>
+        <div class="stat-value" id="avgHelps">0</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">1위 상담사</div>
+        <div class="stat-value" id="topCounselor">-</div>
+      </div>
+    </div>
+    
+    <div class="table-container">
+      <table id="rankTable">
+        <thead>
+          <tr>
+            <th style="width: 100px;">순위</th>
+            <th>상담사</th>
+            <th style="width: 180px;">도움 횟수</th>
+            <th style="width: 200px;">마지막 활동</th>
+          </tr>
+        </thead>
+        <tbody id="rankBody">
+          <tr><td colspan="4" class="loading"><div class="spinner"></div></td></tr>
+        </tbody>
+      </table>
+    </div>
+    
+    <div class="last-sync">
+      <span class="pulse"></span> 
+      <span id="lastSync">연결 중...</span>
+    </div>
+  </div>
+  
+  <script>
+    const API_BASE = '/api';
+    
+    async function fetchStats() {
+      try {
+        const response = await fetch(API_BASE);
+        const data = await response.json();
+        
+        if (data.success) {
+          updateDashboard(data.stats);
+          document.getElementById('lastSync').textContent = 
+            '마지막 업데이트: ' + new Date(data.lastSync).toLocaleTimeString('ko-KR');
+        }
+      } catch (error) {
+        console.error('데이터 로드 실패:', error);
+        document.getElementById('rankBody').innerHTML = 
+          '<tr><td colspan="4" class="loading">연결 오류 - 잠시 후 다시 시도하세요</td></tr>';
+      }
+    }
+    
+    async function syncNow() {
+      const btn = document.getElementById('syncBtn');
+      btn.disabled = true;
+      btn.textContent = '동기화 중...';
+      
+      try {
+        const response = await fetch(API_BASE + '/sync');
+        const data = await response.json();
+        
+        if (data.success) {
+          alert(`동기화 완료! ${data.processed}개 메시지 처리됨`);
+          fetchStats();
+        } else {
+          alert('동기화 실패: ' + (data.error || '알 수 없는 오류'));
+        }
+      } catch (error) {
+        alert('동기화 오류: ' + error.message);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = '📊 수동 동기화';
+      }
+    }
+    
+    function updateDashboard(stats) {
+      // 통계 계산
+      const totalHelps = stats.reduce((sum, s) => sum + s.help_count, 0);
+      const avgHelps = stats.length > 0 ? (totalHelps / stats.length).toFixed(1) : 0;
+      const topName = stats[0]?.counselor_name || '-';
+      
+      document.getElementById('totalHelps').textContent = totalHelps.toLocaleString();
+      document.getElementById('activeCounselors').textContent = stats.length;
+      document.getElementById('avgHelps').textContent = avgHelps;
+      document.getElementById('topCounselor').textContent = topName.slice(0, 10);
+      
+      // 순위 테이블
+      const tbody = document.getElementById('rankBody');
+      
+      if (stats.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="4" class="loading">아직 데이터가 없습니다</td></tr>';
+        return;
+      }
+      
+      tbody.innerHTML = stats.map((stat, idx) => {
+        const rankEmoji = idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : '';
+        const rankClass = idx === 0 ? 'rank-1' : idx === 1 ? 'rank-2' : idx === 2 ? 'rank-3' : '';
+        
+        return `
+          <tr>
+            <td><span class="rank ${rankClass}">${rankEmoji} ${idx + 1}</span></td>
+            <td>
+              <div style="font-weight: 600; font-size: 1.1rem;">${stat.counselor_name}</div>
+              <div style="color: #666; font-size: 0.85rem; margin-top: 5px;">ID: ${stat.counselor_id.slice(-8)}</div>
+            </td>
+            <td><span class="help-count">${stat.help_count}회</span></td>
+            <td style="color: #888;">${new Date(stat.updated_at).toLocaleTimeString('ko-KR')}</td>
+          </tr>
+        `;
+      }).join('');
+    }
+    
+    // 초기 로드 및 자동 새로고침
+    fetchStats();
+    setInterval(fetchStats, 15000); // 15초마다 새로고침
+  </script>
+</body>
+</html>
