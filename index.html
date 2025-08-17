@@ -3,44 +3,28 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>채널톡 미답변 상담 대시보드 | OGD</title>
+    <title>SNS 채널톡 답변현황 대시보드</title>
     
     <!-- Supabase Client -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <!-- Chart.js -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- html2canvas for image export -->
+    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
     
     <style>
         :root {
-            /* OGD Blue Color Palette */
-            --ogd-blue: #1B6EC2;
-            --ogd-blue-light: #2B7ED2;
-            --ogd-blue-lighter: #4B9EF2;
-            --ogd-blue-dark: #0B5EB2;
-            
-            /* Dark Mode Colors */
+            --primary-blue: #1B6EC2;
+            --primary-blue-light: #4B9EF2;
             --bg-primary: #0a0a0a;
-            --bg-secondary: #141414;
-            --bg-tertiary: #1a1a1a;
-            --bg-card: #1e1e1e;
-            --bg-hover: #252525;
-            
-            /* Text Colors */
+            --bg-card: #141414;
+            --bg-hover: #1a1a1a;
             --text-primary: #ffffff;
-            --text-secondary: #a0a0a0;
-            --text-tertiary: #707070;
-            
-            /* Status Colors */
-            --success: #10b981;
-            --warning: #f59e0b;
-            --error: #ef4444;
-            
-            /* Border & Shadow */
+            --text-secondary: #888888;
             --border-color: #2a2a2a;
-            --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.5);
-            --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.6);
-            --shadow-lg: 0 10px 30px rgba(0, 0, 0, 0.7);
-            --shadow-xl: 0 20px 40px rgba(0, 0, 0, 0.8);
+            --success: #10b981;
+            --error: #ef4444;
+            --gold: #FFD700;
+            --silver: #C0C0C0;
+            --bronze: #CD7F32;
         }
 
         * {
@@ -50,491 +34,298 @@
         }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             background: var(--bg-primary);
             color: var(--text-primary);
+            padding: 40px 20px;
             min-height: 100vh;
-            padding: 20px;
-            position: relative;
-        }
-
-        body::before {
-            content: '';
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 500px;
-            background: linear-gradient(180deg, var(--ogd-blue-dark) 0%, transparent 100%);
-            opacity: 0.1;
-            pointer-events: none;
-            z-index: 0;
         }
 
         .container {
-            max-width: 1600px;
+            max-width: 1400px;
             margin: 0 auto;
-            position: relative;
-            z-index: 1;
         }
 
-        /* Header Styles */
+        /* 헤더 */
         .header {
-            background: var(--bg-card);
-            border: 1px solid var(--border-color);
-            border-radius: 24px;
-            padding: 40px;
-            margin-bottom: 30px;
-            box-shadow: var(--shadow-xl);
-            position: relative;
-            overflow: hidden;
-        }
-
-        .header::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 2px;
-            background: linear-gradient(90deg, var(--ogd-blue), var(--ogd-blue-lighter), var(--ogd-blue));
-            animation: shimmer 3s ease-in-out infinite;
-        }
-
-        @keyframes shimmer {
-            0%, 100% { opacity: 0.5; }
-            50% { opacity: 1; }
-        }
-
-        .header-content {
+            margin-bottom: 40px;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid var(--border-color);
         }
 
         .header h1 {
+            font-size: 1.8rem;
+            font-weight: 600;
             color: var(--text-primary);
-            font-size: 2.5rem;
-            font-weight: 700;
+        }
+
+        .header-actions {
             display: flex;
-            align-items: center;
-            gap: 15px;
+            gap: 12px;
         }
 
-        .logo {
-            font-size: 2.5rem;
-            animation: float 3s ease-in-out infinite;
-        }
-
-        .ogd-badge {
-            background: var(--ogd-blue);
-            color: white;
-            padding: 4px 12px;
-            border-radius: 8px;
-            font-size: 0.8rem;
-            font-weight: 600;
-            letter-spacing: 1px;
-            margin-left: 15px;
-        }
-
-        @keyframes float {
-            0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-10px); }
-        }
-
-        .status-bar {
-            display: flex;
-            gap: 20px;
-            flex-wrap: wrap;
-        }
-
-        .status-item {
-            background: var(--bg-secondary);
-            border: 1px solid var(--border-color);
-            color: var(--text-secondary);
-            padding: 12px 24px;
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            font-size: 0.9rem;
-            font-weight: 500;
-            transition: all 0.3s ease;
-        }
-
-        .status-item.connected {
-            border-color: var(--success);
-            color: var(--success);
-        }
-
-        .status-item.syncing {
-            border-color: var(--ogd-blue);
-            color: var(--ogd-blue-lighter);
-        }
-
-        .pulse {
-            width: 8px;
-            height: 8px;
-            background: currentColor;
-            border-radius: 50%;
-            animation: pulse 2s infinite;
-        }
-
-        @keyframes pulse {
-            0% { box-shadow: 0 0 0 0 currentColor; opacity: 1; }
-            70% { box-shadow: 0 0 0 10px transparent; opacity: 0.7; }
-            100% { box-shadow: 0 0 0 0 transparent; opacity: 1; }
-        }
-
-        /* Control Panel */
-        .controls {
-            background: var(--bg-card);
-            border: 1px solid var(--border-color);
-            border-radius: 20px;
-            padding: 30px;
-            margin-bottom: 30px;
-            box-shadow: var(--shadow-lg);
-        }
-
-        .control-buttons {
-            display: flex;
-            gap: 15px;
-            flex-wrap: wrap;
-        }
-
+        /* 버튼 */
         button {
-            background: var(--ogd-blue);
-            color: white;
-            border: none;
-            padding: 14px 28px;
-            border-radius: 12px;
-            font-size: 1rem;
-            font-weight: 600;
+            background: transparent;
+            color: var(--text-secondary);
+            border: 1px solid var(--border-color);
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 0.9rem;
             cursor: pointer;
-            transition: all 0.3s ease;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            position: relative;
-            overflow: hidden;
-        }
-
-        button::before {
-            content: '';
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            width: 0;
-            height: 0;
-            border-radius: 50%;
-            background: rgba(255, 255, 255, 0.2);
-            transform: translate(-50%, -50%);
-            transition: width 0.5s, height 0.5s;
-        }
-
-        button:hover::before {
-            width: 300px;
-            height: 300px;
+            transition: all 0.2s;
         }
 
         button:hover {
-            background: var(--ogd-blue-light);
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(27, 110, 194, 0.4);
+            color: var(--text-primary);
+            border-color: var(--primary-blue);
+            background: rgba(27, 110, 194, 0.1);
         }
 
-        button:active {
-            transform: translateY(0);
-        }
-
-        button.secondary {
-            background: transparent;
-            border: 2px solid var(--ogd-blue);
-            color: var(--ogd-blue-lighter);
-        }
-
-        button.secondary:hover {
-            background: var(--ogd-blue);
+        button.primary {
+            background: var(--primary-blue);
             color: white;
+            border-color: var(--primary-blue);
         }
 
-        button.success {
-            background: var(--success);
-        }
-
-        button.success:hover {
-            background: #0ea968;
-        }
-
-        button.danger {
-            background: transparent;
-            border: 2px solid var(--error);
-            color: var(--error);
-        }
-
-        button.danger:hover {
-            background: var(--error);
-            color: white;
+        button.primary:hover {
+            background: var(--primary-blue-light);
         }
 
         button:disabled {
             opacity: 0.5;
             cursor: not-allowed;
-            pointer-events: none;
         }
 
-        /* Stats Grid */
-        .stats-grid {
+        /* 날짜 선택 */
+        .date-selector {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: var(--bg-card);
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+        }
+
+        .date-selector label {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .date-selector input[type="date"] {
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+            padding: 6px 12px;
+            border-radius: 4px;
+            font-size: 0.9rem;
+        }
+
+        .date-selector input[type="date"]:focus {
+            outline: none;
+            border-color: var(--primary-blue);
+        }
+
+        /* 요약 정보 */
+        .summary {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-            gap: 25px;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
             margin-bottom: 30px;
         }
 
-        .stat-card {
+        .summary-card {
             background: var(--bg-card);
+            padding: 20px;
+            border-radius: 8px;
             border: 1px solid var(--border-color);
-            border-radius: 20px;
-            padding: 30px;
-            box-shadow: var(--shadow-lg);
-            transition: all 0.3s ease;
-            position: relative;
+        }
+
+        .summary-card .label {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            margin-bottom: 8px;
+        }
+
+        .summary-card .value {
+            color: var(--primary-blue-light);
+            font-size: 2rem;
+            font-weight: 600;
+        }
+
+        /* 랭킹 테이블 */
+        .ranking-container {
+            background: var(--bg-card);
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            overflow: hidden;
+            margin-bottom: 30px;
+        }
+
+        .ranking-header {
+            padding: 20px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .ranking-header h2 {
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+
+        .ranking-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .ranking-table thead tr {
+            background: var(--bg-hover);
+        }
+
+        .ranking-table th {
+            text-align: left;
+            padding: 12px 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .ranking-table td {
+            padding: 16px 20px;
+            font-size: 0.95rem;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .ranking-table tbody tr:hover {
+            background: var(--bg-hover);
+        }
+
+        .rank {
+            font-weight: 700;
+            font-size: 1.1rem;
+            min-width: 40px;
+        }
+
+        .rank-1 { color: var(--gold); }
+        .rank-2 { color: var(--silver); }
+        .rank-3 { color: var(--bronze); }
+
+        .rank-medal {
+            display: inline-block;
+            margin-left: 5px;
+        }
+
+        .manager-name {
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+
+        .count {
+            color: var(--primary-blue-light);
+            font-weight: 600;
+            font-size: 1.1rem;
+        }
+
+        .percentage {
+            color: var(--text-secondary);
+        }
+
+        .bar-container {
+            width: 200px;
+            height: 20px;
+            background: var(--bg-primary);
+            border-radius: 10px;
             overflow: hidden;
         }
 
-        .stat-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 2px;
-            background: linear-gradient(90deg, transparent, var(--ogd-blue), transparent);
-            transform: translateX(-100%);
-            animation: slide 3s ease-in-out infinite;
+        .bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--primary-blue), var(--primary-blue-light));
+            transition: width 0.5s ease;
         }
 
-        @keyframes slide {
-            0% { transform: translateX(-100%); }
-            100% { transform: translateX(100%); }
-        }
-
-        .stat-card:hover {
-            transform: translateY(-5px);
-            border-color: var(--ogd-blue);
-            box-shadow: 0 15px 40px rgba(27, 110, 194, 0.2);
-        }
-
-        .stat-label {
-            color: var(--text-tertiary);
-            font-size: 0.9rem;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            margin-bottom: 15px;
-            font-weight: 600;
-        }
-
-        .stat-value {
-            font-size: 3rem;
-            font-weight: 700;
-            color: var(--ogd-blue-lighter);
-            text-shadow: 0 0 20px rgba(27, 110, 194, 0.5);
-        }
-
-        .stat-change {
-            margin-top: 10px;
-            font-size: 0.95rem;
-            color: var(--success);
-            display: flex;
-            align-items: center;
-            gap: 5px;
-        }
-
-        .stat-change.negative {
-            color: var(--error);
-        }
-
-        /* Chart Container */
-        .chart-container {
+        /* 상세 테이블 */
+        .detail-container {
             background: var(--bg-card);
-            border: 1px solid var(--border-color);
-            border-radius: 20px;
-            padding: 30px;
-            margin-bottom: 30px;
-            box-shadow: var(--shadow-lg);
-        }
-
-        .chart-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 25px;
-        }
-
-        .chart-title {
-            font-size: 1.5rem;
-            color: var(--text-primary);
-            font-weight: 600;
-        }
-
-        /* Main Content Grid */
-        .main-grid {
-            display: grid;
-            grid-template-columns: 2fr 1fr;
-            gap: 30px;
-        }
-
-        @media (max-width: 1024px) {
-            .main-grid {
-                grid-template-columns: 1fr;
-            }
-        }
-
-        /* Manager List */
-        .manager-list {
-            background: var(--bg-card);
-            border: 1px solid var(--border-color);
-            border-radius: 20px;
-            padding: 30px;
-            box-shadow: var(--shadow-lg);
-        }
-
-        .manager-list h2 {
-            color: var(--text-primary);
-            margin-bottom: 25px;
-            font-size: 1.5rem;
-            font-weight: 600;
-        }
-
-        .manager-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 20px;
-            border-radius: 12px;
-            background: var(--bg-secondary);
-            border: 1px solid var(--border-color);
-            margin-bottom: 15px;
-            transition: all 0.3s ease;
-        }
-
-        .manager-item:hover {
-            transform: translateX(5px);
-            background: var(--bg-hover);
-            border-color: var(--ogd-blue);
-            box-shadow: 0 0 20px rgba(27, 110, 194, 0.2);
-        }
-
-        .manager-info {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-        }
-
-        .manager-avatar {
-            width: 48px;
-            height: 48px;
-            border-radius: 50%;
-            background: linear-gradient(135deg, var(--ogd-blue), var(--ogd-blue-lighter));
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-weight: 600;
-            font-size: 1.2rem;
-            box-shadow: 0 0 15px rgba(27, 110, 194, 0.5);
-        }
-
-        .manager-details h3 {
-            color: var(--text-primary);
-            font-size: 1.1rem;
-            margin-bottom: 4px;
-        }
-
-        .manager-details p {
-            color: var(--text-tertiary);
-            font-size: 0.9rem;
-        }
-
-        .manager-count {
-            font-size: 2rem;
-            font-weight: 700;
-            color: var(--ogd-blue-lighter);
-            text-shadow: 0 0 10px rgba(27, 110, 194, 0.5);
-        }
-
-        /* Activity Feed */
-        .activity-feed {
-            background: var(--bg-card);
-            border: 1px solid var(--border-color);
-            border-radius: 20px;
-            padding: 30px;
-            box-shadow: var(--shadow-lg);
-            max-height: 600px;
-            overflow-y: auto;
-        }
-
-        .activity-feed::-webkit-scrollbar {
-            width: 6px;
-        }
-
-        .activity-feed::-webkit-scrollbar-track {
-            background: var(--bg-secondary);
-            border-radius: 10px;
-        }
-
-        .activity-feed::-webkit-scrollbar-thumb {
-            background: var(--ogd-blue);
-            border-radius: 10px;
-        }
-
-        .activity-feed h2 {
-            color: var(--text-primary);
-            margin-bottom: 25px;
-            font-size: 1.5rem;
-            font-weight: 600;
-        }
-
-        .activity-item {
-            padding: 15px;
-            border-left: 3px solid var(--ogd-blue);
-            background: var(--bg-secondary);
             border-radius: 8px;
-            margin-bottom: 12px;
-            transition: all 0.3s ease;
+            border: 1px solid var(--border-color);
+            overflow: hidden;
         }
 
-        .activity-item:hover {
+        .detail-header {
+            padding: 20px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .detail-header h2 {
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+
+        .detail-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .detail-table thead tr {
             background: var(--bg-hover);
-            transform: translateX(3px);
-            box-shadow: 0 0 10px rgba(27, 110, 194, 0.2);
         }
 
-        .activity-time {
-            color: var(--text-tertiary);
+        .detail-table th {
+            text-align: left;
+            padding: 12px 20px;
             font-size: 0.85rem;
-            margin-bottom: 5px;
-        }
-
-        .activity-message {
+            font-weight: 600;
             color: var(--text-secondary);
-            font-size: 0.95rem;
-            line-height: 1.5;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
 
-        /* Loading State */
+        .detail-table td {
+            padding: 16px 20px;
+            font-size: 0.95rem;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .detail-table tbody tr:hover {
+            background: var(--bg-hover);
+        }
+
+        .time {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+        }
+
+        .chat-id {
+            color: var(--text-secondary);
+            font-family: monospace;
+            font-size: 0.85rem;
+        }
+
+        /* 로딩 */
         .loading {
             text-align: center;
-            padding: 50px;
-            color: var(--text-tertiary);
+            padding: 40px;
+            color: var(--text-secondary);
         }
 
         .spinner {
-            width: 50px;
-            height: 50px;
+            width: 40px;
+            height: 40px;
             border: 3px solid var(--bg-hover);
-            border-top-color: var(--ogd-blue);
+            border-top-color: var(--primary-blue);
             border-radius: 50%;
             animation: spin 1s linear infinite;
             margin: 0 auto 20px;
@@ -544,403 +335,243 @@
             to { transform: rotate(360deg); }
         }
 
-        /* Notifications */
+        /* 빈 상태 */
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--text-secondary);
+        }
+
+        /* 알림 */
         .notification {
             position: fixed;
-            top: 20px;
+            bottom: 20px;
             right: 20px;
             background: var(--bg-card);
             border: 1px solid var(--border-color);
-            padding: 16px 24px;
-            border-radius: 12px;
-            box-shadow: var(--shadow-xl);
+            padding: 12px 20px;
+            border-radius: 6px;
             display: flex;
             align-items: center;
-            gap: 12px;
-            animation: slideIn 0.3s ease;
+            gap: 10px;
+            animation: slideUp 0.3s ease;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
             z-index: 1000;
-            max-width: 400px;
         }
 
-        @keyframes slideIn {
+        @keyframes slideUp {
             from {
-                transform: translateX(100%);
+                transform: translateY(100%);
                 opacity: 0;
             }
             to {
-                transform: translateX(0);
+                transform: translateY(0);
                 opacity: 1;
             }
         }
 
         .notification.success {
-            border-left: 4px solid var(--success);
+            border-left: 3px solid var(--success);
         }
 
         .notification.error {
-            border-left: 4px solid var(--error);
+            border-left: 3px solid var(--error);
         }
 
-        .notification.info {
-            border-left: 4px solid var(--ogd-blue);
+        /* 이미지 내보내기용 스타일 */
+        #exportCanvas {
+            position: fixed;
+            top: -9999px;
+            left: -9999px;
+            background: white;
+            color: black;
+            padding: 30px;
         }
 
-        /* Scrollbar Styles */
-        ::-webkit-scrollbar {
-            width: 8px;
-            height: 8px;
+        #exportCanvas h2 {
+            margin-bottom: 20px;
+            color: #333;
         }
 
-        ::-webkit-scrollbar-track {
-            background: var(--bg-secondary);
-            border-radius: 10px;
+        #exportCanvas table {
+            width: 600px;
+            border-collapse: collapse;
         }
 
-        ::-webkit-scrollbar-thumb {
-            background: var(--ogd-blue);
-            border-radius: 10px;
+        #exportCanvas th,
+        #exportCanvas td {
+            padding: 12px;
+            border: 1px solid #ddd;
+            text-align: left;
         }
 
-        ::-webkit-scrollbar-thumb:hover {
-            background: var(--ogd-blue-light);
+        #exportCanvas th {
+            background: #f5f5f5;
+            font-weight: bold;
         }
 
-        /* Responsive Design */
+        #exportCanvas .export-rank-1 { color: #FFD700; }
+        #exportCanvas .export-rank-2 { color: #C0C0C0; }
+        #exportCanvas .export-rank-3 { color: #CD7F32; }
+
+        /* 반응형 */
         @media (max-width: 768px) {
-            .header h1 {
-                font-size: 1.8rem;
+            .header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 15px;
             }
-            
-            .ogd-badge {
-                display: none;
+
+            .date-selector {
+                flex-direction: column;
+                align-items: stretch;
             }
-            
-            .stats-grid {
+
+            .summary {
                 grid-template-columns: 1fr;
             }
-            
-            .control-buttons {
-                flex-direction: column;
-            }
-            
-            button {
-                width: 100%;
-                justify-content: center;
-            }
-            
-            .stat-value {
-                font-size: 2.5rem;
-            }
-        }
 
-        /* OGD Branding */
-        .ogd-watermark {
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            opacity: 0.3;
-            font-size: 3rem;
-            color: var(--ogd-blue);
-            font-weight: bold;
-            pointer-events: none;
-            z-index: 0;
+            .bar-container {
+                width: 100px;
+            }
+
+            .detail-container {
+                overflow-x: auto;
+            }
+
+            .detail-table {
+                min-width: 600px;
+            }
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <!-- Header -->
+        <!-- 헤더 -->
         <div class="header">
-            <div class="header-content">
-                <h1>
-                    <span class="logo">💬</span> 
-                    채널톡 미답변 상담 대시보드
-                    <span class="ogd-badge">OGD</span>
-                </h1>
-            </div>
-            <div class="status-bar">
-                <div class="status-item connected">
-                    <div class="pulse"></div>
-                    <span id="connection-status">Supabase 연결됨</span>
-                </div>
-                <div class="status-item syncing" id="sync-status">
-                    <div class="pulse"></div>
-                    <span>실시간 동기화 활성</span>
-                </div>
-                <div class="status-item">
-                    <span id="last-update">마지막 업데이트: -</span>
-                </div>
+            <h1>SNS 채널톡 답변현황 대시보드</h1>
+            <div class="header-actions">
+                <button onclick="refreshData()">새로고침</button>
+                <button onclick="analyzeAll()" class="primary">전체 분석</button>
+                <button onclick="exportToImage()">이미지 저장</button>
             </div>
         </div>
 
-        <!-- Control Panel -->
-        <div class="controls">
-            <div class="control-buttons">
-                <button onclick="refreshData()" id="refreshBtn">
-                    <span>🔄</span> 새로고침
-                </button>
-                <button onclick="analyzeAll()" class="secondary" id="analyzeBtn">
-                    <span>📊</span> 전체 분석
-                </button>
-                <button onclick="syncNow()" class="success" id="syncBtn">
-                    <span>🔗</span> 즉시 동기화
-                </button>
-                <button onclick="exportData()" class="secondary" id="exportBtn">
-                    <span>📥</span> 데이터 내보내기
-                </button>
-                <button onclick="clearAll()" class="danger" id="clearBtn">
-                    <span>🗑️</span> 초기화
-                </button>
+        <!-- 날짜 선택 -->
+        <div class="date-selector">
+            <label>날짜 선택:</label>
+            <input type="date" id="dateFilter" onchange="filterByDate()">
+            <button onclick="setToday()">오늘</button>
+            <button onclick="setYesterday()">어제</button>
+            <button onclick="setThisWeek()">이번 주</button>
+        </div>
+
+        <!-- 요약 정보 -->
+        <div class="summary">
+            <div class="summary-card">
+                <div class="label">총 답변 수</div>
+                <div class="value" id="totalCount">0</div>
+            </div>
+            <div class="summary-card">
+                <div class="label">답변 상담사</div>
+                <div class="value" id="managerCount">0</div>
+            </div>
+            <div class="summary-card">
+                <div class="label">평균 답변</div>
+                <div class="value" id="avgCount">0</div>
             </div>
         </div>
 
-        <!-- Stats Grid -->
-        <div class="stats-grid">
-            <div class="stat-card">
-                <div class="stat-label">총 미답변 상담 답변</div>
-                <div class="stat-value" id="total-responses">0</div>
-                <div class="stat-change">
-                    <span>↑</span> 오늘 +<span id="today-count">0</span>건
-                </div>
+        <!-- 상담사별 랭킹 -->
+        <div class="ranking-container">
+            <div class="ranking-header">
+                <h2>🏆 상담사별 답변 랭킹</h2>
+                <span class="count" id="rankingCount"></span>
             </div>
-            <div class="stat-card">
-                <div class="stat-label">활동 상담사 수</div>
-                <div class="stat-value" id="active-managers">0</div>
-                <div class="stat-change">
-                    <span>↑</span> 전일 대비 +<span id="manager-change">0</span>명
-                </div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-label">평균 응답률</div>
-                <div class="stat-value" id="response-rate">0%</div>
-                <div class="stat-change">
-                    <span>↑</span> +<span id="rate-change">5</span>% 개선
-                </div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-label">실시간 처리</div>
-                <div class="stat-value" id="webhook-count">0</div>
-                <div class="stat-change">
-                    <span>⚡</span> Webhook 처리
-                </div>
-            </div>
+            <table class="ranking-table">
+                <thead>
+                    <tr>
+                        <th style="width: 80px;">순위</th>
+                        <th>상담사</th>
+                        <th style="width: 100px;">답변 수</th>
+                        <th style="width: 80px;">비율</th>
+                        <th style="width: 220px;">그래프</th>
+                    </tr>
+                </thead>
+                <tbody id="rankingTableBody">
+                    <tr>
+                        <td colspan="5" class="loading">
+                            <div class="spinner"></div>
+                            데이터를 불러오는 중...
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
         </div>
 
-        <!-- Chart -->
-        <div class="chart-container">
-            <div class="chart-header">
-                <h2 class="chart-title">📈 시간대별 답변 현황</h2>
+        <!-- 답변 상세 내역 -->
+        <div class="detail-container">
+            <div class="detail-header">
+                <h2>📋 답변 상세 내역</h2>
+                <span class="count" id="detailCount"></span>
             </div>
-            <canvas id="hourlyChart" height="80"></canvas>
-        </div>
-
-        <!-- Main Grid -->
-        <div class="main-grid">
-            <!-- Manager List -->
-            <div class="manager-list">
-                <h2>👥 상담사별 답변 현황</h2>
-                <div id="manager-list-content">
-                    <div class="loading">
-                        <div class="spinner"></div>
-                        <p>데이터를 불러오는 중...</p>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Activity Feed -->
-            <div class="activity-feed">
-                <h2>⚡ 실시간 활동</h2>
-                <div id="activity-content">
-                    <div class="activity-item">
-                        <div class="activity-time">방금 전</div>
-                        <div class="activity-message">시스템이 시작되었습니다</div>
-                    </div>
-                </div>
-            </div>
+            <table class="detail-table">
+                <thead>
+                    <tr>
+                        <th>시간</th>
+                        <th>상담사</th>
+                        <th>채팅 ID</th>
+                        <th>소스</th>
+                    </tr>
+                </thead>
+                <tbody id="detailTableBody">
+                    <tr>
+                        <td colspan="4" class="loading">
+                            <div class="spinner"></div>
+                            데이터를 불러오는 중...
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
         </div>
     </div>
 
-    <!-- OGD Watermark -->
-    <div class="ogd-watermark">OGD</div>
+    <!-- 이미지 내보내기용 숨김 영역 -->
+    <div id="exportCanvas">
+        <h2>SNS 채널톡 답변현황</h2>
+        <p id="exportDate"></p>
+        <table id="exportTable"></table>
+    </div>
 
-    <!-- JavaScript -->
     <script>
-        // ============= 설정 =============
+        // 설정
         const CONFIG = {
-            // API 엔드포인트
             API_BASE: window.location.origin + '/api',
-            
-            // Supabase 설정
             SUPABASE_URL: 'https://bhtqjipygkawoyieidgp.supabase.co',
             SUPABASE_ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJodHFqaXB5Z2thd295aWVpZGdwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ0ODg5NjgsImV4cCI6MjA3MDA2NDk2OH0.hu2EAj9RCq436QBtfbEVF4aGOau4WWomLMDKahN4iAA',
-            
-            // ChannelTalk API 설정
             CHANNEL_ACCESS_KEY: '688a26176fcb19aebf8b',
             CHANNEL_SECRET: 'a0db6c38b95c8ec4d9bb46e7c653b3e2'
         };
 
-        // ============= 전역 변수 =============
         let supabase = null;
-        let realtimeChannel = null;
-        let hourlyChart = null;
-        let activityLog = [];
+        let allData = [];
+        let filteredData = [];
 
-        // ============= 초기화 =============
+        // 초기화
         document.addEventListener('DOMContentLoaded', async () => {
-            await initializeApp();
+            const { createClient } = window.supabase;
+            supabase = createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY);
+            
+            setToday();
+            await refreshData();
+            
+            // 5분마다 자동 새로고침
+            setInterval(refreshData, 5 * 60 * 1000);
         });
 
-        async function initializeApp() {
-            try {
-                // Supabase 클라이언트 초기화
-                const { createClient } = window.supabase;
-                supabase = createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY);
-                
-                // 테이블 초기화
-                await setupDatabase();
-                
-                // 실시간 구독 설정
-                setupRealtimeSubscription();
-                
-                // 차트 초기화
-                initializeChart();
-                
-                // 초기 데이터 로드
-                await refreshData();
-                
-                // 주기적 새로고침 (5분마다)
-                setInterval(refreshData, 5 * 60 * 1000);
-                
-                showNotification('대시보드가 준비되었습니다', 'success');
-                addActivity('시스템 초기화 완료');
-                
-            } catch (error) {
-                console.error('Initialization error:', error);
-                showNotification('초기화 실패: ' + error.message, 'error');
-            }
-        }
-
-        // ============= Supabase 테이블 설정 =============
-        async function setupDatabase() {
-            try {
-                const response = await fetch(`${CONFIG.API_BASE}/setup`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        supabaseUrl: CONFIG.SUPABASE_URL,
-                        supabaseKey: CONFIG.SUPABASE_ANON_KEY
-                    })
-                });
-                
-                if (!response.ok) {
-                    console.log('Tables might already exist');
-                }
-            } catch (error) {
-                console.log('Database setup:', error);
-            }
-        }
-
-        // ============= 실시간 구독 =============
-        function setupRealtimeSubscription() {
-            if (realtimeChannel) {
-                supabase.removeChannel(realtimeChannel);
-            }
-
-            realtimeChannel = supabase
-                .channel('manager-updates')
-                .on('postgres_changes', 
-                    { event: '*', schema: 'public', table: 'manager_responses' },
-                    (payload) => handleRealtimeUpdate(payload)
-                )
-                .subscribe((status) => {
-                    if (status === 'SUBSCRIBED') {
-                        document.getElementById('sync-status').style.display = 'flex';
-                        console.log('Realtime subscription active');
-                    }
-                });
-        }
-
-        function handleRealtimeUpdate(payload) {
-            console.log('Realtime update:', payload);
-            
-            if (payload.eventType === 'INSERT') {
-                addActivity(`새 답변: ${payload.new.manager_name || 'Unknown'}`);
-                refreshData();
-            }
-        }
-
-        // ============= 차트 초기화 =============
-        function initializeChart() {
-            const ctx = document.getElementById('hourlyChart').getContext('2d');
-            
-            // 그라데이션 생성
-            const gradient = ctx.createLinearGradient(0, 0, 0, 400);
-            gradient.addColorStop(0, 'rgba(27, 110, 194, 0.4)');
-            gradient.addColorStop(1, 'rgba(27, 110, 194, 0.05)');
-            
-            hourlyChart = new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: Array.from({length: 24}, (_, i) => `${i}시`),
-                    datasets: [{
-                        label: '답변 수',
-                        data: Array(24).fill(0),
-                        borderColor: '#4B9EF2',
-                        backgroundColor: gradient,
-                        borderWidth: 2,
-                        tension: 0.4,
-                        fill: true,
-                        pointRadius: 4,
-                        pointHoverRadius: 6,
-                        pointBackgroundColor: '#4B9EF2',
-                        pointBorderColor: '#1B6EC2',
-                        pointBorderWidth: 2
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    interaction: {
-                        intersect: false,
-                        mode: 'index'
-                    },
-                    plugins: {
-                        legend: { display: false },
-                        tooltip: {
-                            backgroundColor: 'rgba(30, 30, 30, 0.9)',
-                            padding: 12,
-                            cornerRadius: 8,
-                            titleColor: '#fff',
-                            bodyColor: '#a0a0a0',
-                            borderColor: '#1B6EC2',
-                            borderWidth: 1
-                        }
-                    },
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            grid: { 
-                                color: 'rgba(255, 255, 255, 0.05)',
-                                drawBorder: false
-                            },
-                            ticks: { color: '#707070' }
-                        },
-                        x: {
-                            grid: { display: false },
-                            ticks: { color: '#707070' }
-                        }
-                    }
-                }
-            });
-        }
-
-        // ============= 데이터 새로고침 =============
+        // 데이터 새로고침
         async function refreshData() {
             try {
-                setButtonLoading('refreshBtn', true);
-                
                 const { data, error } = await supabase
                     .from('manager_responses')
                     .select('*')
@@ -948,24 +579,163 @@
 
                 if (error) throw error;
 
-                updateStats(data || []);
-                updateManagerList(data || []);
-                updateHourlyChart(data || []);
-                updateLastUpdateTime();
+                allData = data || [];
+                filterByDate();
                 
             } catch (error) {
-                console.error('Refresh error:', error);
-                showNotification('데이터 새로고침 실패', 'error');
-            } finally {
-                setButtonLoading('refreshBtn', false);
+                console.error('Error:', error);
+                showNotification('데이터 로드 실패', 'error');
             }
         }
 
-        // ============= 전체 분석 =============
+        // 날짜 필터링
+        function filterByDate() {
+            const dateInput = document.getElementById('dateFilter').value;
+            
+            if (dateInput) {
+                const selectedDate = new Date(dateInput).toDateString();
+                filteredData = allData.filter(item => 
+                    new Date(item.created_at).toDateString() === selectedDate
+                );
+            } else {
+                filteredData = allData;
+            }
+            
+            updateDisplay();
+        }
+
+        // 화면 업데이트
+        function updateDisplay() {
+            // 상담사별 집계
+            const managerStats = {};
+            
+            filteredData.forEach(item => {
+                const managerId = item.manager_id;
+                if (!managerStats[managerId]) {
+                    managerStats[managerId] = {
+                        name: item.manager_name || 'Unknown',
+                        count: 0
+                    };
+                }
+                managerStats[managerId].count++;
+            });
+
+            // 많은 순으로 정렬 (랭킹)
+            const sortedManagers = Object.entries(managerStats)
+                .sort((a, b) => b[1].count - a[1].count);
+
+            // 요약 정보 업데이트
+            const totalCount = filteredData.length;
+            const managerCount = sortedManagers.length;
+            const avgCount = managerCount > 0 ? Math.round(totalCount / managerCount) : 0;
+
+            document.getElementById('totalCount').textContent = totalCount;
+            document.getElementById('managerCount').textContent = managerCount;
+            document.getElementById('avgCount').textContent = avgCount;
+
+            // 랭킹 테이블
+            const rankingTableBody = document.getElementById('rankingTableBody');
+            document.getElementById('rankingCount').textContent = `총 ${managerCount}명`;
+            
+            if (sortedManagers.length === 0) {
+                rankingTableBody.innerHTML = `
+                    <tr>
+                        <td colspan="5" class="empty-state">
+                            <p>데이터가 없습니다</p>
+                        </td>
+                    </tr>
+                `;
+            } else {
+                const maxCount = sortedManagers[0][1].count;
+                rankingTableBody.innerHTML = sortedManagers.map(([id, stats], index) => {
+                    const rank = index + 1;
+                    const percentage = ((stats.count / totalCount) * 100).toFixed(1);
+                    const barWidth = (stats.count / maxCount) * 100;
+                    
+                    let rankDisplay = `<span class="rank rank-${rank}">${rank}</span>`;
+                    if (rank === 1) rankDisplay += '<span class="rank-medal">🥇</span>';
+                    else if (rank === 2) rankDisplay += '<span class="rank-medal">🥈</span>';
+                    else if (rank === 3) rankDisplay += '<span class="rank-medal">🥉</span>';
+                    
+                    return `
+                        <tr>
+                            <td>${rankDisplay}</td>
+                            <td class="manager-name">${stats.name}</td>
+                            <td class="count">${stats.count}</td>
+                            <td class="percentage">${percentage}%</td>
+                            <td>
+                                <div class="bar-container">
+                                    <div class="bar-fill" style="width: ${barWidth}%"></div>
+                                </div>
+                            </td>
+                        </tr>
+                    `;
+                }).join('');
+            }
+
+            // 상세 내역 테이블
+            const detailTableBody = document.getElementById('detailTableBody');
+            document.getElementById('detailCount').textContent = `총 ${totalCount}건`;
+            
+            if (filteredData.length === 0) {
+                detailTableBody.innerHTML = `
+                    <tr>
+                        <td colspan="4" class="empty-state">
+                            <p>데이터가 없습니다</p>
+                        </td>
+                    </tr>
+                `;
+            } else {
+                detailTableBody.innerHTML = filteredData.slice(0, 100).map(item => {
+                    const time = new Date(item.created_at).toLocaleString('ko-KR', {
+                        month: '2-digit',
+                        day: '2-digit',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                    });
+                    
+                    return `
+                        <tr>
+                            <td class="time">${time}</td>
+                            <td class="manager-name">${item.manager_name || 'Unknown'}</td>
+                            <td class="chat-id">${item.chat_id.slice(-8)}</td>
+                            <td>${item.source || 'api'}</td>
+                        </tr>
+                    `;
+                }).join('');
+            }
+        }
+
+        // 날짜 설정 함수들
+        function setToday() {
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('dateFilter').value = today;
+            filterByDate();
+        }
+
+        function setYesterday() {
+            const yesterday = new Date();
+            yesterday.setDate(yesterday.getDate() - 1);
+            document.getElementById('dateFilter').value = yesterday.toISOString().split('T')[0];
+            filterByDate();
+        }
+
+        function setThisWeek() {
+            document.getElementById('dateFilter').value = '';
+            const weekStart = new Date();
+            weekStart.setDate(weekStart.getDate() - weekStart.getDay());
+            
+            filteredData = allData.filter(item => 
+                new Date(item.created_at) >= weekStart
+            );
+            
+            updateDisplay();
+        }
+
+        // 전체 분석
         async function analyzeAll() {
             try {
-                setButtonLoading('analyzeBtn', true);
-                showNotification('전체 분석을 시작합니다...', 'info');
+                showNotification('분석 시작...', 'success');
                 
                 const response = await fetch(`${CONFIG.API_BASE}/analyze`, {
                     method: 'POST',
@@ -981,331 +751,136 @@
                     })
                 });
 
-                if (!response.ok) {
-                    const text = await response.text();
-                    throw new Error(`Server error: ${text}`);
-                }
+                if (!response.ok) throw new Error('Analysis failed');
 
                 const result = await response.json();
                 
                 if (result.success) {
-                    showNotification(`분석 완료: ${result.processed}건 처리`, 'success');
-                    addActivity(`전체 분석: ${result.processed}건의 대화 분석 완료`);
+                    showNotification(`분석 완료: ${result.processed}건`, 'success');
                     await refreshData();
-                } else {
-                    throw new Error(result.error || 'Analysis failed');
                 }
                 
             } catch (error) {
-                console.error('Analysis error:', error);
-                showNotification('분석 실패: ' + error.message, 'error');
-            } finally {
-                setButtonLoading('analyzeBtn', false);
+                console.error('Error:', error);
+                showNotification('분석 실패', 'error');
             }
         }
 
-        // ============= 즉시 동기화 (수정됨) =============
-        async function syncNow() {
+        // 이미지로 내보내기
+        async function exportToImage() {
             try {
-                setButtonLoading('syncBtn', true);
-                showNotification('채널톡과 동기화 중...', 'info');
-                
-                const response = await fetch(`${CONFIG.API_BASE}/sync`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        channelKey: CONFIG.CHANNEL_ACCESS_KEY,
-                        channelSecret: CONFIG.CHANNEL_SECRET,
-                        supabaseUrl: CONFIG.SUPABASE_URL,
-                        supabaseKey: CONFIG.SUPABASE_ANON_KEY
-                    })
+                // 상담사별 통계 준비
+                const managerStats = {};
+                filteredData.forEach(item => {
+                    const managerId = item.manager_id;
+                    if (!managerStats[managerId]) {
+                        managerStats[managerId] = {
+                            name: item.manager_name || 'Unknown',
+                            count: 0
+                        };
+                    }
+                    managerStats[managerId].count++;
                 });
 
-                if (!response.ok) {
-                    const text = await response.text();
-                    throw new Error(`Server error: ${text}`);
-                }
+                const sortedManagers = Object.entries(managerStats)
+                    .sort((a, b) => b[1].count - a[1].count);
 
-                const result = await response.json();
+                // 내보낼 테이블 생성
+                const exportDiv = document.getElementById('exportCanvas');
+                const dateText = document.getElementById('dateFilter').value || '전체 기간';
+                document.getElementById('exportDate').textContent = `날짜: ${dateText}`;
                 
-                if (result.success) {
-                    showNotification('동기화 완료', 'success');
-                    addActivity('채널톡 데이터 동기화 완료');
-                    await refreshData();
-                } else {
-                    throw new Error(result.error || 'Sync failed');
-                }
+                const totalCount = filteredData.length;
+                const tableHTML = `
+                    <thead>
+                        <tr>
+                            <th style="width: 80px;">순위</th>
+                            <th style="width: 200px;">상담사</th>
+                            <th style="width: 100px;">답변 수</th>
+                            <th style="width: 100px;">비율</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${sortedManagers.map(([id, stats], index) => {
+                            const rank = index + 1;
+                            const percentage = ((stats.count / totalCount) * 100).toFixed(1);
+                            let rankClass = '';
+                            if (rank === 1) rankClass = 'export-rank-1';
+                            else if (rank === 2) rankClass = 'export-rank-2';
+                            else if (rank === 3) rankClass = 'export-rank-3';
+                            
+                            return `
+                                <tr>
+                                    <td class="${rankClass}" style="font-weight: bold;">${rank}위</td>
+                                    <td>${stats.name}</td>
+                                    <td style="font-weight: bold;">${stats.count}</td>
+                                    <td>${percentage}%</td>
+                                </tr>
+                            `;
+                        }).join('')}
+                    </tbody>
+                    <tfoot>
+                        <tr style="background: #f0f0f0; font-weight: bold;">
+                            <td colspan="2">합계</td>
+                            <td>${totalCount}</td>
+                            <td>100%</td>
+                        </tr>
+                    </tfoot>
+                `;
                 
-            } catch (error) {
-                console.error('Sync error:', error);
-                showNotification('동기화 실패: ' + error.message, 'error');
-            } finally {
-                setButtonLoading('syncBtn', false);
-            }
-        }
-
-        // ============= 데이터 내보내기 =============
-        async function exportData() {
-            try {
-                setButtonLoading('exportBtn', true);
+                document.getElementById('exportTable').innerHTML = tableHTML;
                 
-                const { data, error } = await supabase
-                    .from('manager_responses')
-                    .select('*')
-                    .order('created_at', { ascending: false });
-
-                if (error) throw error;
-
-                const exportData = {
-                    timestamp: new Date().toISOString(),
-                    total: data.length,
-                    data: data,
-                    summary: calculateSummary(data)
-                };
-
-                const blob = new Blob([JSON.stringify(exportData, null, 2)], 
-                    { type: 'application/json' });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = `channeltalk_export_${new Date().toISOString().split('T')[0]}.json`;
-                a.click();
-                URL.revokeObjectURL(url);
-
-                showNotification('데이터 내보내기 완료', 'success');
-                addActivity('데이터 내보내기 성공');
+                // 잠시 보이게 한 후 캡처
+                exportDiv.style.position = 'fixed';
+                exportDiv.style.top = '0';
+                exportDiv.style.left = '0';
+                exportDiv.style.background = 'white';
+                exportDiv.style.color = 'black';
+                exportDiv.style.padding = '30px';
+                exportDiv.style.zIndex = '10000';
+                
+                // html2canvas로 이미지 생성
+                await new Promise(resolve => setTimeout(resolve, 100));
+                const canvas = await html2canvas(exportDiv, {
+                    backgroundColor: '#ffffff',
+                    scale: 2
+                });
+                
+                // 다운로드
+                const link = document.createElement('a');
+                link.download = `채널톡_답변현황_${new Date().toISOString().split('T')[0]}.jpg`;
+                link.href = canvas.toDataURL('image/jpeg', 0.95);
+                link.click();
+                
+                // 숨기기
+                exportDiv.style.position = 'fixed';
+                exportDiv.style.top = '-9999px';
+                exportDiv.style.left = '-9999px';
+                
+                showNotification('이미지 저장 완료', 'success');
                 
             } catch (error) {
                 console.error('Export error:', error);
-                showNotification('내보내기 실패', 'error');
-            } finally {
-                setButtonLoading('exportBtn', false);
+                showNotification('이미지 저장 실패', 'error');
             }
         }
 
-        // ============= 데이터 초기화 =============
-        async function clearAll() {
-            if (!confirm('정말로 모든 데이터를 초기화하시겠습니까?\n이 작업은 되돌릴 수 없습니다.')) {
-                return;
-            }
-            
-            try {
-                setButtonLoading('clearBtn', true);
-                
-                const { error } = await supabase
-                    .from('manager_responses')
-                    .delete()
-                    .neq('id', '00000000-0000-0000-0000-000000000000');
-
-                if (error) throw error;
-
-                showNotification('모든 데이터가 초기화되었습니다', 'success');
-                addActivity('데이터베이스 초기화 완료');
-                await refreshData();
-                
-            } catch (error) {
-                console.error('Clear error:', error);
-                showNotification('초기화 실패', 'error');
-            } finally {
-                setButtonLoading('clearBtn', false);
-            }
-        }
-
-        // ============= UI 업데이트 함수들 =============
-        function updateStats(data) {
-            const today = new Date().toDateString();
-            const stats = {
-                total: data.length,
-                todayCount: 0,
-                webhookCount: 0,
-                managers: {}
-            };
-
-            data.forEach(item => {
-                if (new Date(item.created_at).toDateString() === today) {
-                    stats.todayCount++;
-                }
-                
-                if (item.source === 'webhook') {
-                    stats.webhookCount++;
-                }
-                
-                const managerId = item.manager_id;
-                if (!stats.managers[managerId]) {
-                    stats.managers[managerId] = {
-                        id: managerId,
-                        name: item.manager_name || 'Unknown',
-                        email: item.manager_email || '',
-                        count: 0
-                    };
-                }
-                stats.managers[managerId].count++;
-            });
-
-            document.getElementById('total-responses').textContent = stats.total;
-            document.getElementById('today-count').textContent = stats.todayCount;
-            document.getElementById('active-managers').textContent = Object.keys(stats.managers).length;
-            document.getElementById('webhook-count').textContent = stats.webhookCount;
-            
-            const responseRate = Math.min(100, Math.round((stats.total / Math.max(1, stats.total + 20)) * 100));
-            document.getElementById('response-rate').textContent = responseRate + '%';
-            
-            return stats;
-        }
-
-        function updateManagerList(data) {
-            const managers = {};
-            
-            data.forEach(item => {
-                const id = item.manager_id;
-                if (!managers[id]) {
-                    managers[id] = {
-                        id: id,
-                        name: item.manager_name || 'Unknown',
-                        email: item.manager_email || '',
-                        count: 0
-                    };
-                }
-                managers[id].count++;
-            });
-
-            const sortedManagers = Object.values(managers)
-                .sort((a, b) => b.count - a.count);
-
-            const container = document.getElementById('manager-list-content');
-            
-            if (sortedManagers.length === 0) {
-                container.innerHTML = '<p style="text-align: center; color: #707070;">아직 데이터가 없습니다</p>';
-                return;
-            }
-
-            container.innerHTML = sortedManagers.map(manager => {
-                const initial = manager.name ? manager.name[0].toUpperCase() : '?';
-                return `
-                    <div class="manager-item">
-                        <div class="manager-info">
-                            <div class="manager-avatar">${initial}</div>
-                            <div class="manager-details">
-                                <h3>${manager.name}</h3>
-                                <p>${manager.email}</p>
-                            </div>
-                        </div>
-                        <div class="manager-count">${manager.count}</div>
-                    </div>
-                `;
-            }).join('');
-        }
-
-        function updateHourlyChart(data) {
-            const hourlyData = Array(24).fill(0);
-            
-            data.forEach(item => {
-                const hour = new Date(item.created_at).getHours();
-                hourlyData[hour]++;
-            });
-
-            if (hourlyChart) {
-                hourlyChart.data.datasets[0].data = hourlyData;
-                hourlyChart.update();
-            }
-        }
-
-        function updateLastUpdateTime() {
-            const now = new Date().toLocaleTimeString('ko-KR');
-            document.getElementById('last-update').textContent = `마지막 업데이트: ${now}`;
-        }
-
-        // ============= 유틸리티 함수들 =============
-        function addActivity(message) {
-            const container = document.getElementById('activity-content');
-            const now = new Date().toLocaleTimeString('ko-KR');
-            
-            const item = document.createElement('div');
-            item.className = 'activity-item';
-            item.innerHTML = `
-                <div class="activity-time">${now}</div>
-                <div class="activity-message">${message}</div>
-            `;
-            
-            container.insertBefore(item, container.firstChild);
-            
-            while (container.children.length > 20) {
-                container.removeChild(container.lastChild);
-            }
-            
-            activityLog.push({ time: now, message });
-        }
-
-        function showNotification(message, type = 'info') {
+        // 알림 표시
+        function showNotification(message, type = 'success') {
             const notification = document.createElement('div');
             notification.className = `notification ${type}`;
-            const icon = type === 'success' ? '✅' : type === 'error' ? '❌' : 'ℹ️';
-            notification.innerHTML = `<span>${icon}</span><span>${message}</span>`;
+            notification.innerHTML = `
+                <span>${type === 'success' ? '✓' : '✕'}</span>
+                <span>${message}</span>
+            `;
             
             document.body.appendChild(notification);
             
             setTimeout(() => {
-                notification.style.animation = 'slideIn 0.3s ease reverse';
+                notification.style.animation = 'slideUp 0.3s ease reverse';
                 setTimeout(() => document.body.removeChild(notification), 300);
             }, 3000);
         }
-
-        function setButtonLoading(buttonId, loading) {
-            const button = document.getElementById(buttonId);
-            if (button) {
-                button.disabled = loading;
-                if (loading) {
-                    button.style.opacity = '0.5';
-                } else {
-                    button.style.opacity = '1';
-                }
-            }
-        }
-
-        function calculateSummary(data) {
-            const summary = {
-                totalResponses: data.length,
-                byManager: {},
-                byDay: {},
-                byHour: Array(24).fill(0),
-                bySource: { api: 0, webhook: 0, sync: 0 }
-            };
-
-            data.forEach(item => {
-                const managerId = item.manager_id;
-                if (!summary.byManager[managerId]) {
-                    summary.byManager[managerId] = {
-                        name: item.manager_name,
-                        count: 0
-                    };
-                }
-                summary.byManager[managerId].count++;
-
-                const day = new Date(item.created_at).toDateString();
-                summary.byDay[day] = (summary.byDay[day] || 0) + 1;
-
-                const hour = new Date(item.created_at).getHours();
-                summary.byHour[hour]++;
-
-                const source = item.source || 'api';
-                summary.bySource[source]++;
-            });
-
-            return summary;
-        }
-
-        // ============= Webhook 정보 표시 =============
-        window.addEventListener('load', () => {
-            console.log('%c=================================', 'color: #1B6EC2; font-weight: bold');
-            console.log('%c📡 Webhook URL for ChannelTalk:', 'color: #4B9EF2; font-size: 14px');
-            console.log(`%c${window.location.origin}/api/webhook`, 'color: #ffffff; background: #1B6EC2; padding: 4px 8px; border-radius: 4px');
-            console.log('%c=================================', 'color: #1B6EC2; font-weight: bold');
-            console.log('%cRegister this URL in ChannelTalk Admin', 'color: #a0a0a0');
-            console.log('%cSettings → Developer → Webhooks', 'color: #a0a0a0');
-            console.log('%c=================================', 'color: #1B6EC2; font-weight: bold');
-        });
     </script>
 </body>
 </html>
