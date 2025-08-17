@@ -1,13 +1,9 @@
+// vercel.json
 {
   "crons": [
     {
-      "path": "/api/cron/track",
-      "schedule": "*/2 * * * *"
+      "path": "/api/sync-messages",
+      "schedule": "*/5 * * * *"
     }
-  ],
-  "functions": {
-    "src/app/api/cron/track/route.ts": {
-      "maxDuration": 30
-    }
-  }
+  ]
 }
