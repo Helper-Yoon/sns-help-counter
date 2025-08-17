@@ -173,4 +173,160 @@ export default function Dashboard() {
             <p className="text-gray-500 text-sm">평균 도움 횟수</p>
           </div>
           
-          <div className="card p-6 card-hover bg
+          <div className="card p-6 card-hover bg-gradient-to-br from-gray-900 to-gray-950">
+            <div className="flex items-center justify-between mb-2">
+              <Award className="w-8 h-8 text-yellow-400" />
+              <span className="text-lg font-bold text-yellow-400">
+                {topHelper?.counselor_name || '-'}
+              </span>
+            </div>
+            <p className="text-gray-500 text-sm">오늘의 최고 도우미</p>
+          </div>
+        </div>
+
+        {/* 차트 영역 */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+          <div className="card p-6 bg-gradient-to-br from-gray-950 to-black">
+            <h2 className="text-xl font-bold text-white mb-4">
+              상담사별 도움 현황
+            </h2>
+            {realtimeData.length > 0 ? (
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={realtimeData.slice(0, 10)}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#1f2937" />
+                  <XAxis 
+                    dataKey="counselor_name" 
+                    angle={-45}
+                    textAnchor="end"
+                    height={80}
+                    tick={{ fill: '#6b7280', fontSize: 12 }}
+                  />
+                  <YAxis tick={{ fill: '#6b7280' }} />
+                  <Tooltip 
+                    contentStyle={{ 
+                      backgroundColor: '#030712', 
+                      border: '1px solid #1f2937',
+                      borderRadius: '8px'
+                    }}
+                    labelStyle={{ color: '#e5e7eb' }}
+                  />
+                  <Bar dataKey="total_helps_today" name="도움 횟수">
+                    {realtimeData.slice(0, 10).map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="flex items-center justify-center h-64 text-gray-600">
+                {loading ? '로딩 중...' : '데이터가 없습니다'}
+              </div>
+            )}
+          </div>
+
+          <div className="card p-6 bg-gradient-to-br from-gray-950 to-black">
+            <h2 className="text-xl font-bold text-white mb-4">
+              시간별 활동 추이
+            </h2>
+            <ResponsiveContainer width="100%" height={300}>
+              <LineChart data={hourlyData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#1f2937" />
+                <XAxis 
+                  dataKey="hour" 
+                  tick={{ fill: '#6b7280', fontSize: 12 }}
+                />
+                <YAxis tick={{ fill: '#6b7280' }} />
+                <Tooltip 
+                  contentStyle={{ 
+                    backgroundColor: '#030712', 
+                    border: '1px solid #1f2937',
+                    borderRadius: '8px'
+                  }}
+                  labelStyle={{ color: '#e5e7eb' }}
+                />
+                <Line 
+                  type="monotone" 
+                  dataKey="count" 
+                  stroke="#3b82f6" 
+                  strokeWidth={3}
+                  name="도움 횟수"
+                  dot={{ fill: '#3b82f6', r: 4 }}
+                  activeDot={{ r: 6 }}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        {/* 테이블 */}
+        <div className="card overflow-hidden bg-gradient-to-br from-gray-950 to-black">
+          <div className="p-6 border-b border-gray-800">
+            <h2 className="text-xl font-bold text-white">
+              실시간 상담사 랭킹
+            </h2>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-black">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    순위
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    상담사
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    도움 횟수
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    마지막 활동
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-900">
+                {realtimeData.length > 0 ? (
+                  realtimeData.map((item, index) => (
+                    <tr key={item.counselor_id} className="hover:bg-gray-950 transition-colors">
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className={`text-lg font-bold ${index < 3 ? 'text-yellow-400' : 'text-gray-600'}`}>
+                          {index === 0 && '🥇'}
+                          {index === 1 && '🥈'}
+                          {index === 2 && '🥉'}
+                          {index > 2 && `${index + 1}`}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm font-medium text-gray-100">
+                          {item.counselor_name}
+                        </div>
+                        <div className="text-xs text-gray-600">
+                          ID: {item.counselor_id}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className="px-3 py-1 inline-flex text-sm font-semibold rounded-full bg-blue-950 text-blue-300">
+                          {item.total_helps_today}회
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {item.last_activity 
+                          ? format(new Date(item.last_activity), 'HH:mm:ss', { locale: ko })
+                          : '-'}
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan={4} className="text-center py-12 text-gray-600">
+                      {loading ? '데이터를 불러오는 중...' : '아직 데이터가 없습니다. 잠시 후 다시 확인해주세요.'}
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
