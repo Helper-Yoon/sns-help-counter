@@ -1,0 +1,1148 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>채널톡 미답변 상담 대시보드</title>
+    
+    <!-- Supabase Client -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Axios for API calls -->
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    
+    <style>
+        :root {
+            --primary: #667eea;
+            --primary-dark: #764ba2;
+            --secondary: #f093fb;
+            --secondary-dark: #f5576c;
+            --success: #00d2ff;
+            --success-dark: #3a7bd5;
+            --warning: #ffecd2;
+            --warning-dark: #fcb69f;
+            --dark: #1a202c;
+            --light: #ffffff;
+            --gray-100: #f7fafc;
+            --gray-200: #edf2f7;
+            --gray-300: #e2e8f0;
+            --gray-400: #cbd5e0;
+            --gray-500: #a0aec0;
+            --gray-600: #718096;
+            --gray-700: #4a5568;
+            --gray-800: #2d3748;
+            --gray-900: #1a202c;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        /* Header Styles */
+        .header {
+            background: rgba(255, 255, 255, 0.98);
+            border-radius: 24px;
+            padding: 40px;
+            margin-bottom: 30px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        }
+
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            color: var(--gray-800);
+            font-size: 2.5rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .logo {
+            font-size: 2.5rem;
+            animation: float 3s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+
+        .status-bar {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+
+        .status-item {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white;
+            padding: 12px 24px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+        }
+
+        .status-item.connected {
+            background: linear-gradient(135deg, var(--success) 0%, var(--success-dark) 100%);
+        }
+
+        .status-item.syncing {
+            background: linear-gradient(135deg, var(--secondary) 0%, var(--secondary-dark) 100%);
+        }
+
+        .pulse {
+            width: 8px;
+            height: 8px;
+            background: white;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(255, 255, 255, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(255, 255, 255, 0); }
+        }
+
+        /* Control Panel */
+        .controls {
+            background: rgba(255, 255, 255, 0.98);
+            border-radius: 20px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        }
+
+        .control-buttons {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        button {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white;
+            border: none;
+            padding: 14px 28px;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        button.secondary {
+            background: linear-gradient(135deg, var(--secondary) 0%, var(--secondary-dark) 100%);
+        }
+
+        button.success {
+            background: linear-gradient(135deg, var(--success) 0%, var(--success-dark) 100%);
+        }
+
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        /* Stats Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 25px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: rgba(255, 255, 255, 0.98);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary) 0%, var(--primary-dark) 100%);
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.15);
+        }
+
+        .stat-label {
+            color: var(--gray-600);
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 15px;
+            font-weight: 600;
+        }
+
+        .stat-value {
+            font-size: 3rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .stat-change {
+            margin-top: 10px;
+            font-size: 0.95rem;
+            color: var(--success-dark);
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .stat-change.negative {
+            color: #f56565;
+        }
+
+        /* Chart Container */
+        .chart-container {
+            background: rgba(255, 255, 255, 0.98);
+            border-radius: 20px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        }
+
+        .chart-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+        }
+
+        .chart-title {
+            font-size: 1.5rem;
+            color: var(--gray-800);
+            font-weight: 600;
+        }
+
+        /* Main Content Grid */
+        .main-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 30px;
+        }
+
+        @media (max-width: 1024px) {
+            .main-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Manager List */
+        .manager-list {
+            background: rgba(255, 255, 255, 0.98);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        }
+
+        .manager-list h2 {
+            color: var(--gray-800);
+            margin-bottom: 25px;
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        .manager-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px;
+            border-radius: 12px;
+            background: var(--gray-100);
+            margin-bottom: 15px;
+            transition: all 0.3s ease;
+            border-left: 4px solid transparent;
+        }
+
+        .manager-item:hover {
+            transform: translateX(5px);
+            background: var(--gray-200);
+            border-left-color: var(--primary);
+        }
+
+        .manager-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .manager-avatar {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+            font-size: 1.2rem;
+        }
+
+        .manager-details h3 {
+            color: var(--gray-800);
+            font-size: 1.1rem;
+            margin-bottom: 4px;
+        }
+
+        .manager-details p {
+            color: var(--gray-600);
+            font-size: 0.9rem;
+        }
+
+        .manager-count {
+            font-size: 2rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        /* Activity Feed */
+        .activity-feed {
+            background: rgba(255, 255, 255, 0.98);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            max-height: 600px;
+            overflow-y: auto;
+        }
+
+        .activity-feed h2 {
+            color: var(--gray-800);
+            margin-bottom: 25px;
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        .activity-item {
+            padding: 15px;
+            border-left: 3px solid var(--primary);
+            background: var(--gray-100);
+            border-radius: 8px;
+            margin-bottom: 12px;
+            transition: all 0.3s ease;
+        }
+
+        .activity-item:hover {
+            background: var(--gray-200);
+            transform: translateX(3px);
+        }
+
+        .activity-time {
+            color: var(--gray-500);
+            font-size: 0.85rem;
+            margin-bottom: 5px;
+        }
+
+        .activity-message {
+            color: var(--gray-800);
+            font-size: 0.95rem;
+            line-height: 1.5;
+        }
+
+        /* Loading State */
+        .loading {
+            text-align: center;
+            padding: 50px;
+            color: var(--gray-600);
+        }
+
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 3px solid var(--gray-300);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Notifications */
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: white;
+            padding: 16px 24px;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            animation: slideIn 0.3s ease;
+            z-index: 1000;
+            max-width: 400px;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        .notification.success {
+            border-left: 4px solid #48bb78;
+        }
+
+        .notification.error {
+            border-left: 4px solid #f56565;
+        }
+
+        .notification.info {
+            border-left: 4px solid #4299e1;
+        }
+
+        /* Scrollbar Styles */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--gray-200);
+            border-radius: 10px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--primary);
+            border-radius: 10px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--primary-dark);
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 1.8rem;
+            }
+            
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .control-buttons {
+                flex-direction: column;
+            }
+            
+            button {
+                width: 100%;
+                justify-content: center;
+            }
+            
+            .stat-value {
+                font-size: 2.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <div class="header-content">
+                <h1><span class="logo">💬</span> 채널톡 미답변 상담 대시보드</h1>
+            </div>
+            <div class="status-bar">
+                <div class="status-item connected">
+                    <div class="pulse"></div>
+                    <span id="connection-status">Supabase 연결됨</span>
+                </div>
+                <div class="status-item syncing" id="sync-status">
+                    <div class="pulse"></div>
+                    <span>실시간 동기화 활성</span>
+                </div>
+                <div class="status-item">
+                    <span id="last-update">마지막 업데이트: -</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Control Panel -->
+        <div class="controls">
+            <div class="control-buttons">
+                <button onclick="refreshData()" id="refreshBtn">
+                    <span>🔄</span> 새로고침
+                </button>
+                <button onclick="analyzeAll()" class="secondary" id="analyzeBtn">
+                    <span>📊</span> 전체 분석
+                </button>
+                <button onclick="syncNow()" class="success" id="syncBtn">
+                    <span>🔗</span> 즉시 동기화
+                </button>
+                <button onclick="exportData()" id="exportBtn">
+                    <span>📥</span> 데이터 내보내기
+                </button>
+                <button onclick="clearAll()" id="clearBtn">
+                    <span>🗑️</span> 초기화
+                </button>
+            </div>
+        </div>
+
+        <!-- Stats Grid -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-label">총 미답변 상담 답변</div>
+                <div class="stat-value" id="total-responses">0</div>
+                <div class="stat-change">
+                    <span>↑</span> 오늘 +<span id="today-count">0</span>건
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">활동 상담사 수</div>
+                <div class="stat-value" id="active-managers">0</div>
+                <div class="stat-change">
+                    <span>↑</span> 전일 대비 +<span id="manager-change">0</span>명
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">평균 응답률</div>
+                <div class="stat-value" id="response-rate">0%</div>
+                <div class="stat-change">
+                    <span>↑</span> +<span id="rate-change">5</span>% 개선
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">실시간 처리</div>
+                <div class="stat-value" id="webhook-count">0</div>
+                <div class="stat-change">
+                    <span>⚡</span> Webhook 처리
+                </div>
+            </div>
+        </div>
+
+        <!-- Chart -->
+        <div class="chart-container">
+            <div class="chart-header">
+                <h2 class="chart-title">📈 시간대별 답변 현황</h2>
+            </div>
+            <canvas id="hourlyChart" height="80"></canvas>
+        </div>
+
+        <!-- Main Grid -->
+        <div class="main-grid">
+            <!-- Manager List -->
+            <div class="manager-list">
+                <h2>👥 상담사별 답변 현황</h2>
+                <div id="manager-list-content">
+                    <div class="loading">
+                        <div class="spinner"></div>
+                        <p>데이터를 불러오는 중...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Activity Feed -->
+            <div class="activity-feed">
+                <h2>⚡ 실시간 활동</h2>
+                <div id="activity-content">
+                    <div class="activity-item">
+                        <div class="activity-time">방금 전</div>
+                        <div class="activity-message">시스템이 시작되었습니다</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Vercel API와 통합된 스크립트 -->
+    <script>
+        // ============= 설정 (환경변수로 관리 권장) =============
+        const CONFIG = {
+            // Vercel API 엔드포인트 (현재 도메인 사용)
+            API_BASE: window.location.origin + '/api',
+            
+            // Supabase 설정 (프로덕션에서는 환경변수 사용)
+            SUPABASE_URL: 'https://bhtqjipygkawoyieidgp.supabase.co',
+            SUPABASE_ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJodHFqaXB5Z2thd295aWVpZGdwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ0ODg5NjgsImV4cCI6MjA3MDA2NDk2OH0.hu2EAj9RCq436QBtfbEVF4aGOau4WWomLMDKahN4iAA',
+            
+            // ChannelTalk API 설정 (프로덕션에서는 환경변수 사용)
+            CHANNEL_ACCESS_KEY: '688a26176fcb19aebf8b',
+            CHANNEL_SECRET: 'a0db6c38b95c8ec4d9bb46e7c653b3e2'
+        };
+
+        // ============= 전역 변수 =============
+        let supabase = null;
+        let realtimeChannel = null;
+        let hourlyChart = null;
+        let activityLog = [];
+        let managerData = {};
+
+        // ============= 초기화 =============
+        document.addEventListener('DOMContentLoaded', async () => {
+            await initializeApp();
+        });
+
+        async function initializeApp() {
+            try {
+                // Supabase 클라이언트 초기화
+                const { createClient } = window.supabase;
+                supabase = createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY);
+                
+                // 테이블 초기화
+                await setupDatabase();
+                
+                // 실시간 구독 설정
+                setupRealtimeSubscription();
+                
+                // 차트 초기화
+                initializeChart();
+                
+                // 초기 데이터 로드
+                await refreshData();
+                
+                // 주기적 새로고침 (5분마다)
+                setInterval(refreshData, 5 * 60 * 1000);
+                
+                showNotification('대시보드가 준비되었습니다', 'success');
+                addActivity('시스템 초기화 완료');
+                
+            } catch (error) {
+                console.error('Initialization error:', error);
+                showNotification('초기화 실패: ' + error.message, 'error');
+            }
+        }
+
+        // ============= Supabase 테이블 설정 =============
+        async function setupDatabase() {
+            try {
+                // API를 통해 테이블 생성 (첫 실행시)
+                const response = await fetch(`${CONFIG.API_BASE}/setup`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        supabaseUrl: CONFIG.SUPABASE_URL,
+                        supabaseKey: CONFIG.SUPABASE_ANON_KEY
+                    })
+                });
+                
+                if (!response.ok) {
+                    console.log('Tables might already exist');
+                }
+            } catch (error) {
+                console.log('Database setup:', error);
+            }
+        }
+
+        // ============= 실시간 구독 =============
+        function setupRealtimeSubscription() {
+            if (realtimeChannel) {
+                supabase.removeChannel(realtimeChannel);
+            }
+
+            realtimeChannel = supabase
+                .channel('manager-updates')
+                .on('postgres_changes', 
+                    { event: '*', schema: 'public', table: 'manager_responses' },
+                    (payload) => handleRealtimeUpdate(payload)
+                )
+                .subscribe((status) => {
+                    if (status === 'SUBSCRIBED') {
+                        document.getElementById('sync-status').style.display = 'flex';
+                        console.log('Realtime subscription active');
+                    }
+                });
+        }
+
+        function handleRealtimeUpdate(payload) {
+            console.log('Realtime update:', payload);
+            
+            if (payload.eventType === 'INSERT') {
+                addActivity(`새 답변: ${payload.new.manager_name || 'Unknown'}`);
+                refreshData();
+            }
+        }
+
+        // ============= 차트 초기화 =============
+        function initializeChart() {
+            const ctx = document.getElementById('hourlyChart').getContext('2d');
+            hourlyChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: Array.from({length: 24}, (_, i) => `${i}시`),
+                    datasets: [{
+                        label: '답변 수',
+                        data: Array(24).fill(0),
+                        borderColor: '#667eea',
+                        backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                        tension: 0.4,
+                        fill: true,
+                        pointRadius: 4,
+                        pointHoverRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: {
+                        intersect: false,
+                        mode: 'index'
+                    },
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                            padding: 12,
+                            cornerRadius: 8,
+                            titleColor: '#fff',
+                            bodyColor: '#fff'
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            grid: { color: 'rgba(0, 0, 0, 0.05)' }
+                        },
+                        x: {
+                            grid: { display: false }
+                        }
+                    }
+                }
+            });
+        }
+
+        // ============= 데이터 새로고침 =============
+        async function refreshData() {
+            try {
+                setButtonLoading('refreshBtn', true);
+                
+                // Supabase에서 데이터 가져오기
+                const { data, error } = await supabase
+                    .from('manager_responses')
+                    .select('*')
+                    .order('created_at', { ascending: false });
+
+                if (error) throw error;
+
+                // 통계 계산 및 업데이트
+                updateStats(data || []);
+                updateManagerList(data || []);
+                updateHourlyChart(data || []);
+                
+                // 마지막 업데이트 시간
+                updateLastUpdateTime();
+                
+            } catch (error) {
+                console.error('Refresh error:', error);
+                showNotification('데이터 새로고침 실패', 'error');
+            } finally {
+                setButtonLoading('refreshBtn', false);
+            }
+        }
+
+        // ============= 전체 분석 =============
+        async function analyzeAll() {
+            try {
+                setButtonLoading('analyzeBtn', true);
+                showNotification('전체 분석을 시작합니다...', 'info');
+                
+                const response = await fetch(`${CONFIG.API_BASE}/analyze`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        channelKey: CONFIG.CHANNEL_ACCESS_KEY,
+                        channelSecret: CONFIG.CHANNEL_SECRET,
+                        supabaseUrl: CONFIG.SUPABASE_URL,
+                        supabaseKey: CONFIG.SUPABASE_ANON_KEY,
+                        lookbackHours: 24
+                    })
+                });
+
+                const result = await response.json();
+                
+                if (result.success) {
+                    showNotification(`분석 완료: ${result.processed}건 처리`, 'success');
+                    addActivity(`전체 분석: ${result.processed}건의 대화 분석 완료`);
+                    await refreshData();
+                } else {
+                    throw new Error(result.error || 'Analysis failed');
+                }
+                
+            } catch (error) {
+                console.error('Analysis error:', error);
+                showNotification('분석 실패: ' + error.message, 'error');
+            } finally {
+                setButtonLoading('analyzeBtn', false);
+            }
+        }
+
+        // ============= 즉시 동기화 =============
+        async function syncNow() {
+            try {
+                setButtonLoading('syncBtn', true);
+                showNotification('채널톡과 동기화 중...', 'info');
+                
+                const response = await fetch(`${CONFIG.API_BASE}/sync`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        channelKey: CONFIG.CHANNEL_ACCESS_KEY,
+                        channelSecret: CONFIG.CHANNEL_SECRET,
+                        supabaseUrl: CONFIG.SUPABASE_URL,
+                        supabaseKey: CONFIG.SUPABASE_ANON_KEY
+                    })
+                });
+
+                const result = await response.json();
+                
+                if (result.success) {
+                    showNotification('동기화 완료', 'success');
+                    addActivity('채널톡 데이터 동기화 완료');
+                    await refreshData();
+                } else {
+                    throw new Error(result.error || 'Sync failed');
+                }
+                
+            } catch (error) {
+                console.error('Sync error:', error);
+                showNotification('동기화 실패: ' + error.message, 'error');
+            } finally {
+                setButtonLoading('syncBtn', false);
+            }
+        }
+
+        // ============= 데이터 내보내기 =============
+        async function exportData() {
+            try {
+                setButtonLoading('exportBtn', true);
+                
+                const { data, error } = await supabase
+                    .from('manager_responses')
+                    .select('*')
+                    .order('created_at', { ascending: false });
+
+                if (error) throw error;
+
+                const exportData = {
+                    timestamp: new Date().toISOString(),
+                    total: data.length,
+                    data: data,
+                    summary: calculateSummary(data)
+                };
+
+                const blob = new Blob([JSON.stringify(exportData, null, 2)], 
+                    { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `channeltalk_export_${new Date().toISOString().split('T')[0]}.json`;
+                a.click();
+                URL.revokeObjectURL(url);
+
+                showNotification('데이터 내보내기 완료', 'success');
+                addActivity('데이터 내보내기 성공');
+                
+            } catch (error) {
+                console.error('Export error:', error);
+                showNotification('내보내기 실패', 'error');
+            } finally {
+                setButtonLoading('exportBtn', false);
+            }
+        }
+
+        // ============= 데이터 초기화 =============
+        async function clearAll() {
+            if (!confirm('정말로 모든 데이터를 초기화하시겠습니까?\n이 작업은 되돌릴 수 없습니다.')) {
+                return;
+            }
+            
+            try {
+                setButtonLoading('clearBtn', true);
+                
+                const { error } = await supabase
+                    .from('manager_responses')
+                    .delete()
+                    .neq('id', '00000000-0000-0000-0000-000000000000');
+
+                if (error) throw error;
+
+                showNotification('모든 데이터가 초기화되었습니다', 'success');
+                addActivity('데이터베이스 초기화 완료');
+                await refreshData();
+                
+            } catch (error) {
+                console.error('Clear error:', error);
+                showNotification('초기화 실패', 'error');
+            } finally {
+                setButtonLoading('clearBtn', false);
+            }
+        }
+
+        // ============= UI 업데이트 함수들 =============
+        function updateStats(data) {
+            const today = new Date().toDateString();
+            const stats = {
+                total: data.length,
+                todayCount: 0,
+                webhookCount: 0,
+                managers: {}
+            };
+
+            data.forEach(item => {
+                // 오늘 카운트
+                if (new Date(item.created_at).toDateString() === today) {
+                    stats.todayCount++;
+                }
+                
+                // 웹훅 카운트
+                if (item.source === 'webhook') {
+                    stats.webhookCount++;
+                }
+                
+                // 매니저별 집계
+                const managerId = item.manager_id;
+                if (!stats.managers[managerId]) {
+                    stats.managers[managerId] = {
+                        id: managerId,
+                        name: item.manager_name || 'Unknown',
+                        email: item.manager_email || '',
+                        count: 0
+                    };
+                }
+                stats.managers[managerId].count++;
+            });
+
+            // UI 업데이트
+            document.getElementById('total-responses').textContent = stats.total;
+            document.getElementById('today-count').textContent = stats.todayCount;
+            document.getElementById('active-managers').textContent = Object.keys(stats.managers).length;
+            document.getElementById('webhook-count').textContent = stats.webhookCount;
+            
+            // 응답률 계산 (예시)
+            const responseRate = Math.min(100, Math.round((stats.total / Math.max(1, stats.total + 20)) * 100));
+            document.getElementById('response-rate').textContent = responseRate + '%';
+            
+            return stats;
+        }
+
+        function updateManagerList(data) {
+            const managers = {};
+            
+            data.forEach(item => {
+                const id = item.manager_id;
+                if (!managers[id]) {
+                    managers[id] = {
+                        id: id,
+                        name: item.manager_name || 'Unknown',
+                        email: item.manager_email || '',
+                        count: 0
+                    };
+                }
+                managers[id].count++;
+            });
+
+            const sortedManagers = Object.values(managers)
+                .sort((a, b) => b.count - a.count);
+
+            const container = document.getElementById('manager-list-content');
+            
+            if (sortedManagers.length === 0) {
+                container.innerHTML = '<p style="text-align: center; color: #718096;">아직 데이터가 없습니다</p>';
+                return;
+            }
+
+            container.innerHTML = sortedManagers.map(manager => {
+                const initial = manager.name ? manager.name[0].toUpperCase() : '?';
+                return `
+                    <div class="manager-item">
+                        <div class="manager-info">
+                            <div class="manager-avatar">${initial}</div>
+                            <div class="manager-details">
+                                <h3>${manager.name}</h3>
+                                <p>${manager.email}</p>
+                            </div>
+                        </div>
+                        <div class="manager-count">${manager.count}</div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function updateHourlyChart(data) {
+            const hourlyData = Array(24).fill(0);
+            
+            data.forEach(item => {
+                const hour = new Date(item.created_at).getHours();
+                hourlyData[hour]++;
+            });
+
+            if (hourlyChart) {
+                hourlyChart.data.datasets[0].data = hourlyData;
+                hourlyChart.update();
+            }
+        }
+
+        function updateLastUpdateTime() {
+            const now = new Date().toLocaleTimeString('ko-KR');
+            document.getElementById('last-update').textContent = `마지막 업데이트: ${now}`;
+        }
+
+        // ============= 유틸리티 함수들 =============
+        function addActivity(message) {
+            const container = document.getElementById('activity-content');
+            const now = new Date().toLocaleTimeString('ko-KR');
+            
+            const item = document.createElement('div');
+            item.className = 'activity-item';
+            item.innerHTML = `
+                <div class="activity-time">${now}</div>
+                <div class="activity-message">${message}</div>
+            `;
+            
+            container.insertBefore(item, container.firstChild);
+            
+            // 최대 20개 유지
+            while (container.children.length > 20) {
+                container.removeChild(container.lastChild);
+            }
+            
+            activityLog.push({ time: now, message });
+        }
+
+        function showNotification(message, type = 'info') {
+            const notification = document.createElement('div');
+            notification.className = `notification ${type}`;
+            const icon = type === 'success' ? '✅' : type === 'error' ? '❌' : 'ℹ️';
+            notification.innerHTML = `<span>${icon}</span><span>${message}</span>`;
+            
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.style.animation = 'slideIn 0.3s ease reverse';
+                setTimeout(() => document.body.removeChild(notification), 300);
+            }, 3000);
+        }
+
+        function setButtonLoading(buttonId, loading) {
+            const button = document.getElementById(buttonId);
+            if (button) {
+                button.disabled = loading;
+                if (loading) {
+                    button.style.opacity = '0.6';
+                } else {
+                    button.style.opacity = '1';
+                }
+            }
+        }
+
+        function calculateSummary(data) {
+            const summary = {
+                totalResponses: data.length,
+                byManager: {},
+                byDay: {},
+                byHour: Array(24).fill(0),
+                bySource: { api: 0, webhook: 0, sync: 0 }
+            };
+
+            data.forEach(item => {
+                // By manager
+                const managerId = item.manager_id;
+                if (!summary.byManager[managerId]) {
+                    summary.byManager[managerId] = {
+                        name: item.manager_name,
+                        count: 0
+                    };
+                }
+                summary.byManager[managerId].count++;
+
+                // By day
+                const day = new Date(item.created_at).toDateString();
+                summary.byDay[day] = (summary.byDay[day] || 0) + 1;
+
+                // By hour
+                const hour = new Date(item.created_at).getHours();
+                summary.byHour[hour]++;
+
+                // By source
+                const source = item.source || 'api';
+                summary.bySource[source]++;
+            });
+
+            return summary;
+        }
+
+        // ============= Webhook 정보 표시 =============
+        window.addEventListener('load', () => {
+            console.log('=================================');
+            console.log('📡 Webhook URL for ChannelTalk:');
+            console.log(`${window.location.origin}/api/webhook`);
+            console.log('=================================');
+            console.log('Register this URL in ChannelTalk Admin');
+            console.log('Settings → Developer → Webhooks');
+            console.log('=================================');
+        });
+    </script>
+</body>
+</html>
