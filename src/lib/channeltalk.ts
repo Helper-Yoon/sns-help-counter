@@ -9,7 +9,7 @@ const channelApi = axios.create({
     'x-access-secret': process.env.CHANNELTALK_SECRET!,
     'Content-Type': 'application/json'
   },
-  timeout: 25000 // 25초 타임아웃
+  timeout: 20000
 })
 
 export interface UserChat {
@@ -41,91 +41,82 @@ export interface Message {
   createdAt: number
 }
 
-// 페이지네이션으로 모든 채팅 가져오기
-export async function fetchAllOpenChats(): Promise<UserChat[]> {
+// 모든 열린 채팅 가져오기 (페이지네이션)
+export async function fetchOpenChats(maxPages: number = 5): Promise<UserChat[]> {
   const allChats: UserChat[] = []
   let next: string | null = null
   let page = 0
-  const maxPages = 10 // 최대 1000개 (100 * 10)
   
-  console.log('[ChannelTalk] 열린 채팅 가져오기 시작...')
+  console.log('[ChannelTalk] 열린 채팅 수집 시작...')
   
   try {
     do {
       const params: any = {
         state: 'opened',
-        limit: 100
+        limit: 100,
+        sortOrder: 'desc'
       }
       
+      // next 파라미터가 있으면 추가
       if (next) {
         params.next = next
       }
       
+      console.log(`[ChannelTalk] 페이지 ${page + 1} 요청 중...`)
+      
       const response = await channelApi.get('/v5/user-chats', { params })
       const chats = response.data.userChats || []
+      
+      if (chats.length === 0) {
+        console.log('[ChannelTalk] 더 이상 채팅이 없습니다.')
+        break
+      }
       
       allChats.push(...chats)
       next = response.data.next || null
       page++
       
-      console.log(`[ChannelTalk] 페이지 ${page}: ${chats.length}개 채팅 수집 (총 ${allChats.length}개)`)
+      console.log(`[ChannelTalk] 페이지 ${page}: ${chats.length}개 수집 (총 ${allChats.length}개)`)
       
       // Rate limiting 방지
       if (next && page < maxPages) {
-        await sleep(50) // 50ms 대기
+        await sleep(100)
       }
       
     } while (next && page < maxPages)
     
-    console.log(`[ChannelTalk] 총 ${allChats.length}개 채팅 수집 완료`)
+    console.log(`[ChannelTalk] ✅ 총 ${allChats.length}개 채팅 수집 완료`)
     return allChats
     
   } catch (error: any) {
-    console.error('[ChannelTalk] 채팅 가져오기 오류:', error.message)
-    console.error('[ChannelTalk] 현재까지 수집된 채팅:', allChats.length)
-    return allChats // 에러 발생해도 지금까지 수집한 것 반환
+    console.error('[ChannelTalk] ❌ 채팅 가져오기 오류:', error.message)
+    if (error.response) {
+      console.error('[ChannelTalk] 응답 데이터:', error.response.data)
+    }
+    return allChats
   }
 }
 
-// 최근 활동이 있는 채팅만 가져오기 (최적화)
-export async function fetchRecentOpenChats(minutesAgo: number = 60): Promise<UserChat[]> {
-  try {
-    const since = Date.now() - (minutesAgo * 60 * 1000)
-    
-    const response = await channelApi.get('/v5/user-chats', {
-      params: {
-        state: 'opened',
-        limit: 100,
-        since: since
-      }
-    })
-    
-    const chats = response.data.userChats || []
-    console.log(`[ChannelTalk] 최근 ${minutesAgo}분 내 활동: ${chats.length}개 채팅`)
-    
-    return chats
-  } catch (error) {
-    console.error('[ChannelTalk] 최근 채팅 가져오기 오류:', error)
-    return []
-  }
-}
-
-export async function fetchChatMessages(chatId: string, limit = 30): Promise<Message[]> {
+export async function fetchChatMessages(chatId: string, limit = 20): Promise<Message[]> {
   try {
     const response = await channelApi.get(`/v4/user-chats/${chatId}/messages`, {
       params: {
         limit,
         sortOrder: 'desc'
-      }
+      },
+      timeout: 5000
     })
     return response.data.messages || []
   } catch (error: any) {
-    if (error.response?.status === 429) {
-      console.log(`[ChannelTalk] Rate limit for chat ${chatId}, waiting...`)
-      await sleep(1000)
+    if (error.code === 'ECONNABORTED') {
+      console.log(`[ChannelTalk] 타임아웃: ${chatId}`)
       return []
     }
-    console.error(`[ChannelTalk] 메시지 가져오기 오류 ${chatId}:`, error.message)
+    if (error.response?.status === 429) {
+      console.log(`[ChannelTalk] Rate limit: ${chatId}`)
+      await sleep(2000)
+      return []
+    }
     return []
   }
 }
