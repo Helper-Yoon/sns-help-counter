@@ -1,5 +1,3 @@
-import { createClient } from '@supabase/supabase-js';
-
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
@@ -8,11 +6,8 @@ export default async function handler(req, res) {
   try {
     const { supabaseUrl, supabaseKey } = req.body;
     
-    // Service Role Key가 필요한 경우 (테이블 생성)
-    const supabase = createClient(
-      supabaseUrl, 
-      process.env.SUPABASE_SERVICE_KEY || supabaseKey
-    );
+    const { createClient } = await import('@supabase/supabase-js');
+    const supabase = createClient(supabaseUrl, supabaseKey);
 
     // 테이블이 이미 있는지 확인
     const { data: testData, error: testError } = await supabase
@@ -27,8 +22,7 @@ export default async function handler(req, res) {
       });
     }
 
-    // 테이블이 없으면 생성 (Supabase 대시보드에서 수동으로 하는 것을 권장)
-    // SQL Editor에서 실행할 쿼리:
+    // 테이블 생성 SQL
     const setupSQL = `
       -- manager_responses 테이블
       CREATE TABLE IF NOT EXISTS manager_responses (
@@ -50,19 +44,6 @@ export default async function handler(req, res) {
       CREATE INDEX IF NOT EXISTS idx_chat_id ON manager_responses(chat_id);
       CREATE INDEX IF NOT EXISTS idx_created_at ON manager_responses(created_at);
       
-      -- Unique constraint
-      ALTER TABLE manager_responses 
-      ADD CONSTRAINT unique_chat_manager 
-      UNIQUE (chat_id, manager_id);
-      
-      -- activity_logs 테이블 (선택사항)
-      CREATE TABLE IF NOT EXISTS activity_logs (
-        id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-        action TEXT NOT NULL,
-        details JSONB,
-        created_at TIMESTAMPTZ DEFAULT NOW()
-      );
-      
       -- 실시간 구독 활성화
       ALTER PUBLICATION supabase_realtime ADD TABLE manager_responses;
     `;
@@ -75,9 +56,9 @@ export default async function handler(req, res) {
 
   } catch (error) {
     console.error('Setup error:', error);
-    return res.status(500).json({ 
-      error: 'Setup failed', 
-      details: error.message 
+    return res.status(200).json({ 
+      success: false,
+      error: error.message || 'Setup failed'
     });
   }
 }
