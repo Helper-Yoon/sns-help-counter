@@ -571,22 +571,29 @@
 
         // 데이터 새로고침
         async function refreshData() {
-            try {
-                const { data, error } = await supabase
-                    .from('manager_responses')
-                    .select('*')
-                    .order('created_at', { ascending: false });
+    try {
+        console.log('데이터 새로고침 시작...');
+        
+        const { data, error } = await supabase
+            .from('manager_responses')
+            .select('*')
+            .order('created_at', { ascending: false });
 
-                if (error) throw error;
+        console.log('조회된 데이터:', data);
+        console.log('에러:', error);
+        
+        if (error) throw error;
 
-                allData = data || [];
-                filterByDate();
-                
-            } catch (error) {
-                console.error('Error:', error);
-                showNotification('데이터 로드 실패', 'error');
-            }
-        }
+        allData = data || [];
+        console.log('전체 데이터 수:', allData.length);
+        
+        filterByDate();
+        
+    } catch (error) {
+        console.error('Error:', error);
+        showNotification('데이터 로드 실패', 'error');
+    }
+}
 
         // 날짜 필터링
         function filterByDate() {
