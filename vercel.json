@@ -1,11 +1,31 @@
 {
+  "version": 2,
+  "builds": [
+    {
+      "src": "api/sync.js",
+      "use": "@vercel/node"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/api/sync",
+      "dest": "/api/sync.js",
+      "methods": ["GET", "POST", "OPTIONS"]
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/index.html"
+    }
+  ],
   "functions": {
     "api/sync.js": {
-      "maxDuration": 300
+      "maxDuration": 30
     }
   },
-  "crons": [{
-    "path": "/api/sync",
-    "schedule": "*/5 * * * *"
-  }]
+  "env": {
+    "CHANNEL_ACCESS_KEY": "@channel_access_key",
+    "CHANNEL_SECRET": "@channel_secret",
+    "SUPABASE_URL": "@supabase_url",
+    "SUPABASE_KEY": "@supabase_anon_key"
+  }
 }
