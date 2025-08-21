@@ -3,48 +3,56 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SNS센터 비담당 상담 도움 추적 시스템</title>
+    <title>채널톡 비담당 상담 도움 추적 시스템</title>
     <script src="https://unpkg.com/@supabase/supabase-js@2.39.0/dist/umd/supabase.min.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { 
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; 
-            background: linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 100%);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans KR', sans-serif; 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: #fff; 
             min-height: 100vh; 
         }
         .container { max-width: 1600px; margin: 0 auto; padding: 40px 20px; }
         
-        /* 헤더 스타일 */
+        /* 채널톡 스타일 헤더 */
         .header { 
             text-align: center; 
             margin-bottom: 50px; 
-            background: rgba(255,255,255,0.02);
-            padding: 30px;
-            border-radius: 15px;
+            background: rgba(255,255,255,0.1);
+            padding: 40px;
+            border-radius: 20px;
             backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
         }
         .header h1 { 
             font-size: 48px; 
-            font-weight: 200; 
+            font-weight: 300; 
             margin-bottom: 10px;
-            background: linear-gradient(45deg, #1E6FFF, #00D4FF);
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+        .header h1 span { 
+            font-weight: 700; 
+            background: linear-gradient(45deg, #FFE000, #FFA000);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
         }
-        .header h1 span { font-weight: 600; }
         .subtitle { 
-            color: #888; 
-            font-size: 16px; 
+            color: rgba(255,255,255,0.9); 
+            font-size: 18px; 
             margin-top: 10px;
-            letter-spacing: 1px;
+            letter-spacing: 0.5px;
         }
-        .date-display { 
-            color: #666; 
-            font-size: 14px; 
-            text-transform: uppercase; 
-            letter-spacing: 2px; 
-            margin-top: 20px;
+        .channel-badge {
+            display: inline-block;
+            background: #5856D6;
+            color: white;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 12px;
+            margin-top: 15px;
+            font-weight: 600;
+            letter-spacing: 1px;
         }
         
         /* 실시간 상태 표시 */
@@ -52,11 +60,11 @@
             position: fixed;
             top: 20px;
             right: 20px;
-            background: rgba(0,0,0,0.8);
+            background: rgba(255,255,255,0.95);
+            color: #333;
             padding: 15px 20px;
-            border-radius: 10px;
-            border: 1px solid #222;
-            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
             z-index: 1000;
         }
         .realtime-indicator {
@@ -68,11 +76,11 @@
             width: 10px;
             height: 10px;
             border-radius: 50%;
-            background: #00FF00;
+            background: #4CAF50;
             animation: pulse 2s infinite;
         }
-        .pulse-dot.disconnected { background: #FF0000; }
-        .pulse-dot.connecting { background: #FFD700; }
+        .pulse-dot.disconnected { background: #F44336; }
+        .pulse-dot.connecting { background: #FF9800; }
         
         /* 컨트롤 바 */
         .control-bar { 
@@ -80,45 +88,43 @@
             justify-content: space-between; 
             align-items: center; 
             padding: 25px; 
-            background: rgba(0,0,0,0.4); 
-            border: 1px solid #333; 
-            border-radius: 10px;
+            background: rgba(255,255,255,0.1); 
+            border-radius: 15px;
             margin-bottom: 40px; 
             flex-wrap: wrap; 
             gap: 20px;
-            backdrop-filter: blur(5px);
+            backdrop-filter: blur(10px);
         }
         .control-buttons { display: flex; gap: 15px; flex-wrap: wrap; }
         
         .btn { 
             padding: 12px 30px; 
-            background: transparent; 
-            color: #888; 
-            border: 2px solid #333; 
-            border-radius: 8px;
+            background: rgba(255,255,255,0.2); 
+            color: #fff; 
+            border: 2px solid rgba(255,255,255,0.3); 
+            border-radius: 10px;
             font-size: 14px; 
             font-weight: 600; 
-            letter-spacing: 1px; 
-            text-transform: uppercase; 
+            letter-spacing: 0.5px; 
             cursor: pointer; 
             transition: all 0.3s;
+            backdrop-filter: blur(5px);
         }
         .btn:hover { 
-            color: #1E6FFF; 
-            border-color: #1E6FFF;
-            box-shadow: 0 0 20px rgba(30,111,255,0.3);
+            background: rgba(255,255,255,0.3);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(0,0,0,0.2);
         }
         .btn.primary { 
-            background: linear-gradient(45deg, #1E6FFF, #00D4FF);
-            color: #fff;
+            background: linear-gradient(45deg, #5856D6, #7C3AED);
             border: none;
         }
         .btn.primary:hover { 
-            transform: translateY(-2px);
-            box-shadow: 0 5px 20px rgba(30,111,255,0.5);
+            background: linear-gradient(45deg, #4744C9, #6B2FE0);
+            box-shadow: 0 5px 30px rgba(88,86,214,0.5);
         }
         .btn:disabled { 
-            opacity: 0.3; 
+            opacity: 0.5; 
             cursor: not-allowed; 
         }
         
@@ -130,20 +136,19 @@
             margin-bottom: 50px;
         }
         .stat-card { 
-            background: rgba(0,0,0,0.4); 
-            border: 1px solid #333;
+            background: rgba(255,255,255,0.95); 
+            color: #333;
             border-radius: 15px;
             padding: 30px; 
             text-align: center; 
             position: relative; 
             overflow: hidden;
-            backdrop-filter: blur(5px);
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
             transition: all 0.3s;
         }
         .stat-card:hover {
             transform: translateY(-5px);
-            border-color: #1E6FFF;
-            box-shadow: 0 10px 30px rgba(30,111,255,0.2);
+            box-shadow: 0 15px 50px rgba(0,0,0,0.2);
         }
         .stat-card::before {
             content: '';
@@ -151,81 +156,100 @@
             top: 0;
             left: 0;
             right: 0;
-            height: 3px;
-            background: linear-gradient(90deg, #1E6FFF, #00D4FF);
+            height: 4px;
+            background: linear-gradient(90deg, #5856D6, #7C3AED);
+        }
+        .stat-icon {
+            font-size: 32px;
+            margin-bottom: 15px;
         }
         .stat-value { 
-            font-size: 48px; 
-            font-weight: 200; 
-            color: #1E6FFF; 
+            font-size: 42px; 
+            font-weight: 700; 
+            background: linear-gradient(45deg, #5856D6, #7C3AED);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
             margin-bottom: 10px;
             font-variant-numeric: tabular-nums;
         }
         .stat-label { 
-            font-size: 12px; 
-            color: #888; 
-            text-transform: uppercase; 
-            letter-spacing: 2px;
+            font-size: 14px; 
+            color: #666; 
+            font-weight: 500;
         }
         .stat-change {
             font-size: 14px;
-            color: #00FF00;
+            color: #4CAF50;
             margin-top: 10px;
+            font-weight: 600;
         }
-        .stat-change.down { color: #FF4444; }
+        .stat-change.down { color: #F44336; }
         
         /* 실시간 활동 피드 */
         .activity-feed {
-            background: rgba(0,0,0,0.4);
-            border: 1px solid #333;
+            background: rgba(255,255,255,0.95);
+            color: #333;
             border-radius: 15px;
             margin-bottom: 40px;
-            backdrop-filter: blur(5px);
-            max-height: 400px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+            max-height: 450px;
             overflow: hidden;
         }
         .feed-header {
             padding: 20px 25px;
-            border-bottom: 1px solid #333;
+            border-bottom: 2px solid #f0f0f0;
             display: flex;
             justify-content: space-between;
             align-items: center;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
         }
         .feed-title {
-            font-size: 16px;
+            font-size: 18px;
             font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 1px;
         }
         .feed-content {
-            max-height: 320px;
+            max-height: 350px;
             overflow-y: auto;
             padding: 10px;
+            background: white;
         }
         .activity-item {
             padding: 15px;
-            border-bottom: 1px solid #222;
+            border-bottom: 1px solid #f0f0f0;
             animation: slideIn 0.3s;
             transition: all 0.2s;
+            border-radius: 8px;
+            margin-bottom: 10px;
         }
         .activity-item:hover {
-            background: rgba(30,111,255,0.05);
+            background: #f8f9fa;
+            transform: translateX(5px);
         }
         .activity-time {
             font-size: 12px;
-            color: #666;
+            color: #999;
             margin-bottom: 5px;
         }
         .activity-text {
             font-size: 14px;
-            line-height: 1.5;
+            line-height: 1.6;
+            color: #333;
         }
         .activity-counselor {
-            color: #1E6FFF;
+            color: #5856D6;
+            font-weight: 700;
+        }
+        .activity-customer {
+            background: #FFE000;
+            color: #333;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 12px;
             font-weight: 600;
         }
         .activity-chars {
-            color: #888;
+            color: #999;
             font-size: 12px;
             margin-left: 10px;
         }
@@ -242,77 +266,83 @@
         }
         
         .ranking-table { 
-            background: rgba(0,0,0,0.4); 
-            border: 1px solid #333;
+            background: rgba(255,255,255,0.95);
+            color: #333;
             border-radius: 15px;
-            backdrop-filter: blur(5px);
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
         }
         .table-header { 
             padding: 25px 30px; 
-            border-bottom: 1px solid #333;
-            background: rgba(30,111,255,0.05);
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
         }
         .table-title { 
-            font-size: 16px; 
-            font-weight: 600; 
-            letter-spacing: 1px; 
-            text-transform: uppercase;
+            font-size: 18px; 
+            font-weight: 600;
         }
         table { 
             width: 100%; 
-            border-collapse: collapse; 
+            border-collapse: collapse;
+            background: white;
         }
         th { 
             padding: 20px; 
             text-align: left; 
             font-size: 12px; 
-            color: #888; 
+            color: #666; 
             text-transform: uppercase; 
-            letter-spacing: 2px; 
-            border-bottom: 1px solid #333;
+            letter-spacing: 1px; 
+            border-bottom: 2px solid #f0f0f0;
+            font-weight: 600;
         }
         td { 
             padding: 20px; 
             font-size: 15px; 
-            border-bottom: 1px solid #222;
+            border-bottom: 1px solid #f0f0f0;
             font-variant-numeric: tabular-nums;
+            color: #333;
         }
         tr:hover { 
-            background: rgba(30,111,255,0.05);
+            background: #f8f9fa;
         }
         .rank-badge {
             display: inline-block;
-            width: 30px;
-            height: 30px;
-            line-height: 30px;
+            width: 32px;
+            height: 32px;
+            line-height: 32px;
             text-align: center;
             border-radius: 50%;
-            font-weight: 600;
+            font-weight: 700;
             font-size: 14px;
         }
-        .rank-1 { background: linear-gradient(45deg, #FFD700, #FFA500); color: #000; }
-        .rank-2 { background: linear-gradient(45deg, #C0C0C0, #808080); color: #000; }
+        .rank-1 { background: linear-gradient(45deg, #FFD700, #FFA500); color: #fff; }
+        .rank-2 { background: linear-gradient(45deg, #C0C0C0, #808080); color: #fff; }
         .rank-3 { background: linear-gradient(45deg, #CD7F32, #8B4513); color: #fff; }
         
-        /* 알림 */
+        /* 채널톡 스타일 알림 */
         .notification { 
             position: fixed; 
             bottom: 20px; 
             right: 20px; 
-            padding: 15px 20px; 
-            background: linear-gradient(135deg, #1E6FFF, #00D4FF);
-            border-radius: 10px;
-            color: #fff; 
+            padding: 20px 25px; 
+            background: white;
+            border-radius: 12px;
+            color: #333; 
             font-size: 14px; 
             font-weight: 600;
             z-index: 1000; 
             animation: slideUp 0.3s; 
             display: none;
-            box-shadow: 0 5px 20px rgba(30,111,255,0.5);
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            border-left: 4px solid #5856D6;
         }
         .notification.show { display: block; }
         .notification.error { 
-            background: linear-gradient(135deg, #FF4444, #CC0000);
+            border-left-color: #F44336;
+        }
+        .notification.success {
+            border-left-color: #4CAF50;
         }
         
         @keyframes pulse { 
@@ -342,12 +372,26 @@
         
         /* 스크롤바 스타일 */
         ::-webkit-scrollbar { width: 8px; }
-        ::-webkit-scrollbar-track { background: #111; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; }
         ::-webkit-scrollbar-thumb { 
-            background: #333; 
+            background: #5856D6; 
             border-radius: 4px;
         }
-        ::-webkit-scrollbar-thumb:hover { background: #555; }
+        ::-webkit-scrollbar-thumb:hover { background: #4744C9; }
+
+        /* 로딩 스피너 */
+        .loading-spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            border-top-color: #fff;
+            animation: spin 1s ease-in-out infinite;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
     </style>
 </head>
 <body>
@@ -356,61 +400,66 @@
         <div class="realtime-status">
             <div class="realtime-indicator">
                 <span class="pulse-dot" id="realtimeDot"></span>
-                <span id="realtimeText">연결 대기중</span>
+                <span id="realtimeText" style="color: #333; font-weight: 600;">연결 대기중</span>
             </div>
         </div>
 
         <!-- 헤더 -->
         <div class="header">
-            <h1>SNS센터 <span>비담당 상담 도움 추적</span></h1>
-            <div class="subtitle">담당자가 아닌 상담사의 답변을 실시간으로 모니터링합니다</div>
-            <div class="date-display" id="dateDisplay"></div>
+            <h1>채널톡 <span>비담당 상담 도움 추적</span></h1>
+            <div class="subtitle">담당자(assignee)가 아닌 매니저의 답변을 실시간으로 모니터링합니다</div>
+            <div class="channel-badge">CHANNEL TALK INTEGRATION</div>
         </div>
         
         <!-- 컨트롤 바 -->
         <div class="control-bar">
             <div class="control-buttons">
                 <button class="btn primary" onclick="app.loadData()" id="refreshBtn">
-                    새로고침
+                    <span id="refreshIcon">↻</span> 새로고침
                 </button>
-                <button class="btn" onclick="app.syncFromAPI()" id="syncBtn">
-                    API 동기화
+                <button class="btn" onclick="app.syncChannelTalk()" id="syncBtn">
+                    채널톡 동기화
                 </button>
                 <button class="btn" onclick="app.exportData()" id="exportBtn">
-                    데이터 내보내기
+                    📊 데이터 내보내기
                 </button>
                 <button class="btn" onclick="app.toggleRealtime()" id="realtimeBtn">
-                    실시간 모드
+                    ⚡ 실시간 모드
                 </button>
             </div>
-            <div class="status-indicator">
-                <span id="lastUpdate" style="color: #888;">마지막 업데이트: -</span>
+            <div style="color: rgba(255,255,255,0.9); font-size: 14px;">
+                <span id="lastUpdate">마지막 업데이트: -</span>
             </div>
         </div>
         
         <!-- 통계 카드 -->
         <div class="stats-grid">
             <div class="stat-card">
+                <div class="stat-icon">💬</div>
                 <div class="stat-value" id="totalNonAssignee">0</div>
                 <div class="stat-label">비담당 답변 수</div>
                 <div class="stat-change" id="changeNonAssignee">-</div>
             </div>
             <div class="stat-card">
+                <div class="stat-icon">📝</div>
                 <div class="stat-value" id="totalChars">0</div>
                 <div class="stat-label">총 글자수</div>
                 <div class="stat-change" id="changeChars">-</div>
             </div>
             <div class="stat-card">
-                <div class="stat-value" id="activeCounselors">0</div>
-                <div class="stat-label">활동 상담사</div>
-                <div class="stat-change" id="changeCounselors">-</div>
+                <div class="stat-icon">👥</div>
+                <div class="stat-value" id="activeManagers">0</div>
+                <div class="stat-label">활동 매니저</div>
+                <div class="stat-change" id="changeManagers">-</div>
             </div>
             <div class="stat-card">
+                <div class="stat-icon">⏱️</div>
                 <div class="stat-value" id="avgResponseTime">0</div>
                 <div class="stat-label">평균 응답시간(분)</div>
                 <div class="stat-change" id="changeResponseTime">-</div>
             </div>
             <div class="stat-card">
+                <div class="stat-icon">📈</div>
                 <div class="stat-value" id="helpRate">0%</div>
                 <div class="stat-label">도움 비율</div>
                 <div class="stat-change" id="changeHelpRate">-</div>
@@ -420,34 +469,34 @@
         <!-- 실시간 활동 피드 -->
         <div class="activity-feed">
             <div class="feed-header">
-                <div class="feed-title">실시간 활동</div>
-                <span id="feedCount" style="color: #888;">0개 활동</span>
+                <div class="feed-title">⚡ 실시간 활동</div>
+                <span id="feedCount">0개 활동</span>
             </div>
             <div class="feed-content" id="activityFeed">
-                <div style="padding: 50px; text-align: center; color: #666;">
-                    실시간 활동이 여기에 표시됩니다
+                <div style="padding: 50px; text-align: center; color: #999;">
+                    채널톡 활동이 여기에 실시간으로 표시됩니다
                 </div>
             </div>
         </div>
         
         <!-- 랭킹 테이블 -->
         <div class="ranking-section">
-            <!-- 오늘의 상담사 랭킹 -->
+            <!-- 오늘의 매니저 랭킹 -->
             <div class="ranking-table">
                 <div class="table-header">
-                    <div class="table-title">오늘의 비담당 도움 랭킹</div>
+                    <div class="table-title">🏆 오늘의 비담당 도움 랭킹</div>
                 </div>
                 <table>
                     <thead>
                         <tr>
                             <th width="60">순위</th>
-                            <th>상담사</th>
+                            <th>매니저</th>
                             <th width="80">횟수</th>
                             <th width="100">글자수</th>
                         </tr>
                     </thead>
                     <tbody id="todayRanking">
-                        <tr><td colspan="4" style="text-align:center;padding:50px;color:#666;">
+                        <tr><td colspan="4" style="text-align:center;padding:50px;color:#999;">
                             데이터를 불러오는 중...
                         </td></tr>
                     </tbody>
@@ -457,19 +506,19 @@
             <!-- 시간대별 통계 -->
             <div class="ranking-table">
                 <div class="table-header">
-                    <div class="table-title">시간대별 활동 통계</div>
+                    <div class="table-title">📊 시간대별 활동 통계</div>
                 </div>
                 <table>
                     <thead>
                         <tr>
                             <th>시간대</th>
                             <th>답변 수</th>
-                            <th>활동 상담사</th>
+                            <th>활동 매니저</th>
                             <th>평균 글자</th>
                         </tr>
                     </thead>
                     <tbody id="hourlyStats">
-                        <tr><td colspan="4" style="text-align:center;padding:50px;color:#666;">
+                        <tr><td colspan="4" style="text-align:center;padding:50px;color:#999;">
                             데이터를 불러오는 중...
                         </td></tr>
                     </tbody>
@@ -481,15 +530,15 @@
     <div class="notification" id="notification"></div>
     
     <script>
-        // Supabase 설정
+        // ✅ Supabase 설정 (키 자동 적용 완료!)
         const SUPABASE_URL = 'https://bhtqjipygkawoyieidgp.supabase.co';
-        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJodHFqaXB5Z2thd295aWVpZGdwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ0ODg5NjgsImV4cCI6MjA3MDA2NDk2OH0.hu2EAj9RCq436QBtfbEVF4aGOau4WWomLMDKahN4iAA';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJodHFqaXB5Z2thd285aWVpZGdwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ0ODg5NjgsImV4cCI6MjA3MDA2NDk2OH0.hu2EAj9RCq436QBtfbEVF4aGOau4WWomLMDKahN4iAA';
         
         const { createClient } = window.supabase;
         const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
         
-        // 상담사 매핑
-        const counselorMap = {
+        // 채널톡 매니저(상담사) 매핑
+        const managerMap = {
             '520798': '채주은', '520799': '윤도우리', '521212': '손진우',
             '521213': '차정환', '521214': '서민국', '521215': '구본영',
             '521217': '권재현', '521218': '조시현', '521220': '김상아',
@@ -525,22 +574,23 @@
                 await this.loadData();
                 this.setupRealtime();
                 
-                // 자동 새로고침 (5분마다)
-                setInterval(() => this.loadData(), 300000);
+                // 자동 새로고침 (3분마다)
+                setInterval(() => this.loadData(), 180000);
             },
             
             // 날짜시간 업데이트
             updateDateTime() {
                 const now = new Date();
-                const days = ['일', '월', '화', '수', '목', '금', '토'];
-                document.getElementById('dateDisplay').textContent = 
-                    `${now.getFullYear()}년 ${now.getMonth()+1}월 ${now.getDate()}일 ${days[now.getDay()]}요일 ${now.getHours()}:${now.getMinutes().toString().padStart(2,'0')}`;
+                const timeStr = `${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}`;
+                document.getElementById('lastUpdate').textContent = `마지막 업데이트: ${timeStr}`;
             },
             
             // 데이터 로드
             async loadData() {
                 const btn = document.getElementById('refreshBtn');
+                const icon = document.getElementById('refreshIcon');
                 btn.disabled = true;
+                icon.style.animation = 'spin 1s linear infinite';
                 
                 try {
                     // 오늘 날짜
@@ -550,7 +600,7 @@
                     
                     // 비담당 답변 데이터 가져오기
                     const { data: responses, error } = await supabase
-                        .from('non_assignee_responses')
+                        .from('channel_non_assignee_responses')
                         .select('*')
                         .gte('created_at', startDate)
                         .lt('created_at', endDate)
@@ -560,13 +610,15 @@
                     
                     this.currentData = responses || [];
                     this.updateUI();
-                    this.updateLastTime();
+                    this.updateDateTime();
+                    this.showNotification('데이터를 성공적으로 불러왔습니다', 'success');
                     
                 } catch (error) {
                     console.error('데이터 로드 실패:', error);
                     this.showNotification('데이터 로드 실패', 'error');
                 } finally {
                     btn.disabled = false;
+                    icon.style.animation = '';
                 }
             },
             
@@ -578,12 +630,12 @@
                 // 통계 카드 업데이트
                 this.updateStatCard('totalNonAssignee', stats.totalResponses);
                 this.updateStatCard('totalChars', stats.totalChars);
-                this.updateStatCard('activeCounselors', stats.activeCounselors);
+                this.updateStatCard('activeManagers', stats.activeManagers);
                 this.updateStatCard('avgResponseTime', stats.avgResponseTime);
                 this.updateStatCard('helpRate', stats.helpRate + '%');
                 
                 // 랭킹 업데이트
-                this.updateRanking(stats.counselorStats);
+                this.updateRanking(stats.managerStats);
                 
                 // 시간대별 통계 업데이트
                 this.updateHourlyStats(stats.hourlyStats);
@@ -595,26 +647,26 @@
             
             // 통계 계산
             calculateStats() {
-                const counselorStats = {};
+                const managerStats = {};
                 const hourlyStats = {};
                 let totalChars = 0;
                 let totalResponseTime = 0;
                 let responseCount = 0;
                 
                 this.currentData.forEach(item => {
-                    // 상담사별 통계
-                    const counselorId = item.counselor_id;
-                    const counselorName = counselorMap[counselorId] || `상담사${counselorId}`;
+                    // 매니저별 통계
+                    const managerId = item.manager_id;
+                    const managerName = item.manager_name || managerMap[managerId] || `매니저${managerId}`;
                     
-                    if (!counselorStats[counselorId]) {
-                        counselorStats[counselorId] = {
-                            name: counselorName,
+                    if (!managerStats[managerId]) {
+                        managerStats[managerId] = {
+                            name: managerName,
                             count: 0,
                             chars: 0
                         };
                     }
-                    counselorStats[counselorId].count++;
-                    counselorStats[counselorId].chars += item.char_count || 0;
+                    managerStats[managerId].count++;
+                    managerStats[managerId].chars += item.char_count || 0;
                     
                     // 시간대별 통계
                     const hour = new Date(item.created_at).getHours();
@@ -622,12 +674,12 @@
                         hourlyStats[hour] = {
                             count: 0,
                             chars: 0,
-                            counselors: new Set()
+                            managers: new Set()
                         };
                     }
                     hourlyStats[hour].count++;
                     hourlyStats[hour].chars += item.char_count || 0;
-                    hourlyStats[hour].counselors.add(counselorId);
+                    hourlyStats[hour].managers.add(managerId);
                     
                     // 전체 통계
                     totalChars += item.char_count || 0;
@@ -641,10 +693,11 @@
                 return {
                     totalResponses: this.currentData.length,
                     totalChars: totalChars,
-                    activeCounselors: Object.keys(counselorStats).length,
+                    activeManagers: Object.keys(managerStats).length,
                     avgResponseTime: responseCount > 0 ? Math.round(totalResponseTime / responseCount) : 0,
-                    helpRate: this.currentData.length > 0 ? Math.round((this.currentData.filter(d => d.is_helpful).length / this.currentData.length) * 100) : 0,
-                    counselorStats: Object.entries(counselorStats)
+                    helpRate: this.currentData.length > 0 ? 
+                        Math.round((this.currentData.filter(d => d.is_helpful).length / this.currentData.length) * 100) : 0,
+                    managerStats: Object.entries(managerStats)
                         .map(([id, stats]) => ({ id, ...stats }))
                         .sort((a, b) => b.count - a.count),
                     hourlyStats: hourlyStats
@@ -666,8 +719,8 @@
                         newStats.totalResponses - this.lastStats.totalResponses);
                     this.updateChange('changeChars', 
                         newStats.totalChars - this.lastStats.totalChars);
-                    this.updateChange('changeCounselors', 
-                        newStats.activeCounselors - this.lastStats.activeCounselors);
+                    this.updateChange('changeManagers', 
+                        newStats.activeManagers - this.lastStats.activeManagers);
                     this.updateChange('changeResponseTime', 
                         newStats.avgResponseTime - this.lastStats.avgResponseTime);
                     this.updateChange('changeHelpRate', 
@@ -679,27 +732,27 @@
             updateChange(id, value, suffix = '') {
                 const element = document.getElementById(id);
                 if (element && value !== 0) {
-                    const sign = value > 0 ? '+' : '';
-                    element.textContent = `${sign}${value}${suffix}`;
+                    const sign = value > 0 ? '↑' : '↓';
+                    element.textContent = `${sign} ${Math.abs(value)}${suffix}`;
                     element.className = value > 0 ? 'stat-change' : 'stat-change down';
                 }
             },
             
             // 랭킹 업데이트
-            updateRanking(counselorStats) {
+            updateRanking(managerStats) {
                 const tbody = document.getElementById('todayRanking');
                 if (!tbody) return;
                 
-                if (counselorStats.length === 0) {
+                if (managerStats.length === 0) {
                     tbody.innerHTML = `
-                        <tr><td colspan="4" style="text-align:center;padding:50px;color:#666;">
+                        <tr><td colspan="4" style="text-align:center;padding:50px;color:#999;">
                             오늘 비담당 답변 데이터가 없습니다
                         </td></tr>
                     `;
                     return;
                 }
                 
-                tbody.innerHTML = counselorStats.slice(0, 10).map((stat, index) => {
+                tbody.innerHTML = managerStats.slice(0, 10).map((stat, index) => {
                     const rankClass = index < 3 ? `rank-${index + 1}` : '';
                     const rankDisplay = index < 3 ? 
                         `<span class="rank-badge ${rankClass}">${index + 1}</span>` : 
@@ -723,34 +776,31 @@
                 
                 const hours = [];
                 for (let h = 0; h < 24; h++) {
-                    const stat = hourlyStats[h] || { count: 0, chars: 0, counselors: new Set() };
-                    hours.push({
-                        hour: h,
-                        count: stat.count,
-                        counselors: stat.counselors ? stat.counselors.size : 0,
-                        avgChars: stat.count > 0 ? Math.round(stat.chars / stat.count) : 0
-                    });
+                    const stat = hourlyStats[h] || { count: 0, chars: 0, managers: new Set() };
+                    if (stat.count > 0) {
+                        hours.push({
+                            hour: h,
+                            count: stat.count,
+                            managers: stat.managers ? stat.managers.size : 0,
+                            avgChars: Math.round(stat.chars / stat.count)
+                        });
+                    }
                 }
                 
-                // 현재 시간 기준으로 정렬
-                const currentHour = new Date().getHours();
-                const sortedHours = hours.slice(currentHour - 5, currentHour + 1)
-                    .filter(h => h.count > 0);
-                
-                if (sortedHours.length === 0) {
+                if (hours.length === 0) {
                     tbody.innerHTML = `
-                        <tr><td colspan="4" style="text-align:center;padding:50px;color:#666;">
+                        <tr><td colspan="4" style="text-align:center;padding:50px;color:#999;">
                             시간대별 데이터가 없습니다
                         </td></tr>
                     `;
                     return;
                 }
                 
-                tbody.innerHTML = sortedHours.map(stat => `
+                tbody.innerHTML = hours.map(stat => `
                     <tr>
                         <td>${stat.hour.toString().padStart(2, '0')}:00</td>
                         <td>${stat.count}</td>
-                        <td>${stat.counselors}</td>
+                        <td>${stat.managers}</td>
                         <td>${stat.avgChars.toLocaleString()}</td>
                     </tr>
                 `).join('');
@@ -760,13 +810,13 @@
             setupRealtime() {
                 // Supabase Realtime 구독
                 this.realtimeChannel = supabase
-                    .channel('non-assignee-changes')
+                    .channel('channel-talk-changes')
                     .on(
                         'postgres_changes',
                         {
                             event: 'INSERT',
                             schema: 'public',
-                            table: 'non_assignee_responses'
+                            table: 'channel_non_assignee_responses'
                         },
                         (payload) => {
                             this.handleRealtimeUpdate(payload.new);
@@ -789,21 +839,22 @@
                 this.updateUI();
                 
                 // 알림 표시
-                const counselorName = counselorMap[newData.counselor_id] || `상담사${newData.counselor_id}`;
-                this.showNotification(`${counselorName}님이 비담당 상담에 답변했습니다`);
+                const managerName = newData.manager_name || managerMap[newData.manager_id] || `매니저${newData.manager_id}`;
+                this.showNotification(`${managerName}님이 비담당 상담에 답변했습니다`, 'success');
             },
             
             // 활동 피드에 추가
             addToActivityFeed(data) {
                 const feed = document.getElementById('activityFeed');
-                const counselorName = counselorMap[data.counselor_id] || `상담사${data.counselor_id}`;
+                const managerName = data.manager_name || managerMap[data.manager_id] || `매니저${data.manager_id}`;
                 const time = new Date(data.created_at).toLocaleTimeString('ko-KR');
                 
                 const activityHtml = `
                     <div class="activity-item">
                         <div class="activity-time">${time}</div>
                         <div class="activity-text">
-                            <span class="activity-counselor">${counselorName}</span>님이 
+                            <span class="activity-counselor">${managerName}</span>님이 
+                            <span class="activity-customer">${data.customer_name || '고객'}</span>님의
                             비담당 상담에 답변
                             <span class="activity-chars">(${data.char_count}자)</span>
                         </div>
@@ -850,22 +901,23 @@
                 if (this.realtimeChannel) {
                     supabase.removeChannel(this.realtimeChannel);
                     this.realtimeChannel = null;
-                    btn.textContent = '실시간 모드 켜기';
+                    btn.textContent = '⚡ 실시간 모드 켜기';
                     this.updateRealtimeStatus('CLOSED');
                 } else {
                     this.setupRealtime();
-                    btn.textContent = '실시간 모드 끄기';
+                    btn.textContent = '⚡ 실시간 모드 끄기';
                 }
             },
             
-            // API 동기화
-            async syncFromAPI() {
+            // 채널톡 API 동기화
+            async syncChannelTalk() {
                 const btn = document.getElementById('syncBtn');
                 btn.disabled = true;
+                btn.innerHTML = '<span class="loading-spinner"></span> 동기화 중...';
                 
                 try {
                     // Vercel API 호출
-                    const response = await fetch('/api/sync-non-assignee', {
+                    const response = await fetch('/api/channel-sync', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ 
@@ -875,18 +927,19 @@
                     
                     if (response.ok) {
                         const result = await response.json();
-                        this.showNotification(`동기화 완료: ${result.processed}개 처리됨`);
+                        this.showNotification(`채널톡 동기화 완료: ${result.processed}개 처리됨`, 'success');
                         await this.loadData();
                     } else {
                         // 로컬 환경이거나 API가 없는 경우
-                        this.showNotification('API 서버를 찾을 수 없습니다', 'error');
+                        this.showNotification('API 서버를 찾을 수 없습니다. Vercel에 배포 후 사용하세요.', 'error');
                     }
                     
                 } catch (error) {
-                    console.error('API 동기화 실패:', error);
-                    this.showNotification('동기화 실패', 'error');
+                    console.error('채널톡 동기화 실패:', error);
+                    this.showNotification('채널톡 동기화 실패', 'error');
                 } finally {
                     btn.disabled = false;
+                    btn.innerHTML = '채널톡 동기화';
                 }
             },
             
@@ -898,27 +951,29 @@
                 }
                 
                 const csv = this.convertToCSV(this.currentData);
-                const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+                const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
                 const link = document.createElement('a');
                 const url = URL.createObjectURL(blob);
                 
                 link.setAttribute('href', url);
-                link.setAttribute('download', `non_assignee_responses_${new Date().toISOString().split('T')[0]}.csv`);
+                link.setAttribute('download', `channel_talk_non_assignee_${new Date().toISOString().split('T')[0]}.csv`);
                 link.style.visibility = 'hidden';
                 document.body.appendChild(link);
                 link.click();
                 document.body.removeChild(link);
                 
-                this.showNotification('데이터 내보내기 완료');
+                this.showNotification('데이터 내보내기 완료', 'success');
             },
             
             // CSV 변환
             convertToCSV(data) {
-                const headers = ['시간', '상담사ID', '상담사명', '글자수', '응답시간(분)', '도움여부'];
+                const headers = ['시간', '매니저ID', '매니저명', '고객명', '대화ID', '글자수', '응답시간(분)', '도움여부'];
                 const rows = data.map(item => [
                     new Date(item.created_at).toLocaleString('ko-KR'),
-                    item.counselor_id,
-                    counselorMap[item.counselor_id] || `상담사${item.counselor_id}`,
+                    item.manager_id,
+                    item.manager_name || managerMap[item.manager_id] || `매니저${item.manager_id}`,
+                    item.customer_name || '-',
+                    item.user_chat_id,
                     item.char_count,
                     item.response_time || '',
                     item.is_helpful ? 'Y' : 'N'
@@ -927,18 +982,11 @@
                 return [headers, ...rows].map(row => row.join(',')).join('\n');
             },
             
-            // 마지막 업데이트 시간
-            updateLastTime() {
-                const now = new Date();
-                document.getElementById('lastUpdate').textContent = 
-                    `마지막 업데이트: ${now.getHours()}:${now.getMinutes().toString().padStart(2,'0')}:${now.getSeconds().toString().padStart(2,'0')}`;
-            },
-            
             // 알림 표시
             showNotification(message, type = 'success') {
                 const notification = document.getElementById('notification');
                 notification.textContent = message;
-                notification.className = `notification show ${type === 'error' ? 'error' : ''}`;
+                notification.className = `notification show ${type}`;
                 
                 setTimeout(() => {
                     notification.classList.remove('show');
