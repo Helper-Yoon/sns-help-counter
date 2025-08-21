@@ -241,14 +241,19 @@
                     if (!response.ok) throw new Error('API 호출 실패');
                 }
                 
-                // 데모 데이터 (개발용)
-                const demoData = [
-                    { counselor_id: 'CS001', counselor_name: '김도움', help_count: Math.floor(Math.random() * 50) + 10, total_chars: Math.floor(Math.random() * 20000) + 5000 },
-                    { counselor_id: 'CS002', counselor_name: '이지원', help_count: Math.floor(Math.random() * 50) + 10, total_chars: Math.floor(Math.random() * 20000) + 5000 },
-                    { counselor_id: 'CS003', counselor_name: '박상담', help_count: Math.floor(Math.random() * 50) + 10, total_chars: Math.floor(Math.random() * 20000) + 5000 },
-                    { counselor_id: 'CS004', counselor_name: '최서포트', help_count: Math.floor(Math.random() * 50) + 10, total_chars: Math.floor(Math.random() * 20000) + 5000 },
-                    { counselor_id: 'CS005', counselor_name: '정헬프', help_count: Math.floor(Math.random() * 50) + 10, total_chars: Math.floor(Math.random() * 20000) + 5000 }
-                ].map(item => ({
+                // 데모 데이터 (개발용) - 실제 상담사 이름 사용
+                const counselorList = [
+                    '채주은', '손진우', '윤도우리', '차정환', '서민국',
+                    '구본영', '권재현', '조시현', '김상아', '정주연',
+                    '김지원', '정다혜', '김시진', '신혜서', '이민주'
+                ];
+                
+                const demoData = counselorList.slice(0, 5 + Math.floor(Math.random() * 5)).map((name, idx) => ({
+                    counselor_id: `52${1200 + idx}`,
+                    counselor_name: name,
+                    help_count: Math.floor(Math.random() * 50) + 10,
+                    total_chars: Math.floor(Math.random() * 20000) + 5000
+                })).map(item => ({
                     ...item,
                     period_start: startDate,
                     period_end: endDate,
