@@ -4,7 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SNS센터 도움 카운팅 프로그램</title>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- CDN 버전으로 변경 (npm 설치 불필요) -->
+    <script src="https://unpkg.com/@supabase/supabase-js@2.39.0/dist/umd/supabase.min.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #000; color: #fff; min-height: 100vh; }
@@ -16,16 +17,8 @@
         .date-display { color: #666; font-size: 14px; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 5px; }
         .today-info { color: #1E6FFF; font-size: 18px; margin-top: 10px; }
         
-        /* 프로그레스 바 추가 */
-        .progress-container { margin-bottom: 30px; padding: 20px; background: #111; border: 1px solid #222; display: none; }
-        .progress-container.active { display: block; }
-        .progress-title { font-size: 14px; color: #999; margin-bottom: 10px; }
-        .progress-bar { width: 100%; height: 4px; background: #222; position: relative; overflow: hidden; }
-        .progress-fill { height: 100%; background: linear-gradient(90deg, #1E6FFF, #00D4FF); transition: width 0.3s; }
-        .progress-info { display: flex; justify-content: space-between; margin-top: 10px; font-size: 12px; color: #666; }
-        
         .control-bar { display: flex; justify-content: space-between; align-items: center; padding: 20px 30px; background: #000; border: 1px solid #222; margin-bottom: 40px; flex-wrap: wrap; gap: 20px; }
-        .control-buttons { display: flex; gap: 15px; }
+        .control-buttons { display: flex; gap: 15px; flex-wrap: wrap; }
         
         .btn { padding: 10px 25px; background: transparent; color: #666; border: 1px solid #333; font-size: 14px; font-weight: 500; letter-spacing: 1px; text-transform: uppercase; cursor: pointer; transition: all 0.3s; }
         .btn:hover { color: #1E6FFF; border-color: #1E6FFF; }
@@ -42,73 +35,23 @@
         
         .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 2px; margin-bottom: 50px; background: #111; padding: 2px; }
         .stat-card { background: #000; padding: 30px; text-align: center; position: relative; overflow: hidden; }
-        .stat-card.updating::before { content: ''; position: absolute; top: 0; left: -100%; width: 100%; height: 2px; background: linear-gradient(90deg, transparent, #1E6FFF, transparent); animation: slide 1s infinite; }
-        @keyframes slide { to { left: 100%; } }
         .stat-value { font-size: 48px; font-weight: 200; color: #1E6FFF; margin-bottom: 10px; }
         .stat-label { font-size: 12px; color: #666; text-transform: uppercase; letter-spacing: 2px; }
-        .stat-change { font-size: 13px; color: #00FF00; margin-top: 10px; }
-        .stat-change.down { color: #FF0000; }
-        
-        .podium { display: flex; justify-content: center; align-items: flex-end; gap: 40px; margin-bottom: 60px; height: 400px; opacity: 0; transition: opacity 0.5s; }
-        .podium.show { opacity: 1; }
-        .podium-item { flex: 1; max-width: 280px; display: flex; flex-direction: column; align-items: center; position: relative; animation: fadeInUp 0.5s backwards; }
-        .podium-item.rank-1 { animation-delay: 0.2s; }
-        .podium-item.rank-2 { animation-delay: 0.1s; margin-top: 50px; }
-        .podium-item.rank-3 { animation-delay: 0.3s; margin-top: 100px; }
-        @keyframes fadeInUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
-        
-        .podium-rank { font-size: 60px; font-weight: 100; margin-bottom: 20px; opacity: 0.8; }
-        .podium-item.rank-1 .podium-rank { color: #FFD700; opacity: 1; }
-        .podium-item.rank-2 .podium-rank { color: #C0C0C0; }
-        .podium-item.rank-3 .podium-rank { color: #CD7F32; }
-        .podium-bar { width: 100%; background: #0a0a0a; border: 1px solid #222; position: relative; overflow: hidden; }
-        .podium-item.rank-1 .podium-bar { height: 250px; border-color: #FFD700; background: linear-gradient(180deg, rgba(255,215,0,0.1), transparent); }
-        .podium-item.rank-2 .podium-bar { height: 200px; border-color: #C0C0C0; background: linear-gradient(180deg, rgba(192,192,192,0.1), transparent); }
-        .podium-item.rank-3 .podium-bar { height: 150px; border-color: #CD7F32; background: linear-gradient(180deg, rgba(205,127,50,0.1), transparent); }
-        .podium-content { position: absolute; bottom: 20px; left: 0; right: 0; padding: 0 15px; text-align: center; }
-        .podium-name { font-size: 18px; font-weight: 500; margin-bottom: 5px; }
-        .podium-helps { font-size: 36px; font-weight: 200; color: #1E6FFF; }
-        .podium-chars { font-size: 12px; color: #999; }
         
         .ranking-table { background: #000; border: 1px solid #222; margin-bottom: 40px; }
-        .table-header { padding: 25px 30px; border-bottom: 1px solid #222; display: flex; justify-content: space-between; align-items: center; }
+        .table-header { padding: 25px 30px; border-bottom: 1px solid #222; }
         .table-title { font-size: 16px; font-weight: 300; letter-spacing: 1px; text-transform: uppercase; }
-        .table-count { font-size: 12px; color: #666; }
         table { width: 100%; border-collapse: collapse; }
         th { padding: 20px; text-align: left; font-size: 12px; color: #666; text-transform: uppercase; letter-spacing: 2px; border-bottom: 1px solid #222; }
         td { padding: 20px; font-size: 15px; border-bottom: 1px solid #111; }
-        tr { opacity: 0; animation: fadeIn 0.3s forwards; }
-        tr:nth-child(1) { animation-delay: 0.05s; }
-        tr:nth-child(2) { animation-delay: 0.1s; }
-        tr:nth-child(3) { animation-delay: 0.15s; }
-        tr:nth-child(4) { animation-delay: 0.2s; }
-        tr:nth-child(5) { animation-delay: 0.25s; }
-        @keyframes fadeIn { to { opacity: 1; } }
         tr:hover { background: #050505; }
-        tr.new-entry { animation: highlight 1s; }
-        @keyframes highlight { 0% { background: rgba(30,111,255,0.2); } 100% { background: transparent; } }
         
-        .rank-number { display: inline-block; width: 32px; height: 32px; line-height: 32px; text-align: center; font-size: 16px; color: #666; }
-        .rank-number.gold { background: linear-gradient(135deg, #FFD700, #FFA500); color: #000; border-radius: 50%; }
-        .rank-number.silver { background: linear-gradient(135deg, #C0C0C0, #808080); color: #000; border-radius: 50%; }
-        .rank-number.bronze { background: linear-gradient(135deg, #CD7F32, #8B4513); color: #fff; border-radius: 50%; }
-        
-        .update-info { text-align: center; padding: 30px 0; color: #666; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; }
-        
-        .loading-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.9); display: none; align-items: center; justify-content: center; z-index: 9999; }
-        .loading-overlay.active { display: flex; }
-        .spinner { width: 50px; height: 50px; border: 2px solid #222; border-top-color: #1E6FFF; border-radius: 50%; animation: spin 1s linear infinite; }
-        @keyframes spin { to { transform: rotate(360deg); } }
-        
-        /* 실시간 알림 */
         .notification { position: fixed; top: 20px; right: 20px; padding: 15px 20px; background: #111; border: 1px solid #1E6FFF; color: #fff; font-size: 14px; z-index: 1000; animation: slideIn 0.3s; display: none; }
         .notification.show { display: block; }
         @keyframes slideIn { from { transform: translateX(100%); } to { transform: translateX(0); } }
         
         @media (max-width: 768px) {
             .control-bar { flex-direction: column; }
-            .podium { flex-direction: column; height: auto; gap: 30px; }
-            .podium-item.rank-2, .podium-item.rank-3 { margin-top: 0; }
             .stats-grid { grid-template-columns: 1fr; }
         }
     </style>
@@ -118,27 +61,13 @@
         <div class="header">
             <h1>SNS센터 <span>도움 카운팅 프로그램</span></h1>
             <div class="date-display" id="dateDisplay"></div>
-            <div class="today-info">오늘 하루 (00:00 - 23:59) 실시간 집계</div>
-        </div>
-        
-        <!-- 프로그레스 바 -->
-        <div class="progress-container" id="progressContainer">
-            <div class="progress-title" id="progressTitle">데이터 동기화 중...</div>
-            <div class="progress-bar">
-                <div class="progress-fill" id="progressFill" style="width: 0%"></div>
-            </div>
-            <div class="progress-info">
-                <span id="progressCurrent">0</span>
-                <span id="progressPercent">0%</span>
-                <span id="progressTotal">0</span>
-            </div>
+            <div class="today-info">오늘 하루 실시간 집계</div>
         </div>
         
         <div class="control-bar">
             <div class="control-buttons">
-                <button class="btn primary" onclick="quickSync()" id="quickSyncBtn">빠른 새로고침</button>
-                <button class="btn" onclick="fullSync()" id="fullSyncBtn">전체 동기화</button>
-                <button class="btn" onclick="toggleAuto()" id="autoBtn">자동 새로고침 시작</button>
+                <button class="btn primary" onclick="loadData()" id="refreshBtn">새로고침</button>
+                <button class="btn" onclick="generateDemoData()" id="demoBtn">데모 데이터 생성</button>
             </div>
             <div class="status-indicator">
                 <span class="status-dot" id="statusDot"></span>
@@ -148,34 +77,27 @@
         </div>
         
         <div class="stats-grid">
-            <div class="stat-card" id="card-helps">
+            <div class="stat-card">
                 <div class="stat-value" id="totalHelps">0</div>
                 <div class="stat-label">오늘 도움 횟수</div>
-                <div class="stat-change" id="helpsChange"></div>
             </div>
-            <div class="stat-card" id="card-chars">
+            <div class="stat-card">
                 <div class="stat-value" id="totalChars">0</div>
                 <div class="stat-label">오늘 총 글자수</div>
-                <div class="stat-change" id="charsChange"></div>
             </div>
-            <div class="stat-card" id="card-counselors">
+            <div class="stat-card">
                 <div class="stat-value" id="activeCounselors">0</div>
                 <div class="stat-label">오늘 참여 상담사</div>
-                <div class="stat-change" id="counselorsChange"></div>
             </div>
-            <div class="stat-card" id="card-avg">
+            <div class="stat-card">
                 <div class="stat-value" id="avgChars">0</div>
                 <div class="stat-label">평균 글자수</div>
-                <div class="stat-change" id="avgChange"></div>
             </div>
         </div>
-        
-        <div class="podium" id="podium"></div>
         
         <div class="ranking-table">
             <div class="table-header">
                 <div class="table-title">오늘의 상담사 랭킹</div>
-                <div class="table-count" id="tableCount">0명 참여</div>
             </div>
             <table>
                 <thead>
@@ -192,244 +114,168 @@
                 </tbody>
             </table>
         </div>
-        
-        <div class="update-info" id="updateInfo">자동으로 30초마다 업데이트됩니다</div>
     </div>
     
-    <div class="loading-overlay" id="loadingOverlay"><div class="spinner"></div></div>
     <div class="notification" id="notification"></div>
     
     <script>
-        // Supabase 설정
+        // Supabase 설정 (UMD 버전 사용)
         const SUPABASE_URL = 'https://bhtqjipygkawoyieidgp.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJodHFqaXB5Z2thd295aWVpZGdwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ0ODg5NjgsImV4cCI6MjA3MDA2NDk2OH0.hu2EAj9RCq436QBtfbEVF4aGOau4WWomLMDKahN4iAA';
-        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        
+        // UMD 버전에서는 window.supabase 사용
+        const { createClient } = window.supabase;
+        const supabaseClient = createClient(SUPABASE_URL, SUPABASE_KEY);
         
         let currentData = [];
-        let autoInterval = null;
-        let lastData = null;
-        let isLoading = false;
-        let realtimeSubscription = null;
+        
+        // 정확한 상담사 매핑
+        const counselorMap = {
+            '520798': '채주은',
+            '520799': '윤도우리',
+            '521212': '손진우',
+            '521213': '차정환',
+            '521214': '서민국',
+            '521215': '구본영',
+            '521217': '권재현',
+            '521218': '조시현',
+            '521220': '김상아',
+            '521221': '김지원',
+            '521222': '정다혜',
+            '521223': '김시진',
+            '521224': '신혜서',
+            '521226': '이민주',
+            '521227': '정주연',
+            '521230': '김진후',
+            '521231': '이혜영',
+            '521232': '김영진',
+            '521233': '최호익',
+            '521234': '서정국',
+            '521236': '박해영',
+            '521239': '이종민',
+            '521243': '강형욱',
+            '521378': '오민경',
+            '521379': '최수능',
+            '521381': '김채영',
+            '521382': '전지윤',
+            '521383': '이유주',
+            '521384': '김범주',
+            '521385': '김예진',
+            '521386': '차승현',
+            '521392': '이성철',
+            '521393': '박은진',
+            '521410': '오민환',
+            '521416': '전미란',
+            '521564': '김국현',
+            '521567': '김성현',
+            '521902': '김시윤',
+            '521937': '김종현',
+            '521942': '주은지',
+            '521965': '강헌준',
+            '522038': '문홍주',
+            '523260': '주수현',
+            '523268': '오현수',
+            '527833': '유종현',
+            '527836': '김진협',
+            '527910': '옥서아',
+            '528425': '정용욱',
+            '528628': '김소영',
+            '529149': '동수진',
+            '529561': '한승윤',
+            '544751': '성일훈',
+            '555633': '아정당',
+            '555865': '공현준'
+        };
         
         // 오늘 날짜 가져오기
         function getTodayRange() {
             const today = new Date();
             const start = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 0, 0, 0);
-            const end = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59);
             return {
                 startDate: start.toISOString().split('T')[0],
-                endDate: end.toISOString().split('T')[0],
-                startTime: start.toISOString(),
-                endTime: end.toISOString()
+                endDate: start.toISOString().split('T')[0]
             };
         }
         
         // 초기화
         async function init() {
-            console.log('앱 초기화 시작');
-            
             // 날짜 표시
             const now = new Date();
             const days = ['일', '월', '화', '수', '목', '금', '토'];
             document.getElementById('dateDisplay').textContent = 
                 `${now.getFullYear()}년 ${now.getMonth()+1}월 ${now.getDate()}일 ${days[now.getDay()]}요일`;
             
-            // 테이블 체크
-            await checkTables();
-            
-            // 초기 데이터 로드
-            await quickSync();
-            
-            // 실시간 구독 설정
-            setupRealtimeSubscription();
-            
-            // 자동 새로고침 시작
-            startAutoRefresh();
-        }
-        
-        // 테이블 체크 (생성 시도 없이)
-        async function checkTables() {
-            try {
-                // 테이블 존재 여부만 확인
-                const { data, error } = await supabase
-                    .from('counselor_stats')
-                    .select('id')
-                    .limit(1);
-                
-                if (error && error.code === '42P01') {
-                    console.log('테이블이 없습니다. 관리자에게 문의하세요.');
-                    showNotification('데이터베이스 초기화 필요', 'error');
-                } else {
-                    console.log('테이블 확인 완료');
-                }
-            } catch (e) {
-                console.log('테이블 확인 중 오류:', e);
-            }
-        }
-        
-        // 빠른 동기화 (캐시 데이터 우선)
-        async function quickSync() {
-            if (isLoading) return;
-            isLoading = true;
-            
-            const btn = document.getElementById('quickSyncBtn');
-            btn.disabled = true;
-            
-            setStatus('loading', '빠른 동기화 중...');
-            
-            try {
-                // 먼저 캐시된 데이터 로드
-                await loadData();
-                
-                // 백그라운드에서 API 호출
-                if (window.location.hostname !== 'localhost') {
-                    fetch('/api/sync', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(getTodayRange())
-                    }).then(() => {
-                        loadData(); // API 응답 후 재로드
-                    }).catch(console.error);
-                }
-                
-                setStatus('active', '업데이트 완료');
-                updateLastTime();
-                
-            } catch (error) {
-                console.error('빠른 동기화 실패:', error);
-                setStatus('error', '오류 발생');
-            } finally {
-                isLoading = false;
-                btn.disabled = false;
-            }
-        }
-        
-        // 전체 동기화 (API 호출 후 데이터 로드)
-        async function fullSync() {
-            if (isLoading) return;
-            isLoading = true;
-            
-            const btn = document.getElementById('fullSyncBtn');
-            btn.disabled = true;
-            
-            showProgress(true);
-            setStatus('loading', '전체 동기화 중...');
-            updateProgress('채널톡 연결 중...', 0, 100);
-            
-            const { startDate, endDate } = getTodayRange();
-            
-            try {
-                // API 호출 또는 데모 데이터 생성
-                if (window.location.hostname !== 'localhost') {
-                    // 실제 API 호출
-                    updateProgress('대화 목록 가져오는 중...', 20, 100);
-                    
-                    const response = await fetch('/api/sync', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ startDate, endDate })
-                    });
-                    
-                    if (!response.ok) throw new Error('API 호출 실패');
-                    
-                    updateProgress('데이터 처리 중...', 80, 100);
-                    
-                } else {
-                    // 데모 데이터 생성
-                    await generateDemoData(startDate, endDate);
-                }
-                
-                updateProgress('완료!', 100, 100);
-                await loadData();
-                
-                setStatus('active', '동기화 완료');
-                updateLastTime();
-                showNotification('전체 동기화가 완료되었습니다');
-                
-                setTimeout(() => showProgress(false), 1000);
-                
-            } catch (error) {
-                console.error('전체 동기화 실패:', error);
-                setStatus('error', '동기화 실패');
-                showNotification('동기화 중 오류가 발생했습니다', 'error');
-                showProgress(false);
-            } finally {
-                isLoading = false;
-                btn.disabled = false;
-            }
-        }
-        
-        // 데모 데이터 생성 (개발용)
-        async function generateDemoData(startDate, endDate) {
-            const counselorList = [
-                '채주은', '손진우', '윤도우리', '차정환', '서민국',
-                '구본영', '권재현', '조시현', '김상아', '정주연',
-                '김지원', '정다혜', '김시진', '신혜서', '이민주'
-            ];
-            
-            const activeCounselors = Math.floor(Math.random() * 8) + 5;
-            const demoData = [];
-            
-            for (let i = 0; i < activeCounselors; i++) {
-                updateProgress(`상담사 ${i+1}/${activeCounselors} 처리 중...`, 20 + (60 * i / activeCounselors), 100);
-                
-                const counselor = counselorList[i];
-                const helpCount = Math.floor(Math.random() * 50) + 10;
-                const totalChars = Math.floor(Math.random() * 20000) + 5000;
-                
-                demoData.push({
-                    counselor_id: `52${1200 + i}`,
-                    counselor_name: counselor,
-                    period_start: startDate,
-                    period_end: endDate,
-                    help_count: helpCount,
-                    total_chars: totalChars,
-                    avg_chars: Math.round(totalChars / helpCount),
-                    updated_at: new Date().toISOString()
-                });
-                
-                // 실시간 느낌을 위해 약간의 딜레이
-                await new Promise(r => setTimeout(r, 100));
-            }
-            
-            // 데이터베이스에 저장
-            updateProgress('데이터베이스 저장 중...', 85, 100);
-            
-            for (const item of demoData) {
-                await supabase.from('counselor_stats').upsert(item, { 
-                    onConflict: 'counselor_id,period_start,period_end' 
-                });
-            }
+            // 데이터 로드
+            await loadData();
         }
         
         // 데이터 로드
         async function loadData() {
-            const { startDate, endDate } = getTodayRange();
+            const btn = document.getElementById('refreshBtn');
+            btn.disabled = true;
+            setStatus('loading', '데이터 로드 중...');
             
-            const { data, error } = await supabase
-                .from('counselor_stats')
-                .select('*')
-                .eq('period_start', startDate)
-                .eq('period_end', endDate)
-                .order('help_count', { ascending: false });
-            
-            if (error) {
+            try {
+                const { startDate, endDate } = getTodayRange();
+                
+                const { data, error } = await supabaseClient
+                    .from('counselor_stats')
+                    .select('*')
+                    .eq('period_start', startDate)
+                    .eq('period_end', endDate)
+                    .order('help_count', { ascending: false });
+                
+                if (error) throw error;
+                
+                currentData = data || [];
+                updateUI();
+                setStatus('active', '업데이트 완료');
+                updateLastTime();
+                
+            } catch (error) {
                 console.error('데이터 로드 실패:', error);
-                return;
+                setStatus('error', '로드 실패');
+                showNotification('데이터 로드 실패', 'error');
+            } finally {
+                btn.disabled = false;
             }
+        }
+        
+        // 데모 데이터 생성
+        async function generateDemoData() {
+            const btn = document.getElementById('demoBtn');
+            btn.disabled = true;
+            setStatus('loading', '데모 데이터 생성 중...');
             
-            if (data) {
-                // 변화량 계산
-                if (currentData.length > 0) {
-                    lastData = {
-                        totalHelps: currentData.reduce((sum, item) => sum + item.help_count, 0),
-                        totalChars: currentData.reduce((sum, item) => sum + item.total_chars, 0),
-                        counselors: currentData.length
-                    };
+            try {
+                const { startDate, endDate } = getTodayRange();
+                const counselorList = Object.entries(counselorMap).slice(0, 15);
+                
+                for (const [id, name] of counselorList) {
+                    const helpCount = Math.floor(Math.random() * 50) + 10;
+                    const totalChars = Math.floor(Math.random() * 20000) + 5000;
+                    
+                    await supabaseClient.from('counselor_stats').upsert({
+                        counselor_id: id,
+                        counselor_name: name,
+                        period_start: startDate,
+                        period_end: endDate,
+                        help_count: helpCount,
+                        total_chars: totalChars,
+                        avg_chars: Math.round(totalChars / helpCount)
+                    }, { 
+                        onConflict: 'counselor_id,period_start,period_end' 
+                    });
                 }
                 
-                currentData = data;
-                updateUI();
+                await loadData();
+                showNotification('데모 데이터 생성 완료');
+                
+            } catch (error) {
+                console.error('데모 데이터 생성 실패:', error);
+                showNotification('생성 실패', 'error');
+            } finally {
+                btn.disabled = false;
             }
         }
         
@@ -440,146 +286,27 @@
             const totalChars = currentData.reduce((sum, item) => sum + item.total_chars, 0);
             const avgChars = totalHelps > 0 ? Math.round(totalChars / totalHelps) : 0;
             
-            // 카드 애니메이션
-            ['helps', 'chars', 'counselors', 'avg'].forEach(type => {
-                document.getElementById(`card-${type}`).classList.add('updating');
-                setTimeout(() => {
-                    document.getElementById(`card-${type}`).classList.remove('updating');
-                }, 500);
-            });
-            
             // 숫자 업데이트
-            animateNumber('totalHelps', totalHelps);
-            animateNumber('totalChars', totalChars);
-            animateNumber('activeCounselors', currentData.length);
-            animateNumber('avgChars', avgChars);
-            
-            // 변화량 표시
-            if (lastData) {
-                const helpsChange = totalHelps - lastData.totalHelps;
-                const charsChange = totalChars - lastData.totalChars;
-                const counselorsChange = currentData.length - lastData.counselors;
-                
-                updateChange('helpsChange', helpsChange);
-                updateChange('charsChange', charsChange);
-                updateChange('counselorsChange', counselorsChange);
-            }
-            
-            // 포디움 업데이트
-            updatePodium();
+            document.getElementById('totalHelps').textContent = totalHelps.toLocaleString();
+            document.getElementById('totalChars').textContent = totalChars.toLocaleString();
+            document.getElementById('activeCounselors').textContent = currentData.length;
+            document.getElementById('avgChars').textContent = avgChars.toLocaleString();
             
             // 테이블 업데이트
-            updateTable();
-            
-            // 참여자 수 업데이트
-            document.getElementById('tableCount').textContent = `${currentData.length}명 참여`;
-        }
-        
-        // 포디움 업데이트
-        function updatePodium() {
-            const podium = document.getElementById('podium');
-            const top3 = currentData.slice(0, 3);
-            
-            if (top3.length === 0) {
-                podium.innerHTML = '';
-                podium.classList.remove('show');
-                return;
-            }
-            
-            const order = top3.length >= 2 ? [1, 0, 2] : [0, 1, 2]; // 2등, 1등, 3등 순서
-            podium.innerHTML = order.map(idx => {
-                if (!top3[idx]) return '';
-                const item = top3[idx];
-                const rank = idx + 1;
-                return `
-                    <div class="podium-item rank-${rank}">
-                        <div class="podium-rank">${rank}</div>
-                        <div class="podium-bar">
-                            <div class="podium-content">
-                                <div class="podium-name">${item.counselor_name}</div>
-                                <div class="podium-helps">${item.help_count}</div>
-                                <div class="podium-chars">${item.total_chars.toLocaleString()} 글자</div>
-                            </div>
-                        </div>
-                    </div>
-                `;
-            }).join('');
-            
-            setTimeout(() => podium.classList.add('show'), 100);
-        }
-        
-        // 테이블 업데이트
-        function updateTable() {
             const tbody = document.getElementById('tableBody');
-            
             if (currentData.length === 0) {
                 tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:50px;color:#666;">오늘 데이터가 없습니다</td></tr>';
-                return;
-            }
-            
-            const oldRows = tbody.querySelectorAll('tr');
-            const oldIds = Array.from(oldRows).map(row => row.dataset.id);
-            
-            tbody.innerHTML = currentData.map((item, index) => {
-                const rank = index + 1;
-                let rankClass = rank === 1 ? 'gold' : rank === 2 ? 'silver' : rank === 3 ? 'bronze' : '';
-                const isNew = !oldIds.includes(item.counselor_id);
-                
-                return `
-                    <tr data-id="${item.counselor_id}" class="${isNew ? 'new-entry' : ''}">
-                        <td><span class="rank-number ${rankClass}">${rank}</span></td>
+            } else {
+                tbody.innerHTML = currentData.map((item, index) => `
+                    <tr>
+                        <td>${index + 1}</td>
                         <td>${item.counselor_name}<br><small style="color:#666">${item.counselor_id}</small></td>
                         <td>${item.help_count.toLocaleString()}</td>
                         <td>${item.total_chars.toLocaleString()}</td>
                         <td>${item.avg_chars.toLocaleString()}</td>
                     </tr>
-                `;
-            }).join('');
-        }
-        
-        // 숫자 애니메이션
-        function animateNumber(id, target) {
-            const element = document.getElementById(id);
-            const start = parseInt(element.textContent.replace(/,/g, '')) || 0;
-            const duration = 800;
-            const startTime = Date.now();
-            
-            function update() {
-                const progress = Math.min((Date.now() - startTime) / duration, 1);
-                const easeProgress = 1 - Math.pow(1 - progress, 3); // ease-out cubic
-                const current = Math.floor(start + (target - start) * easeProgress);
-                element.textContent = current.toLocaleString();
-                if (progress < 1) requestAnimationFrame(update);
+                `).join('');
             }
-            update();
-        }
-        
-        // 변화량 업데이트
-        function updateChange(id, value) {
-            const element = document.getElementById(id);
-            if (value > 0) {
-                element.textContent = `+${value.toLocaleString()}`;
-                element.className = 'stat-change';
-            } else if (value < 0) {
-                element.textContent = value.toLocaleString();
-                element.className = 'stat-change down';
-            } else {
-                element.textContent = '';
-            }
-        }
-        
-        // 프로그레스 바
-        function showProgress(show) {
-            document.getElementById('progressContainer').classList.toggle('active', show);
-        }
-        
-        function updateProgress(title, current, total) {
-            document.getElementById('progressTitle').textContent = title;
-            document.getElementById('progressCurrent').textContent = current;
-            document.getElementById('progressTotal').textContent = total;
-            const percent = Math.round((current / total) * 100);
-            document.getElementById('progressPercent').textContent = `${percent}%`;
-            document.getElementById('progressFill').style.width = `${percent}%`;
         }
         
         // 상태 표시
@@ -592,7 +319,7 @@
         function updateLastTime() {
             const now = new Date();
             document.getElementById('lastUpdate').textContent = 
-                `마지막 업데이트: ${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}:${now.getSeconds().toString().padStart(2,'0')}`;
+                `마지막 업데이트: ${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}`;
         }
         
         // 알림 표시
@@ -606,88 +333,6 @@
                 notification.classList.remove('show');
             }, 3000);
         }
-        
-        // 실시간 구독 설정
-        function setupRealtimeSubscription() {
-            // 기존 구독 해제
-            if (realtimeSubscription) {
-                supabase.removeChannel(realtimeSubscription);
-            }
-            
-            // 새 구독 설정
-            realtimeSubscription = supabase
-                .channel('stats-changes')
-                .on('postgres_changes', { 
-                    event: '*', 
-                    schema: 'public', 
-                    table: 'counselor_stats' 
-                }, (payload) => {
-                    console.log('실시간 업데이트:', payload);
-                    
-                    // 오늘 데이터인지 확인
-                    const { startDate } = getTodayRange();
-                    if (payload.new && payload.new.period_start === startDate) {
-                        loadData();
-                        showNotification('새로운 데이터가 업데이트되었습니다');
-                    }
-                })
-                .subscribe();
-        }
-        
-        // 자동 새로고침
-        function startAutoRefresh() {
-            if (!autoInterval) {
-                autoInterval = setInterval(() => {
-                    if (!isLoading) {
-                        quickSync();
-                    }
-                }, 30000); // 30초마다
-                
-                document.getElementById('autoBtn').textContent = '자동 새로고침 중지';
-                setStatus('active', '자동 모드 (30초)');
-                document.getElementById('updateInfo').textContent = '자동으로 30초마다 업데이트됩니다';
-            }
-        }
-        
-        function toggleAuto() {
-            const btn = document.getElementById('autoBtn');
-            if (autoInterval) {
-                clearInterval(autoInterval);
-                autoInterval = null;
-                btn.textContent = '자동 새로고침 시작';
-                setStatus('active', '수동 모드');
-                document.getElementById('updateInfo').textContent = '수동 새로고침 모드';
-            } else {
-                startAutoRefresh();
-            }
-        }
-        
-        // 자정 리셋
-        setInterval(() => {
-            const now = new Date();
-            if (now.getHours() === 0 && now.getMinutes() === 0) {
-                currentData = [];
-                lastData = null;
-                init();
-            }
-        }, 60000);
-        
-        // 페이지 가시성 변경 감지
-        document.addEventListener('visibilitychange', () => {
-            if (document.hidden) {
-                // 페이지가 숨겨지면 자동 새로고침 중지
-                if (autoInterval) {
-                    clearInterval(autoInterval);
-                    autoInterval = null;
-                }
-            } else {
-                // 페이지가 다시 보이면 즉시 새로고침 후 자동 새로고침 재시작
-                quickSync();
-                if (document.getElementById('autoBtn').textContent === '자동 새로고침 중지') {
-                    startAutoRefresh();
-                }
-            }
-        });
         
         // 시작
         init();
