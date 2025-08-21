@@ -1,12 +1,16 @@
-// api/sync.js
+// api/sync.js - 실제 채널톡 API 연동
 const { createClient } = require('@supabase/supabase-js');
 
 const supabase = createClient(
   'https://bhtqjipygkawoyieidgp.supabase.co',
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJodHFqaXB5Z2thd295aWVpZGdwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ0ODg5NjgsImV4cCI6MjA3MDA2NDk2OH0.hu2EAj9RCq436QBtfbEVF4aGOau4WWomLMDKahN4iAA'
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJodHFqaXB5Z2thd285aWVpZGdwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ0ODg5NjgsImV4cCI6MjA3MDA2NDk2OH0.hu2EAj9RCq436QBtfbEVF4aGOau4WWomLMDKahN4iAA'
 );
 
-// 상담사 ID-이름 매핑
+// 채널톡 API 키
+const CHANNEL_ACCESS_KEY = '688a26176fcb19aebf8b';
+const CHANNEL_SECRET = 'a0db6c38b95c8ec4d9bb46e7c653b3e2';
+
+// 상담사 ID-이름 매핑 (완전한 목록)
 const counselorMap = {
   '520798': '채주은',
   '521212': '손진우',
@@ -64,9 +68,48 @@ const counselorMap = {
   '555865': '공현준'
 };
 
-// ID로 이름 찾기
+// ID로 이름 찾기 (Unknown 방지)
 function getCounselorName(id) {
-  return counselorMap[id] || counselorMap[String(id)] || `상담사${id}`;
+  const cleanId = String(id).trim();
+  return counselorMap[cleanId] || `미확인(${cleanId})`;
+}
+
+// Rate limiter
+let lastCall = 0;
+async function rateLimit() {
+  const now = Date.now();
+  const wait = Math.max(0, 100 - (now - lastCall)); // 100ms 간격
+  if (wait > 0) await new Promise(r => setTimeout(r, wait));
+  lastCall = Date.now();
+}
+
+// 채널톡 API 호출
+async function callChannelAPI(endpoint, params = {}) {
+  await rateLimit();
+  
+  const url = new URL(`https://api.channel.io/open/v5/${endpoint}`);
+  Object.keys(params).forEach(key => url.searchParams.append(key, params[key]));
+  
+  const response = await fetch(url, {
+    headers: {
+      'x-access-key': CHANNEL_ACCESS_KEY,
+      'x-access-secret': CHANNEL_SECRET,
+      'Content-Type': 'application/json'
+    }
+  });
+  
+  if (!response.ok) {
+    throw new Error(`API 호출 실패: ${response.status}`);
+  }
+  
+  return response.json();
+}
+
+// 글자수 정확하게 계산
+function countChars(text) {
+  if (!text) return 0;
+  // 한글, 이모지 포함 정확한 글자수
+  return [...text].length;
 }
 
 module.exports = async (req, res) => {
@@ -75,22 +118,25 @@ module.exports = async (req, res) => {
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
   
-  // OPTIONS 요청 처리
   if (req.method === 'OPTIONS') {
     return res.status(200).end();
   }
   
   try {
-    console.log('API 호출 받음:', req.method, req.body);
+    console.log('=== API 시작 ===');
     
-    // 오늘 날짜 가져오기
+    // 오늘 날짜
     const today = new Date();
     const startDate = req.body?.startDate || today.toISOString().split('T')[0];
     const endDate = req.body?.endDate || today.toISOString().split('T')[0];
     
-    console.log('날짜 범위:', startDate, '~', endDate);
+    // 오늘 0시부터 23시 59분까지
+    const startTime = new Date(startDate + 'T00:00:00Z').getTime();
+    const endTime = new Date(endDate + 'T23:59:59Z').getTime();
     
-    // 웹훅 처리 (채널톡에서 오는 요청)
+    console.log(`날짜 범위: ${startDate} 00:00 ~ ${endDate} 23:59`);
+    
+    // 웹훅 처리
     if (req.headers['x-signature'] || req.headers['x-token']) {
       console.log('웹훅 이벤트 수신');
       const { event, resource } = req.body;
@@ -99,9 +145,12 @@ module.exports = async (req, res) => {
         const msg = resource.message;
         const chat = resource.userChat || {};
         
-        // assignee가 아닌 매니저가 답변한 경우
-        if (msg.personType === 'manager' && msg.personId !== chat.assignee?.id) {
-          const counselorId = msg.personId || 'unknown';
+        // assignee가 아닌 매니저가 답변한 경우만
+        if (msg.personType === 'manager' && 
+            msg.personId && 
+            msg.personId !== chat.assignee?.id) {
+          
+          const counselorId = String(msg.personId).trim();
           const counselorName = getCounselorName(counselorId);
           
           const record = {
@@ -109,121 +158,219 @@ module.exports = async (req, res) => {
             conversation_id: chat.id || 'unknown',
             counselor_id: counselorId,
             counselor_name: counselorName,
-            char_count: (msg.plainText || msg.message || '').length,
+            message_content: msg.plainText || msg.message || '',
+            char_count: countChars(msg.plainText || msg.message || ''),
             helped_at: new Date(msg.createdAt || Date.now()).toISOString()
           };
           
-          console.log('도움 기록 저장:', record);
+          console.log(`도움 기록: ${counselorName}(${counselorId}) - ${record.char_count}자`);
           
+          // 도움 기록 저장
           await supabase.from('help_records').upsert(record, { 
             onConflict: 'message_id' 
           });
           
           // 통계 업데이트
-          const { data: existingStats } = await supabase
-            .from('counselor_stats')
-            .select('*')
-            .eq('counselor_id', counselorId)
-            .eq('period_start', startDate)
-            .eq('period_end', endDate)
-            .single();
-          
-          if (existingStats) {
-            // 기존 통계 업데이트
-            const newCount = existingStats.help_count + 1;
-            const newTotal = existingStats.total_chars + record.char_count;
-            
-            await supabase
-              .from('counselor_stats')
-              .update({
-                help_count: newCount,
-                total_chars: newTotal,
-                avg_chars: Math.round(newTotal / newCount),
-                counselor_name: counselorName
-              })
-              .eq('id', existingStats.id);
-          } else {
-            // 새 통계 생성
-            await supabase
-              .from('counselor_stats')
-              .insert({
-                counselor_id: counselorId,
-                counselor_name: counselorName,
-                period_start: startDate,
-                period_end: endDate,
-                help_count: 1,
-                total_chars: record.char_count,
-                avg_chars: record.char_count
-              });
-          }
+          await updateStats(counselorId, counselorName, record.char_count, startDate, endDate);
         }
       }
       
-      return res.status(200).json({ success: true, message: 'Webhook processed' });
+      return res.status(200).json({ success: true });
     }
     
-    // 실제 상담사 목록 기반 데모 데이터 생성
-    console.log('실제 상담사 데이터 생성 중...');
+    // 정기 동기화 - 실제 채널톡 API 호출
+    console.log('채널톡 대화 목록 가져오기...');
     
-    // 랜덤으로 10명 선택
-    const counselorIds = Object.keys(counselorMap);
-    const selectedCounselors = [];
-    const usedIndexes = new Set();
+    const conversations = [];
+    const states = ['opened', 'closed', 'snoozed'];
     
-    while (selectedCounselors.length < Math.min(10, counselorIds.length)) {
-      const randomIndex = Math.floor(Math.random() * counselorIds.length);
-      if (!usedIndexes.has(randomIndex)) {
-        usedIndexes.add(randomIndex);
-        const counselorId = counselorIds[randomIndex];
-        selectedCounselors.push({
-          counselor_id: counselorId,
-          counselor_name: counselorMap[counselorId],
-          help_count: Math.floor(Math.random() * 30) + 5,
-          total_chars: Math.floor(Math.random() * 15000) + 3000
+    // 모든 상태의 대화 가져오기
+    for (const state of states) {
+      let cursor = null;
+      let pageCount = 0;
+      
+      do {
+        const params = {
+          state,
+          limit: 500,
+          ...(cursor && { since: cursor })
+        };
+        
+        const data = await callChannelAPI('user-chats', params);
+        
+        if (data.userChats && data.userChats.length > 0) {
+          // 오늘 날짜 대화만 필터링
+          const todayChats = data.userChats.filter(chat => {
+            const chatTime = new Date(chat.updatedAt || chat.createdAt).getTime();
+            return chatTime >= startTime && chatTime <= endTime;
+          });
+          
+          conversations.push(...todayChats);
+          console.log(`${state} 상태: ${todayChats.length}개 대화 추가`);
+        }
+        
+        cursor = data.next;
+        pageCount++;
+        
+        // 너무 많은 페이지 방지
+        if (pageCount > 30) break;
+        
+      } while (cursor);
+    }
+    
+    console.log(`총 ${conversations.length}개 대화 발견`);
+    
+    // 각 대화의 메시지 확인
+    const counselorStats = new Map();
+    const helpMessages = [];
+    let processedCount = 0;
+    
+    for (const conv of conversations) {
+      try {
+        // 메시지 가져오기
+        const msgData = await callChannelAPI(`user-chats/${conv.id}/messages`, {
+          limit: 100
+        });
+        
+        if (msgData.messages) {
+          for (const msg of msgData.messages) {
+            // assignee가 아닌 매니저가 답변한 경우만
+            if (msg.personType === 'manager' && 
+                msg.personId && 
+                msg.personId !== conv.assignee?.id) {
+              
+              const counselorId = String(msg.personId).trim();
+              const counselorName = getCounselorName(counselorId);
+              const charCount = countChars(msg.plainText || msg.message || '');
+              
+              // 도움 메시지 기록
+              helpMessages.push({
+                message_id: msg.id,
+                conversation_id: conv.id,
+                counselor_id: counselorId,
+                counselor_name: counselorName,
+                message_content: msg.plainText || msg.message || '',
+                char_count: charCount,
+                helped_at: new Date(msg.createdAt).toISOString()
+              });
+              
+              // 통계 집계
+              if (!counselorStats.has(counselorId)) {
+                counselorStats.set(counselorId, {
+                  counselor_id: counselorId,
+                  counselor_name: counselorName,
+                  help_count: 0,
+                  total_chars: 0,
+                  messages: []
+                });
+              }
+              
+              const stats = counselorStats.get(counselorId);
+              stats.help_count++;
+              stats.total_chars += charCount;
+              stats.messages.push({
+                content: msg.plainText || msg.message || '',
+                chars: charCount,
+                time: msg.createdAt
+              });
+            }
+          }
+        }
+        
+        processedCount++;
+        if (processedCount % 10 === 0) {
+          console.log(`처리 진행: ${processedCount}/${conversations.length}`);
+        }
+        
+      } catch (error) {
+        console.error(`대화 ${conv.id} 처리 실패:`, error);
+      }
+    }
+    
+    console.log(`총 ${helpMessages.length}개 도움 메시지 발견`);
+    
+    // 데이터베이스에 저장
+    if (helpMessages.length > 0) {
+      // 배치로 저장
+      for (let i = 0; i < helpMessages.length; i += 100) {
+        const batch = helpMessages.slice(i, i + 100);
+        await supabase.from('help_records').upsert(batch, {
+          onConflict: 'message_id'
         });
       }
     }
     
-    // 평균 계산 및 저장
-    for (const item of selectedCounselors) {
-      const statsData = {
-        counselor_id: item.counselor_id,
-        counselor_name: item.counselor_name,
-        period_start: startDate,
-        period_end: endDate,
-        help_count: item.help_count,
-        total_chars: item.total_chars,
-        avg_chars: Math.round(item.total_chars / item.help_count)
-      };
-      
-      console.log('통계 저장:', statsData);
-      
-      const { error } = await supabase
-        .from('counselor_stats')
-        .upsert(statsData, { 
-          onConflict: 'counselor_id,period_start,period_end' 
-        });
-      
-      if (error) {
-        console.error('Supabase 저장 에러:', error);
-      }
+    // 통계 저장
+    const statsArray = Array.from(counselorStats.values()).map(stats => ({
+      counselor_id: stats.counselor_id,
+      counselor_name: stats.counselor_name,
+      period_start: startDate,
+      period_end: endDate,
+      help_count: stats.help_count,
+      total_chars: stats.total_chars,
+      avg_chars: Math.round(stats.total_chars / stats.help_count)
+    }));
+    
+    if (statsArray.length > 0) {
+      await supabase.from('counselor_stats').upsert(statsArray, {
+        onConflict: 'counselor_id,period_start,period_end'
+      });
     }
     
-    // 성공 응답
+    console.log('=== 동기화 완료 ===');
+    
     res.status(200).json({
       success: true,
-      message: 'Data synced successfully',
       date: startDate,
-      counselors: selectedCounselors.length,
-      counselorList: selectedCounselors.map(c => c.counselor_name)
+      conversations: conversations.length,
+      helpMessages: helpMessages.length,
+      counselors: counselorStats.size,
+      summary: statsArray.map(s => `${s.counselor_name}: ${s.help_count}건`)
     });
     
   } catch (error) {
     console.error('API 에러:', error);
     res.status(200).json({ 
       success: false,
-      error: error.message,
-      note: 'Using demo data' 
+      error: error.message
     });
   }
 };
+
+// 통계 업데이트 함수
+async function updateStats(counselorId, counselorName, charCount, startDate, endDate) {
+  const { data: existing } = await supabase
+    .from('counselor_stats')
+    .select('*')
+    .eq('counselor_id', counselorId)
+    .eq('period_start', startDate)
+    .eq('period_end', endDate)
+    .single();
+  
+  if (existing) {
+    const newCount = existing.help_count + 1;
+    const newTotal = existing.total_chars + charCount;
+    
+    await supabase
+      .from('counselor_stats')
+      .update({
+        help_count: newCount,
+        total_chars: newTotal,
+        avg_chars: Math.round(newTotal / newCount),
+        counselor_name: counselorName
+      })
+      .eq('id', existing.id);
+  } else {
+    await supabase
+      .from('counselor_stats')
+      .insert({
+        counselor_id: counselorId,
+        counselor_name: counselorName,
+        period_start: startDate,
+        period_end: endDate,
+        help_count: 1,
+        total_chars: charCount,
+        avg_chars: charCount
+      });
+  }
+}
