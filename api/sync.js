@@ -73,11 +73,10 @@ export default async function handler(req, res) {
       return res.status(200).json({ ok: true });
     }
     
-    // 동기화 처리
-    const { startDate, endDate } = req.body || req.query;
-    if (!startDate || !endDate) {
-      return res.status(400).json({ error: 'Dates required' });
-    }
+    // 동기화 처리 - 당일 데이터만
+    const today = new Date();
+    const startDate = req.body?.startDate || today.toISOString().split('T')[0];
+    const endDate = req.body?.endDate || today.toISOString().split('T')[0];
     
     console.log('Syncing:', startDate, 'to', endDate);
     
