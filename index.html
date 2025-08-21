@@ -3,56 +3,53 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>채널톡 비담당 상담 도움 추적 시스템</title>
+    <title>채널톡 비담당 상담 추적 시스템</title>
     <script src="https://unpkg.com/@supabase/supabase-js@2.39.0/dist/umd/supabase.min.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { 
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans KR', sans-serif; 
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: #000; 
             color: #fff; 
             min-height: 100vh; 
         }
         .container { max-width: 1600px; margin: 0 auto; padding: 40px 20px; }
         
-        /* 채널톡 스타일 헤더 */
+        /* 헤더 스타일 */
         .header { 
             text-align: center; 
-            margin-bottom: 50px; 
-            background: rgba(255,255,255,0.1);
-            padding: 40px;
-            border-radius: 20px;
-            backdrop-filter: blur(10px);
-            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+            margin-bottom: 50px;
+            padding: 30px;
+            background: #000;
+            border: 1px solid #222;
         }
         .header h1 { 
-            font-size: 48px; 
-            font-weight: 300; 
-            margin-bottom: 10px;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+            font-size: 52px; 
+            font-weight: 200; 
+            margin-bottom: 15px;
         }
         .header h1 span { 
-            font-weight: 700; 
-            background: linear-gradient(45deg, #FFE000, #FFA000);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
+            color: #1E6FFF; 
+            font-weight: 400;
         }
         .subtitle { 
-            color: rgba(255,255,255,0.9); 
-            font-size: 18px; 
+            color: #999; 
+            font-size: 16px; 
             margin-top: 10px;
             letter-spacing: 0.5px;
         }
-        .channel-badge {
-            display: inline-block;
-            background: #5856D6;
-            color: white;
-            padding: 5px 15px;
-            border-radius: 20px;
-            font-size: 12px;
-            margin-top: 15px;
-            font-weight: 600;
-            letter-spacing: 1px;
+        .date-display { 
+            color: #888; 
+            font-size: 15px; 
+            text-transform: uppercase; 
+            letter-spacing: 2px; 
+            margin-top: 20px;
+        }
+        .today-info { 
+            color: #1E6FFF; 
+            font-size: 20px; 
+            margin-top: 10px;
+            font-weight: 300;
         }
         
         /* 실시간 상태 표시 */
@@ -60,11 +57,10 @@
             position: fixed;
             top: 20px;
             right: 20px;
-            background: rgba(255,255,255,0.95);
-            color: #333;
+            background: #111;
             padding: 15px 20px;
-            border-radius: 12px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+            border: 1px solid #333;
+            border-radius: 4px;
             z-index: 1000;
         }
         .realtime-indicator {
@@ -76,181 +72,183 @@
             width: 10px;
             height: 10px;
             border-radius: 50%;
-            background: #4CAF50;
+            background: #00FF00;
             animation: pulse 2s infinite;
         }
-        .pulse-dot.disconnected { background: #F44336; }
-        .pulse-dot.connecting { background: #FF9800; }
+        .pulse-dot.disconnected { background: #FF0000; }
+        .pulse-dot.connecting { background: #FFD700; }
         
         /* 컨트롤 바 */
         .control-bar { 
             display: flex; 
             justify-content: space-between; 
             align-items: center; 
-            padding: 25px; 
-            background: rgba(255,255,255,0.1); 
-            border-radius: 15px;
+            padding: 25px 30px; 
+            background: #000; 
+            border: 1px solid #222;
             margin-bottom: 40px; 
             flex-wrap: wrap; 
             gap: 20px;
-            backdrop-filter: blur(10px);
         }
         .control-buttons { display: flex; gap: 15px; flex-wrap: wrap; }
         
         .btn { 
             padding: 12px 30px; 
-            background: rgba(255,255,255,0.2); 
-            color: #fff; 
-            border: 2px solid rgba(255,255,255,0.3); 
-            border-radius: 10px;
-            font-size: 14px; 
-            font-weight: 600; 
-            letter-spacing: 0.5px; 
+            background: transparent; 
+            color: #999; 
+            border: 1px solid #333; 
+            font-size: 15px; 
+            font-weight: 500; 
+            letter-spacing: 1px; 
+            text-transform: uppercase; 
             cursor: pointer; 
             transition: all 0.3s;
-            backdrop-filter: blur(5px);
         }
         .btn:hover { 
-            background: rgba(255,255,255,0.3);
-            transform: translateY(-2px);
-            box-shadow: 0 5px 20px rgba(0,0,0,0.2);
+            color: #1E6FFF; 
+            border-color: #1E6FFF;
         }
         .btn.primary { 
-            background: linear-gradient(45deg, #5856D6, #7C3AED);
-            border: none;
+            color: #1E6FFF; 
+            border-color: #1E6FFF;
         }
         .btn.primary:hover { 
-            background: linear-gradient(45deg, #4744C9, #6B2FE0);
-            box-shadow: 0 5px 30px rgba(88,86,214,0.5);
+            background: #1E6FFF; 
+            color: #000;
         }
         .btn:disabled { 
             opacity: 0.5; 
             cursor: not-allowed; 
         }
         
-        /* 통계 카드 */
+        /* 상태 인디케이터 */
+        .status-indicator { 
+            display: flex; 
+            align-items: center; 
+            gap: 10px; 
+            font-size: 13px; 
+            text-transform: uppercase; 
+            letter-spacing: 1px;
+        }
+        .status-dot { 
+            width: 8px; 
+            height: 8px; 
+            border-radius: 50%; 
+            background: #666; 
+            animation: pulse 2s infinite;
+        }
+        .status-dot.active { background: #00FF00; }
+        .status-dot.loading { background: #1E6FFF; }
+        .status-dot.error { background: #FF0000; }
+        
+        /* 통계 카드 그리드 */
         .stats-grid { 
             display: grid; 
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); 
-            gap: 20px; 
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); 
+            gap: 2px; 
             margin-bottom: 50px;
+            background: #111;
+            padding: 2px;
         }
         .stat-card { 
-            background: rgba(255,255,255,0.95); 
-            color: #333;
-            border-radius: 15px;
-            padding: 30px; 
+            background: #000; 
+            padding: 35px; 
             text-align: center; 
             position: relative; 
             overflow: hidden;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
-            transition: all 0.3s;
         }
         .stat-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 15px 50px rgba(0,0,0,0.2);
-        }
-        .stat-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 4px;
-            background: linear-gradient(90deg, #5856D6, #7C3AED);
+            background: #050505;
         }
         .stat-icon {
-            font-size: 32px;
+            font-size: 36px;
             margin-bottom: 15px;
+            opacity: 0.7;
         }
         .stat-value { 
-            font-size: 42px; 
-            font-weight: 700; 
-            background: linear-gradient(45deg, #5856D6, #7C3AED);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            margin-bottom: 10px;
+            font-size: 52px; 
+            font-weight: 200; 
+            color: #1E6FFF; 
+            margin-bottom: 12px;
             font-variant-numeric: tabular-nums;
         }
         .stat-label { 
             font-size: 14px; 
-            color: #666; 
-            font-weight: 500;
+            color: #888; 
+            text-transform: uppercase; 
+            letter-spacing: 2px;
+            font-weight: 400;
         }
         .stat-change {
-            font-size: 14px;
-            color: #4CAF50;
+            font-size: 15px;
+            color: #00FF00;
             margin-top: 10px;
-            font-weight: 600;
+            font-weight: 500;
         }
-        .stat-change.down { color: #F44336; }
+        .stat-change.down { color: #FF4444; }
         
         /* 실시간 활동 피드 */
         .activity-feed {
-            background: rgba(255,255,255,0.95);
-            color: #333;
-            border-radius: 15px;
+            background: #000;
+            border: 1px solid #222;
             margin-bottom: 40px;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
-            max-height: 450px;
+            max-height: 500px;
             overflow: hidden;
         }
         .feed-header {
-            padding: 20px 25px;
-            border-bottom: 2px solid #f0f0f0;
+            padding: 25px 30px;
+            border-bottom: 1px solid #222;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
         }
         .feed-title {
-            font-size: 18px;
-            font-weight: 600;
+            font-size: 17px;
+            font-weight: 300;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            color: #1E6FFF;
+        }
+        .feed-count {
+            color: #888;
+            font-size: 14px;
         }
         .feed-content {
-            max-height: 350px;
+            max-height: 400px;
             overflow-y: auto;
-            padding: 10px;
-            background: white;
+            padding: 0;
         }
         .activity-item {
-            padding: 15px;
-            border-bottom: 1px solid #f0f0f0;
-            animation: slideIn 0.3s;
+            padding: 20px 30px;
+            border-bottom: 1px solid #111;
             transition: all 0.2s;
-            border-radius: 8px;
-            margin-bottom: 10px;
         }
         .activity-item:hover {
-            background: #f8f9fa;
-            transform: translateX(5px);
+            background: #050505;
         }
         .activity-time {
-            font-size: 12px;
-            color: #999;
-            margin-bottom: 5px;
+            font-size: 13px;
+            color: #888;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
         }
         .activity-text {
-            font-size: 14px;
+            font-size: 16px;
             line-height: 1.6;
-            color: #333;
+            color: #ccc;
         }
         .activity-counselor {
-            color: #5856D6;
-            font-weight: 700;
+            color: #1E6FFF;
+            font-weight: 500;
         }
         .activity-customer {
-            background: #FFE000;
-            color: #333;
-            padding: 2px 8px;
-            border-radius: 12px;
-            font-size: 12px;
-            font-weight: 600;
+            color: #FFD700;
+            font-weight: 500;
         }
         .activity-chars {
-            color: #999;
-            font-size: 12px;
+            color: #888;
+            font-size: 14px;
             margin-left: 10px;
         }
         
@@ -258,7 +256,7 @@
         .ranking-section {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 20px;
+            gap: 30px;
             margin-bottom: 40px;
         }
         @media (max-width: 1024px) {
@@ -266,83 +264,93 @@
         }
         
         .ranking-table { 
-            background: rgba(255,255,255,0.95);
-            color: #333;
-            border-radius: 15px;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
-            overflow: hidden;
+            background: #000;
+            border: 1px solid #222;
         }
         .table-header { 
-            padding: 25px 30px; 
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
+            padding: 25px 30px;
+            border-bottom: 1px solid #222;
         }
         .table-title { 
-            font-size: 18px; 
-            font-weight: 600;
+            font-size: 17px;
+            font-weight: 300;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            color: #1E6FFF;
         }
         table { 
             width: 100%; 
             border-collapse: collapse;
-            background: white;
         }
         th { 
             padding: 20px; 
             text-align: left; 
-            font-size: 12px; 
-            color: #666; 
+            font-size: 13px; 
+            color: #888; 
             text-transform: uppercase; 
-            letter-spacing: 1px; 
-            border-bottom: 2px solid #f0f0f0;
-            font-weight: 600;
+            letter-spacing: 2px; 
+            border-bottom: 1px solid #222;
+            font-weight: 500;
         }
         td { 
             padding: 20px; 
-            font-size: 15px; 
-            border-bottom: 1px solid #f0f0f0;
+            font-size: 16px; 
+            border-bottom: 1px solid #111;
+            color: #ccc;
             font-variant-numeric: tabular-nums;
-            color: #333;
         }
         tr:hover { 
-            background: #f8f9fa;
+            background: #050505;
         }
-        .rank-badge {
+        .rank-number {
             display: inline-block;
-            width: 32px;
-            height: 32px;
-            line-height: 32px;
+            width: 35px;
+            height: 35px;
+            line-height: 35px;
             text-align: center;
             border-radius: 50%;
-            font-weight: 700;
-            font-size: 14px;
+            font-weight: 600;
+            font-size: 16px;
+            background: #111;
+            border: 1px solid #333;
         }
-        .rank-1 { background: linear-gradient(45deg, #FFD700, #FFA500); color: #fff; }
-        .rank-2 { background: linear-gradient(45deg, #C0C0C0, #808080); color: #fff; }
-        .rank-3 { background: linear-gradient(45deg, #CD7F32, #8B4513); color: #fff; }
+        .rank-1 { 
+            background: #FFD700; 
+            color: #000;
+            border: none;
+        }
+        .rank-2 { 
+            background: #C0C0C0; 
+            color: #000;
+            border: none;
+        }
+        .rank-3 { 
+            background: #CD7F32; 
+            color: #fff;
+            border: none;
+        }
         
-        /* 채널톡 스타일 알림 */
+        /* 알림 */
         .notification { 
             position: fixed; 
-            bottom: 20px; 
+            top: 20px; 
             right: 20px; 
-            padding: 20px 25px; 
-            background: white;
-            border-radius: 12px;
-            color: #333; 
-            font-size: 14px; 
-            font-weight: 600;
+            padding: 18px 25px; 
+            background: #111;
+            border: 1px solid #1E6FFF;
+            color: #fff; 
+            font-size: 15px;
+            font-weight: 500;
             z-index: 1000; 
-            animation: slideUp 0.3s; 
+            animation: slideIn 0.3s; 
             display: none;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
-            border-left: 4px solid #5856D6;
         }
         .notification.show { display: block; }
         .notification.error { 
-            border-left-color: #F44336;
+            border-color: #FF0000;
         }
         .notification.success {
-            border-left-color: #4CAF50;
+            border-color: #00FF00;
         }
         
         @keyframes pulse { 
@@ -350,47 +358,39 @@
             50% { opacity: 0.5; } 
         }
         @keyframes slideIn { 
-            from { 
-                opacity: 0;
-                transform: translateX(-20px); 
-            } 
-            to { 
-                opacity: 1;
-                transform: translateX(0); 
-            } 
-        }
-        @keyframes slideUp {
-            from {
-                opacity: 0;
-                transform: translateY(20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
+            from { transform: translateX(100%); } 
+            to { transform: translateX(0); } 
         }
         
         /* 스크롤바 스타일 */
-        ::-webkit-scrollbar { width: 8px; }
-        ::-webkit-scrollbar-track { background: #f1f1f1; }
+        ::-webkit-scrollbar { width: 10px; }
+        ::-webkit-scrollbar-track { background: #111; }
         ::-webkit-scrollbar-thumb { 
-            background: #5856D6; 
-            border-radius: 4px;
+            background: #333; 
+            border-radius: 0;
         }
-        ::-webkit-scrollbar-thumb:hover { background: #4744C9; }
+        ::-webkit-scrollbar-thumb:hover { background: #444; }
 
         /* 로딩 스피너 */
         .loading-spinner {
             display: inline-block;
-            width: 20px;
-            height: 20px;
-            border: 3px solid rgba(255,255,255,0.3);
+            width: 16px;
+            height: 16px;
+            border: 2px solid #333;
             border-radius: 50%;
-            border-top-color: #fff;
+            border-top-color: #1E6FFF;
             animation: spin 1s ease-in-out infinite;
         }
         @keyframes spin {
             to { transform: rotate(360deg); }
+        }
+        
+        /* 모바일 반응형 */
+        @media (max-width: 768px) {
+            .control-bar { flex-direction: column; }
+            .stats-grid { grid-template-columns: 1fr; }
+            .header h1 { font-size: 36px; }
+            .stat-value { font-size: 42px; }
         }
     </style>
 </head>
@@ -400,35 +400,30 @@
         <div class="realtime-status">
             <div class="realtime-indicator">
                 <span class="pulse-dot" id="realtimeDot"></span>
-                <span id="realtimeText" style="color: #333; font-weight: 600;">연결 대기중</span>
+                <span id="realtimeText" style="color: #888; font-size: 13px;">연결 대기중</span>
             </div>
         </div>
 
         <!-- 헤더 -->
         <div class="header">
-            <h1>채널톡 <span>비담당 상담 도움 추적</span></h1>
-            <div class="subtitle">담당자(assignee)가 아닌 매니저의 답변을 실시간으로 모니터링합니다</div>
-            <div class="channel-badge">CHANNEL TALK INTEGRATION</div>
+            <h1>채널톡 <span>비담당 상담 추적</span></h1>
+            <div class="subtitle">담당자(ASSIGNEE)가 아닌 매니저의 답변을 실시간으로 모니터링합니다</div>
+            <div class="date-display" id="dateDisplay"></div>
+            <div class="today-info">오늘 하루 실시간 집계</div>
         </div>
         
         <!-- 컨트롤 바 -->
         <div class="control-bar">
             <div class="control-buttons">
-                <button class="btn primary" onclick="app.loadData()" id="refreshBtn">
-                    <span id="refreshIcon">↻</span> 새로고침
-                </button>
-                <button class="btn" onclick="app.syncChannelTalk()" id="syncBtn">
-                    채널톡 동기화
-                </button>
-                <button class="btn" onclick="app.exportData()" id="exportBtn">
-                    📊 데이터 내보내기
-                </button>
-                <button class="btn" onclick="app.toggleRealtime()" id="realtimeBtn">
-                    ⚡ 실시간 모드
-                </button>
+                <button class="btn primary" onclick="app.loadData()" id="refreshBtn">새로고침</button>
+                <button class="btn" onclick="app.syncChannelTalk()" id="syncBtn">채널톡 동기화</button>
+                <button class="btn" onclick="app.exportData()" id="exportBtn">데이터 내보내기</button>
+                <button class="btn" onclick="app.generateDemoData()" id="demoBtn">데모 데이터</button>
             </div>
-            <div style="color: rgba(255,255,255,0.9); font-size: 14px;">
-                <span id="lastUpdate">마지막 업데이트: -</span>
+            <div class="status-indicator">
+                <span class="status-dot" id="statusDot"></span>
+                <span id="statusText" style="color: #888;">대기 중</span>
+                <span id="lastUpdate" style="margin-left: 20px; color: #888;"></span>
             </div>
         </div>
         
@@ -437,13 +432,13 @@
             <div class="stat-card">
                 <div class="stat-icon">💬</div>
                 <div class="stat-value" id="totalNonAssignee">0</div>
-                <div class="stat-label">비담당 답변 수</div>
+                <div class="stat-label">오늘 비담당 답변</div>
                 <div class="stat-change" id="changeNonAssignee">-</div>
             </div>
             <div class="stat-card">
-                <div class="stat-icon">📝</div>
+                <div class="stat-icon">✍️</div>
                 <div class="stat-value" id="totalChars">0</div>
-                <div class="stat-label">총 글자수</div>
+                <div class="stat-label">오늘 총 글자수</div>
                 <div class="stat-change" id="changeChars">-</div>
             </div>
             <div class="stat-card">
@@ -459,22 +454,22 @@
                 <div class="stat-change" id="changeResponseTime">-</div>
             </div>
             <div class="stat-card">
-                <div class="stat-icon">📈</div>
-                <div class="stat-value" id="helpRate">0%</div>
-                <div class="stat-label">도움 비율</div>
-                <div class="stat-change" id="changeHelpRate">-</div>
+                <div class="stat-icon">📊</div>
+                <div class="stat-value" id="avgChars">0</div>
+                <div class="stat-label">평균 글자수</div>
+                <div class="stat-change" id="changeAvgChars">-</div>
             </div>
         </div>
         
         <!-- 실시간 활동 피드 -->
         <div class="activity-feed">
             <div class="feed-header">
-                <div class="feed-title">⚡ 실시간 활동</div>
-                <span id="feedCount">0개 활동</span>
+                <div class="feed-title">실시간 활동</div>
+                <span class="feed-count" id="feedCount">0개 활동</span>
             </div>
             <div class="feed-content" id="activityFeed">
-                <div style="padding: 50px; text-align: center; color: #999;">
-                    채널톡 활동이 여기에 실시간으로 표시됩니다
+                <div style="padding: 50px; text-align: center; color: #666;">
+                    실시간 활동이 여기에 표시됩니다
                 </div>
             </div>
         </div>
@@ -484,19 +479,20 @@
             <!-- 오늘의 매니저 랭킹 -->
             <div class="ranking-table">
                 <div class="table-header">
-                    <div class="table-title">🏆 오늘의 비담당 도움 랭킹</div>
+                    <div class="table-title">오늘의 비담당 도움 랭킹</div>
                 </div>
                 <table>
                     <thead>
                         <tr>
-                            <th width="60">순위</th>
+                            <th width="80">순위</th>
                             <th>매니저</th>
-                            <th width="80">횟수</th>
-                            <th width="100">글자수</th>
+                            <th width="100">횟수</th>
+                            <th width="120">글자수</th>
+                            <th width="120">평균</th>
                         </tr>
                     </thead>
                     <tbody id="todayRanking">
-                        <tr><td colspan="4" style="text-align:center;padding:50px;color:#999;">
+                        <tr><td colspan="5" style="text-align:center;padding:50px;color:#666;">
                             데이터를 불러오는 중...
                         </td></tr>
                     </tbody>
@@ -506,19 +502,19 @@
             <!-- 시간대별 통계 -->
             <div class="ranking-table">
                 <div class="table-header">
-                    <div class="table-title">📊 시간대별 활동 통계</div>
+                    <div class="table-title">시간대별 활동 통계</div>
                 </div>
                 <table>
                     <thead>
                         <tr>
                             <th>시간대</th>
                             <th>답변 수</th>
-                            <th>활동 매니저</th>
+                            <th>매니저</th>
                             <th>평균 글자</th>
                         </tr>
                     </thead>
                     <tbody id="hourlyStats">
-                        <tr><td colspan="4" style="text-align:center;padding:50px;color:#999;">
+                        <tr><td colspan="4" style="text-align:center;padding:50px;color:#666;">
                             데이터를 불러오는 중...
                         </td></tr>
                     </tbody>
@@ -532,7 +528,7 @@
     <script>
         // ✅ Supabase 설정 (키 자동 적용 완료!)
         const SUPABASE_URL = 'https://bhtqjipygkawoyieidgp.supabase.co';
-        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJodHFqaXB5Z2thd285aWVpZGdwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ0ODg5NjgsImV4cCI6MjA3MDA2NDk2OH0.hu2EAj9RCq436QBtfbEVF4aGOau4WWomLMDKahN4iAA';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJodHFqaXB5Z2thd295aWVpZGdwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ0ODg5NjgsImV4cCI6MjA3MDA2NDk2OH0.hu2EAj9RCq436QBtfbEVF4aGOau4WWomLMDKahN4iAA';
         
         const { createClient } = window.supabase;
         const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -574,23 +570,25 @@
                 await this.loadData();
                 this.setupRealtime();
                 
-                // 자동 새로고침 (3분마다)
-                setInterval(() => this.loadData(), 180000);
+                // 자동 새로고침 (5분마다)
+                setInterval(() => this.loadData(), 300000);
             },
             
             // 날짜시간 업데이트
             updateDateTime() {
                 const now = new Date();
-                const timeStr = `${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}`;
-                document.getElementById('lastUpdate').textContent = `마지막 업데이트: ${timeStr}`;
+                const days = ['일', '월', '화', '수', '목', '금', '토'];
+                document.getElementById('dateDisplay').textContent = 
+                    `${now.getFullYear()}년 ${now.getMonth()+1}월 ${now.getDate()}일 ${days[now.getDay()]}요일`;
+                document.getElementById('lastUpdate').textContent = 
+                    `마지막 업데이트: ${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}`;
             },
             
             // 데이터 로드
             async loadData() {
                 const btn = document.getElementById('refreshBtn');
-                const icon = document.getElementById('refreshIcon');
                 btn.disabled = true;
-                icon.style.animation = 'spin 1s linear infinite';
+                this.setStatus('loading', '데이터 로드 중...');
                 
                 try {
                     // 오늘 날짜
@@ -611,14 +609,58 @@
                     this.currentData = responses || [];
                     this.updateUI();
                     this.updateDateTime();
-                    this.showNotification('데이터를 성공적으로 불러왔습니다', 'success');
+                    this.setStatus('active', '업데이트 완료');
                     
                 } catch (error) {
                     console.error('데이터 로드 실패:', error);
+                    this.setStatus('error', '로드 실패');
                     this.showNotification('데이터 로드 실패', 'error');
                 } finally {
                     btn.disabled = false;
-                    icon.style.animation = '';
+                }
+            },
+            
+            // 데모 데이터 생성
+            async generateDemoData() {
+                const btn = document.getElementById('demoBtn');
+                btn.disabled = true;
+                this.setStatus('loading', '데모 데이터 생성 중...');
+                
+                try {
+                    const managers = Object.entries(managerMap).slice(0, 10);
+                    const customers = ['고객A', '고객B', '고객C', '고객D', '고객E'];
+                    
+                    for (let i = 0; i < 20; i++) {
+                        const [managerId, managerName] = managers[Math.floor(Math.random() * managers.length)];
+                        const [assigneeId, assigneeName] = managers[Math.floor(Math.random() * managers.length)];
+                        
+                        // 담당자가 아닌 경우만 생성
+                        if (managerId !== assigneeId) {
+                            const charCount = Math.floor(Math.random() * 500) + 100;
+                            
+                            await supabase.from('channel_non_assignee_responses').insert({
+                                manager_id: managerId,
+                                manager_name: managerName,
+                                user_chat_id: `chat_${Date.now()}_${i}`,
+                                assignee_id: assigneeId,
+                                customer_name: customers[Math.floor(Math.random() * customers.length)],
+                                message_content: '데모 메시지 내용입니다.',
+                                char_count: charCount,
+                                response_time: Math.floor(Math.random() * 10) + 1,
+                                is_helpful: Math.random() > 0.3,
+                                created_at: new Date()
+                            });
+                        }
+                    }
+                    
+                    await this.loadData();
+                    this.showNotification('데모 데이터 생성 완료', 'success');
+                    
+                } catch (error) {
+                    console.error('데모 데이터 생성 실패:', error);
+                    this.showNotification('생성 실패', 'error');
+                } finally {
+                    btn.disabled = false;
                 }
             },
             
@@ -632,7 +674,7 @@
                 this.updateStatCard('totalChars', stats.totalChars);
                 this.updateStatCard('activeManagers', stats.activeManagers);
                 this.updateStatCard('avgResponseTime', stats.avgResponseTime);
-                this.updateStatCard('helpRate', stats.helpRate + '%');
+                this.updateStatCard('avgChars', stats.avgChars);
                 
                 // 랭킹 업데이트
                 this.updateRanking(stats.managerStats);
@@ -695,10 +737,13 @@
                     totalChars: totalChars,
                     activeManagers: Object.keys(managerStats).length,
                     avgResponseTime: responseCount > 0 ? Math.round(totalResponseTime / responseCount) : 0,
-                    helpRate: this.currentData.length > 0 ? 
-                        Math.round((this.currentData.filter(d => d.is_helpful).length / this.currentData.length) * 100) : 0,
+                    avgChars: this.currentData.length > 0 ? Math.round(totalChars / this.currentData.length) : 0,
                     managerStats: Object.entries(managerStats)
-                        .map(([id, stats]) => ({ id, ...stats }))
+                        .map(([id, stats]) => ({ 
+                            id, 
+                            ...stats,
+                            avgChars: Math.round(stats.chars / stats.count)
+                        }))
                         .sort((a, b) => b.count - a.count),
                     hourlyStats: hourlyStats
                 };
@@ -723,18 +768,23 @@
                         newStats.activeManagers - this.lastStats.activeManagers);
                     this.updateChange('changeResponseTime', 
                         newStats.avgResponseTime - this.lastStats.avgResponseTime);
-                    this.updateChange('changeHelpRate', 
-                        newStats.helpRate - this.lastStats.helpRate, '%');
+                    this.updateChange('changeAvgChars', 
+                        newStats.avgChars - this.lastStats.avgChars);
                 }
             },
             
             // 변화량 표시
-            updateChange(id, value, suffix = '') {
+            updateChange(id, value) {
                 const element = document.getElementById(id);
-                if (element && value !== 0) {
-                    const sign = value > 0 ? '↑' : '↓';
-                    element.textContent = `${sign} ${Math.abs(value)}${suffix}`;
-                    element.className = value > 0 ? 'stat-change' : 'stat-change down';
+                if (element) {
+                    if (value === 0) {
+                        element.textContent = '-';
+                        element.className = 'stat-change';
+                    } else {
+                        const sign = value > 0 ? '+' : '';
+                        element.textContent = `${sign}${value}`;
+                        element.className = value > 0 ? 'stat-change' : 'stat-change down';
+                    }
                 }
             },
             
@@ -745,7 +795,7 @@
                 
                 if (managerStats.length === 0) {
                     tbody.innerHTML = `
-                        <tr><td colspan="4" style="text-align:center;padding:50px;color:#999;">
+                        <tr><td colspan="5" style="text-align:center;padding:50px;color:#666;">
                             오늘 비담당 답변 데이터가 없습니다
                         </td></tr>
                     `;
@@ -754,16 +804,15 @@
                 
                 tbody.innerHTML = managerStats.slice(0, 10).map((stat, index) => {
                     const rankClass = index < 3 ? `rank-${index + 1}` : '';
-                    const rankDisplay = index < 3 ? 
-                        `<span class="rank-badge ${rankClass}">${index + 1}</span>` : 
-                        `${index + 1}`;
+                    const rankDisplay = `<span class="rank-number ${rankClass}">${index + 1}</span>`;
                     
                     return `
                         <tr>
                             <td>${rankDisplay}</td>
-                            <td>${stat.name}</td>
-                            <td>${stat.count}</td>
+                            <td>${stat.name}<br><small style="color:#666;">${stat.id}</small></td>
+                            <td>${stat.count.toLocaleString()}</td>
                             <td>${stat.chars.toLocaleString()}</td>
+                            <td>${stat.avgChars.toLocaleString()}</td>
                         </tr>
                     `;
                 }).join('');
@@ -789,7 +838,7 @@
                 
                 if (hours.length === 0) {
                     tbody.innerHTML = `
-                        <tr><td colspan="4" style="text-align:center;padding:50px;color:#999;">
+                        <tr><td colspan="4" style="text-align:center;padding:50px;color:#666;">
                             시간대별 데이터가 없습니다
                         </td></tr>
                     `;
@@ -799,7 +848,7 @@
                 tbody.innerHTML = hours.map(stat => `
                     <tr>
                         <td>${stat.hour.toString().padStart(2, '0')}:00</td>
-                        <td>${stat.count}</td>
+                        <td>${stat.count.toLocaleString()}</td>
                         <td>${stat.managers}</td>
                         <td>${stat.avgChars.toLocaleString()}</td>
                     </tr>
@@ -847,7 +896,7 @@
             addToActivityFeed(data) {
                 const feed = document.getElementById('activityFeed');
                 const managerName = data.manager_name || managerMap[data.manager_id] || `매니저${data.manager_id}`;
-                const time = new Date(data.created_at).toLocaleTimeString('ko-KR');
+                const time = new Date(data.created_at).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
                 
                 const activityHtml = `
                     <div class="activity-item">
@@ -895,20 +944,6 @@
                 }
             },
             
-            // 실시간 모드 토글
-            toggleRealtime() {
-                const btn = document.getElementById('realtimeBtn');
-                if (this.realtimeChannel) {
-                    supabase.removeChannel(this.realtimeChannel);
-                    this.realtimeChannel = null;
-                    btn.textContent = '⚡ 실시간 모드 켜기';
-                    this.updateRealtimeStatus('CLOSED');
-                } else {
-                    this.setupRealtime();
-                    btn.textContent = '⚡ 실시간 모드 끄기';
-                }
-            },
-            
             // 채널톡 API 동기화
             async syncChannelTalk() {
                 const btn = document.getElementById('syncBtn');
@@ -930,8 +965,7 @@
                         this.showNotification(`채널톡 동기화 완료: ${result.processed}개 처리됨`, 'success');
                         await this.loadData();
                     } else {
-                        // 로컬 환경이거나 API가 없는 경우
-                        this.showNotification('API 서버를 찾을 수 없습니다. Vercel에 배포 후 사용하세요.', 'error');
+                        this.showNotification('API 서버를 찾을 수 없습니다', 'error');
                     }
                     
                 } catch (error) {
@@ -956,7 +990,7 @@
                 const url = URL.createObjectURL(blob);
                 
                 link.setAttribute('href', url);
-                link.setAttribute('download', `channel_talk_non_assignee_${new Date().toISOString().split('T')[0]}.csv`);
+                link.setAttribute('download', `channel_non_assignee_${new Date().toISOString().split('T')[0]}.csv`);
                 link.style.visibility = 'hidden';
                 document.body.appendChild(link);
                 link.click();
@@ -980,6 +1014,12 @@
                 ]);
                 
                 return [headers, ...rows].map(row => row.join(',')).join('\n');
+            },
+            
+            // 상태 표시
+            setStatus(type, text) {
+                document.getElementById('statusDot').className = 'status-dot ' + type;
+                document.getElementById('statusText').textContent = text;
             },
             
             // 알림 표시
