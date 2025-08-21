@@ -3,358 +3,951 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SNS센터 도움 카운팅 프로그램</title>
-    <!-- CDN 버전으로 변경 (npm 설치 불필요) -->
+    <title>SNS센터 비담당 상담 도움 추적 시스템</title>
     <script src="https://unpkg.com/@supabase/supabase-js@2.39.0/dist/umd/supabase.min.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #000; color: #fff; min-height: 100vh; }
-        .container { max-width: 1400px; margin: 0 auto; padding: 40px 20px; }
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; 
+            background: linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 100%);
+            color: #fff; 
+            min-height: 100vh; 
+        }
+        .container { max-width: 1600px; margin: 0 auto; padding: 40px 20px; }
         
-        .header { text-align: center; margin-bottom: 50px; }
-        .header h1 { font-size: 48px; font-weight: 200; margin-bottom: 10px; }
-        .header h1 span { color: #1E6FFF; font-weight: 400; }
-        .date-display { color: #666; font-size: 14px; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 5px; }
-        .today-info { color: #1E6FFF; font-size: 18px; margin-top: 10px; }
+        /* 헤더 스타일 */
+        .header { 
+            text-align: center; 
+            margin-bottom: 50px; 
+            background: rgba(255,255,255,0.02);
+            padding: 30px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+        }
+        .header h1 { 
+            font-size: 48px; 
+            font-weight: 200; 
+            margin-bottom: 10px;
+            background: linear-gradient(45deg, #1E6FFF, #00D4FF);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .header h1 span { font-weight: 600; }
+        .subtitle { 
+            color: #888; 
+            font-size: 16px; 
+            margin-top: 10px;
+            letter-spacing: 1px;
+        }
+        .date-display { 
+            color: #666; 
+            font-size: 14px; 
+            text-transform: uppercase; 
+            letter-spacing: 2px; 
+            margin-top: 20px;
+        }
         
-        .control-bar { display: flex; justify-content: space-between; align-items: center; padding: 20px 30px; background: #000; border: 1px solid #222; margin-bottom: 40px; flex-wrap: wrap; gap: 20px; }
+        /* 실시간 상태 표시 */
+        .realtime-status {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(0,0,0,0.8);
+            padding: 15px 20px;
+            border-radius: 10px;
+            border: 1px solid #222;
+            backdrop-filter: blur(10px);
+            z-index: 1000;
+        }
+        .realtime-indicator {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .pulse-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #00FF00;
+            animation: pulse 2s infinite;
+        }
+        .pulse-dot.disconnected { background: #FF0000; }
+        .pulse-dot.connecting { background: #FFD700; }
+        
+        /* 컨트롤 바 */
+        .control-bar { 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            padding: 25px; 
+            background: rgba(0,0,0,0.4); 
+            border: 1px solid #333; 
+            border-radius: 10px;
+            margin-bottom: 40px; 
+            flex-wrap: wrap; 
+            gap: 20px;
+            backdrop-filter: blur(5px);
+        }
         .control-buttons { display: flex; gap: 15px; flex-wrap: wrap; }
         
-        .btn { padding: 10px 25px; background: transparent; color: #666; border: 1px solid #333; font-size: 14px; font-weight: 500; letter-spacing: 1px; text-transform: uppercase; cursor: pointer; transition: all 0.3s; }
-        .btn:hover { color: #1E6FFF; border-color: #1E6FFF; }
-        .btn.primary { color: #1E6FFF; border-color: #1E6FFF; }
-        .btn.primary:hover { background: #1E6FFF; color: #000; }
-        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
-        
-        .status-indicator { display: flex; align-items: center; gap: 10px; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; }
-        .status-dot { width: 8px; height: 8px; border-radius: 50%; background: #666; animation: pulse 2s infinite; }
-        .status-dot.active { background: #00FF00; }
-        .status-dot.loading { background: #1E6FFF; }
-        .status-dot.error { background: #FF0000; }
-        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
-        
-        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 2px; margin-bottom: 50px; background: #111; padding: 2px; }
-        .stat-card { background: #000; padding: 30px; text-align: center; position: relative; overflow: hidden; }
-        .stat-value { font-size: 48px; font-weight: 200; color: #1E6FFF; margin-bottom: 10px; }
-        .stat-label { font-size: 12px; color: #666; text-transform: uppercase; letter-spacing: 2px; }
-        
-        .ranking-table { background: #000; border: 1px solid #222; margin-bottom: 40px; }
-        .table-header { padding: 25px 30px; border-bottom: 1px solid #222; }
-        .table-title { font-size: 16px; font-weight: 300; letter-spacing: 1px; text-transform: uppercase; }
-        table { width: 100%; border-collapse: collapse; }
-        th { padding: 20px; text-align: left; font-size: 12px; color: #666; text-transform: uppercase; letter-spacing: 2px; border-bottom: 1px solid #222; }
-        td { padding: 20px; font-size: 15px; border-bottom: 1px solid #111; }
-        tr:hover { background: #050505; }
-        
-        .notification { position: fixed; top: 20px; right: 20px; padding: 15px 20px; background: #111; border: 1px solid #1E6FFF; color: #fff; font-size: 14px; z-index: 1000; animation: slideIn 0.3s; display: none; }
-        .notification.show { display: block; }
-        @keyframes slideIn { from { transform: translateX(100%); } to { transform: translateX(0); } }
-        
-        @media (max-width: 768px) {
-            .control-bar { flex-direction: column; }
-            .stats-grid { grid-template-columns: 1fr; }
+        .btn { 
+            padding: 12px 30px; 
+            background: transparent; 
+            color: #888; 
+            border: 2px solid #333; 
+            border-radius: 8px;
+            font-size: 14px; 
+            font-weight: 600; 
+            letter-spacing: 1px; 
+            text-transform: uppercase; 
+            cursor: pointer; 
+            transition: all 0.3s;
         }
+        .btn:hover { 
+            color: #1E6FFF; 
+            border-color: #1E6FFF;
+            box-shadow: 0 0 20px rgba(30,111,255,0.3);
+        }
+        .btn.primary { 
+            background: linear-gradient(45deg, #1E6FFF, #00D4FF);
+            color: #fff;
+            border: none;
+        }
+        .btn.primary:hover { 
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(30,111,255,0.5);
+        }
+        .btn:disabled { 
+            opacity: 0.3; 
+            cursor: not-allowed; 
+        }
+        
+        /* 통계 카드 */
+        .stats-grid { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); 
+            gap: 20px; 
+            margin-bottom: 50px;
+        }
+        .stat-card { 
+            background: rgba(0,0,0,0.4); 
+            border: 1px solid #333;
+            border-radius: 15px;
+            padding: 30px; 
+            text-align: center; 
+            position: relative; 
+            overflow: hidden;
+            backdrop-filter: blur(5px);
+            transition: all 0.3s;
+        }
+        .stat-card:hover {
+            transform: translateY(-5px);
+            border-color: #1E6FFF;
+            box-shadow: 0 10px 30px rgba(30,111,255,0.2);
+        }
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, #1E6FFF, #00D4FF);
+        }
+        .stat-value { 
+            font-size: 48px; 
+            font-weight: 200; 
+            color: #1E6FFF; 
+            margin-bottom: 10px;
+            font-variant-numeric: tabular-nums;
+        }
+        .stat-label { 
+            font-size: 12px; 
+            color: #888; 
+            text-transform: uppercase; 
+            letter-spacing: 2px;
+        }
+        .stat-change {
+            font-size: 14px;
+            color: #00FF00;
+            margin-top: 10px;
+        }
+        .stat-change.down { color: #FF4444; }
+        
+        /* 실시간 활동 피드 */
+        .activity-feed {
+            background: rgba(0,0,0,0.4);
+            border: 1px solid #333;
+            border-radius: 15px;
+            margin-bottom: 40px;
+            backdrop-filter: blur(5px);
+            max-height: 400px;
+            overflow: hidden;
+        }
+        .feed-header {
+            padding: 20px 25px;
+            border-bottom: 1px solid #333;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .feed-title {
+            font-size: 16px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .feed-content {
+            max-height: 320px;
+            overflow-y: auto;
+            padding: 10px;
+        }
+        .activity-item {
+            padding: 15px;
+            border-bottom: 1px solid #222;
+            animation: slideIn 0.3s;
+            transition: all 0.2s;
+        }
+        .activity-item:hover {
+            background: rgba(30,111,255,0.05);
+        }
+        .activity-time {
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 5px;
+        }
+        .activity-text {
+            font-size: 14px;
+            line-height: 1.5;
+        }
+        .activity-counselor {
+            color: #1E6FFF;
+            font-weight: 600;
+        }
+        .activity-chars {
+            color: #888;
+            font-size: 12px;
+            margin-left: 10px;
+        }
+        
+        /* 랭킹 테이블 */
+        .ranking-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 40px;
+        }
+        @media (max-width: 1024px) {
+            .ranking-section { grid-template-columns: 1fr; }
+        }
+        
+        .ranking-table { 
+            background: rgba(0,0,0,0.4); 
+            border: 1px solid #333;
+            border-radius: 15px;
+            backdrop-filter: blur(5px);
+        }
+        .table-header { 
+            padding: 25px 30px; 
+            border-bottom: 1px solid #333;
+            background: rgba(30,111,255,0.05);
+        }
+        .table-title { 
+            font-size: 16px; 
+            font-weight: 600; 
+            letter-spacing: 1px; 
+            text-transform: uppercase;
+        }
+        table { 
+            width: 100%; 
+            border-collapse: collapse; 
+        }
+        th { 
+            padding: 20px; 
+            text-align: left; 
+            font-size: 12px; 
+            color: #888; 
+            text-transform: uppercase; 
+            letter-spacing: 2px; 
+            border-bottom: 1px solid #333;
+        }
+        td { 
+            padding: 20px; 
+            font-size: 15px; 
+            border-bottom: 1px solid #222;
+            font-variant-numeric: tabular-nums;
+        }
+        tr:hover { 
+            background: rgba(30,111,255,0.05);
+        }
+        .rank-badge {
+            display: inline-block;
+            width: 30px;
+            height: 30px;
+            line-height: 30px;
+            text-align: center;
+            border-radius: 50%;
+            font-weight: 600;
+            font-size: 14px;
+        }
+        .rank-1 { background: linear-gradient(45deg, #FFD700, #FFA500); color: #000; }
+        .rank-2 { background: linear-gradient(45deg, #C0C0C0, #808080); color: #000; }
+        .rank-3 { background: linear-gradient(45deg, #CD7F32, #8B4513); color: #fff; }
+        
+        /* 알림 */
+        .notification { 
+            position: fixed; 
+            bottom: 20px; 
+            right: 20px; 
+            padding: 15px 20px; 
+            background: linear-gradient(135deg, #1E6FFF, #00D4FF);
+            border-radius: 10px;
+            color: #fff; 
+            font-size: 14px; 
+            font-weight: 600;
+            z-index: 1000; 
+            animation: slideUp 0.3s; 
+            display: none;
+            box-shadow: 0 5px 20px rgba(30,111,255,0.5);
+        }
+        .notification.show { display: block; }
+        .notification.error { 
+            background: linear-gradient(135deg, #FF4444, #CC0000);
+        }
+        
+        @keyframes pulse { 
+            0%, 100% { opacity: 1; } 
+            50% { opacity: 0.5; } 
+        }
+        @keyframes slideIn { 
+            from { 
+                opacity: 0;
+                transform: translateX(-20px); 
+            } 
+            to { 
+                opacity: 1;
+                transform: translateX(0); 
+            } 
+        }
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        /* 스크롤바 스타일 */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #111; }
+        ::-webkit-scrollbar-thumb { 
+            background: #333; 
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover { background: #555; }
     </style>
 </head>
 <body>
     <div class="container">
+        <!-- 실시간 연결 상태 -->
+        <div class="realtime-status">
+            <div class="realtime-indicator">
+                <span class="pulse-dot" id="realtimeDot"></span>
+                <span id="realtimeText">연결 대기중</span>
+            </div>
+        </div>
+
+        <!-- 헤더 -->
         <div class="header">
-            <h1>SNS센터 <span>도움 카운팅 프로그램</span></h1>
+            <h1>SNS센터 <span>비담당 상담 도움 추적</span></h1>
+            <div class="subtitle">담당자가 아닌 상담사의 답변을 실시간으로 모니터링합니다</div>
             <div class="date-display" id="dateDisplay"></div>
-            <div class="today-info">오늘 하루 실시간 집계</div>
         </div>
         
+        <!-- 컨트롤 바 -->
         <div class="control-bar">
             <div class="control-buttons">
-                <button class="btn primary" onclick="loadData()" id="refreshBtn">새로고침</button>
-                <button class="btn" onclick="syncData()" id="syncBtn">API 동기화</button>
+                <button class="btn primary" onclick="app.loadData()" id="refreshBtn">
+                    새로고침
+                </button>
+                <button class="btn" onclick="app.syncFromAPI()" id="syncBtn">
+                    API 동기화
+                </button>
+                <button class="btn" onclick="app.exportData()" id="exportBtn">
+                    데이터 내보내기
+                </button>
+                <button class="btn" onclick="app.toggleRealtime()" id="realtimeBtn">
+                    실시간 모드
+                </button>
             </div>
             <div class="status-indicator">
-                <span class="status-dot" id="statusDot"></span>
-                <span id="statusText">대기 중</span>
-                <span id="lastUpdate" style="margin-left: 20px; color: #666;"></span>
+                <span id="lastUpdate" style="color: #888;">마지막 업데이트: -</span>
             </div>
         </div>
         
+        <!-- 통계 카드 -->
         <div class="stats-grid">
             <div class="stat-card">
-                <div class="stat-value" id="totalHelps">0</div>
-                <div class="stat-label">오늘 도움 횟수</div>
+                <div class="stat-value" id="totalNonAssignee">0</div>
+                <div class="stat-label">비담당 답변 수</div>
+                <div class="stat-change" id="changeNonAssignee">-</div>
             </div>
             <div class="stat-card">
                 <div class="stat-value" id="totalChars">0</div>
-                <div class="stat-label">오늘 총 글자수</div>
+                <div class="stat-label">총 글자수</div>
+                <div class="stat-change" id="changeChars">-</div>
             </div>
             <div class="stat-card">
                 <div class="stat-value" id="activeCounselors">0</div>
-                <div class="stat-label">오늘 참여 상담사</div>
+                <div class="stat-label">활동 상담사</div>
+                <div class="stat-change" id="changeCounselors">-</div>
             </div>
             <div class="stat-card">
-                <div class="stat-value" id="avgChars">0</div>
-                <div class="stat-label">평균 글자수</div>
+                <div class="stat-value" id="avgResponseTime">0</div>
+                <div class="stat-label">평균 응답시간(분)</div>
+                <div class="stat-change" id="changeResponseTime">-</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="helpRate">0%</div>
+                <div class="stat-label">도움 비율</div>
+                <div class="stat-change" id="changeHelpRate">-</div>
             </div>
         </div>
         
-        <div class="ranking-table">
-            <div class="table-header">
-                <div class="table-title">오늘의 상담사 랭킹</div>
+        <!-- 실시간 활동 피드 -->
+        <div class="activity-feed">
+            <div class="feed-header">
+                <div class="feed-title">실시간 활동</div>
+                <span id="feedCount" style="color: #888;">0개 활동</span>
             </div>
-            <table>
-                <thead>
-                    <tr>
-                        <th>순위</th>
-                        <th>상담사</th>
-                        <th>도움 횟수</th>
-                        <th>총 글자수</th>
-                        <th>평균 글자수</th>
-                    </tr>
-                </thead>
-                <tbody id="tableBody">
-                    <tr><td colspan="5" style="text-align:center;padding:50px;color:#666;">데이터를 불러오는 중...</td></tr>
-                </tbody>
-            </table>
+            <div class="feed-content" id="activityFeed">
+                <div style="padding: 50px; text-align: center; color: #666;">
+                    실시간 활동이 여기에 표시됩니다
+                </div>
+            </div>
+        </div>
+        
+        <!-- 랭킹 테이블 -->
+        <div class="ranking-section">
+            <!-- 오늘의 상담사 랭킹 -->
+            <div class="ranking-table">
+                <div class="table-header">
+                    <div class="table-title">오늘의 비담당 도움 랭킹</div>
+                </div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th width="60">순위</th>
+                            <th>상담사</th>
+                            <th width="80">횟수</th>
+                            <th width="100">글자수</th>
+                        </tr>
+                    </thead>
+                    <tbody id="todayRanking">
+                        <tr><td colspan="4" style="text-align:center;padding:50px;color:#666;">
+                            데이터를 불러오는 중...
+                        </td></tr>
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- 시간대별 통계 -->
+            <div class="ranking-table">
+                <div class="table-header">
+                    <div class="table-title">시간대별 활동 통계</div>
+                </div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>시간대</th>
+                            <th>답변 수</th>
+                            <th>활동 상담사</th>
+                            <th>평균 글자</th>
+                        </tr>
+                    </thead>
+                    <tbody id="hourlyStats">
+                        <tr><td colspan="4" style="text-align:center;padding:50px;color:#666;">
+                            데이터를 불러오는 중...
+                        </td></tr>
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
     
     <div class="notification" id="notification"></div>
     
     <script>
-        // Supabase 설정 (UMD 버전 사용)
+        // Supabase 설정
         const SUPABASE_URL = 'https://bhtqjipygkawoyieidgp.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJodHFqaXB5Z2thd295aWVpZGdwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ0ODg5NjgsImV4cCI6MjA3MDA2NDk2OH0.hu2EAj9RCq436QBtfbEVF4aGOau4WWomLMDKahN4iAA';
         
-        // UMD 버전에서는 window.supabase 사용
         const { createClient } = window.supabase;
-        const supabaseClient = createClient(SUPABASE_URL, SUPABASE_KEY);
+        const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
         
-        let currentData = [];
-        
-        // 정확한 상담사 매핑
+        // 상담사 매핑
         const counselorMap = {
-            '520798': '채주은',
-            '520799': '윤도우리',
-            '521212': '손진우',
-            '521213': '차정환',
-            '521214': '서민국',
-            '521215': '구본영',
-            '521217': '권재현',
-            '521218': '조시현',
-            '521220': '김상아',
-            '521221': '김지원',
-            '521222': '정다혜',
-            '521223': '김시진',
-            '521224': '신혜서',
-            '521226': '이민주',
-            '521227': '정주연',
-            '521230': '김진후',
-            '521231': '이혜영',
-            '521232': '김영진',
-            '521233': '최호익',
-            '521234': '서정국',
-            '521236': '박해영',
-            '521239': '이종민',
-            '521243': '강형욱',
-            '521378': '오민경',
-            '521379': '최수능',
-            '521381': '김채영',
-            '521382': '전지윤',
-            '521383': '이유주',
-            '521384': '김범주',
-            '521385': '김예진',
-            '521386': '차승현',
-            '521392': '이성철',
-            '521393': '박은진',
-            '521410': '오민환',
-            '521416': '전미란',
-            '521564': '김국현',
-            '521567': '김성현',
-            '521902': '김시윤',
-            '521937': '김종현',
-            '521942': '주은지',
-            '521965': '강헌준',
-            '522038': '문홍주',
-            '523260': '주수현',
-            '523268': '오현수',
-            '527833': '유종현',
-            '527836': '김진협',
-            '527910': '옥서아',
-            '528425': '정용욱',
-            '528628': '김소영',
-            '529149': '동수진',
-            '529561': '한승윤',
-            '544751': '성일훈',
-            '555633': '아정당',
-            '555865': '공현준'
+            '520798': '채주은', '520799': '윤도우리', '521212': '손진우',
+            '521213': '차정환', '521214': '서민국', '521215': '구본영',
+            '521217': '권재현', '521218': '조시현', '521220': '김상아',
+            '521221': '김지원', '521222': '정다혜', '521223': '김시진',
+            '521224': '신혜서', '521226': '이민주', '521227': '정주연',
+            '521230': '김진후', '521231': '이혜영', '521232': '김영진',
+            '521233': '최호익', '521234': '서정국', '521236': '박해영',
+            '521239': '이종민', '521243': '강형욱', '521378': '오민경',
+            '521379': '최수능', '521381': '김채영', '521382': '전지윤',
+            '521383': '이유주', '521384': '김범주', '521385': '김예진',
+            '521386': '차승현', '521392': '이성철', '521393': '박은진',
+            '521410': '오민환', '521416': '전미란', '521564': '김국현',
+            '521567': '김성현', '521902': '김시윤', '521937': '김종현',
+            '521942': '주은지', '521965': '강헌준', '522038': '문홍주',
+            '523260': '주수현', '523268': '오현수', '527833': '유종현',
+            '527836': '김진협', '527910': '옥서아', '528425': '정용욱',
+            '528628': '김소영', '529149': '동수진', '529561': '한승윤',
+            '544751': '성일훈', '555633': '아정당', '555865': '공현준'
         };
         
-        // 오늘 날짜 가져오기
-        function getTodayRange() {
-            const today = new Date();
-            const start = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 0, 0, 0);
-            return {
-                startDate: start.toISOString().split('T')[0],
-                endDate: start.toISOString().split('T')[0]
-            };
-        }
-        
-        // 초기화
-        async function init() {
-            // 날짜 표시
-            const now = new Date();
-            const days = ['일', '월', '화', '수', '목', '금', '토'];
-            document.getElementById('dateDisplay').textContent = 
-                `${now.getFullYear()}년 ${now.getMonth()+1}월 ${now.getDate()}일 ${days[now.getDay()]}요일`;
+        // 앱 상태 관리
+        const app = {
+            currentData: [],
+            realtimeChannel: null,
+            activityFeed: [],
+            lastStats: {},
+            
+            // 초기화
+            async init() {
+                this.updateDateTime();
+                setInterval(() => this.updateDateTime(), 60000);
+                
+                await this.loadData();
+                this.setupRealtime();
+                
+                // 자동 새로고침 (5분마다)
+                setInterval(() => this.loadData(), 300000);
+            },
+            
+            // 날짜시간 업데이트
+            updateDateTime() {
+                const now = new Date();
+                const days = ['일', '월', '화', '수', '목', '금', '토'];
+                document.getElementById('dateDisplay').textContent = 
+                    `${now.getFullYear()}년 ${now.getMonth()+1}월 ${now.getDate()}일 ${days[now.getDay()]}요일 ${now.getHours()}:${now.getMinutes().toString().padStart(2,'0')}`;
+            },
             
             // 데이터 로드
-            await loadData();
-        }
-        
-        // 데이터 로드
-        async function loadData() {
-            const btn = document.getElementById('refreshBtn');
-            btn.disabled = true;
-            setStatus('loading', '데이터 로드 중...');
+            async loadData() {
+                const btn = document.getElementById('refreshBtn');
+                btn.disabled = true;
+                
+                try {
+                    // 오늘 날짜
+                    const today = new Date();
+                    const startDate = new Date(today.getFullYear(), today.getMonth(), today.getDate()).toISOString();
+                    const endDate = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1).toISOString();
+                    
+                    // 비담당 답변 데이터 가져오기
+                    const { data: responses, error } = await supabase
+                        .from('non_assignee_responses')
+                        .select('*')
+                        .gte('created_at', startDate)
+                        .lt('created_at', endDate)
+                        .order('created_at', { ascending: false });
+                    
+                    if (error) throw error;
+                    
+                    this.currentData = responses || [];
+                    this.updateUI();
+                    this.updateLastTime();
+                    
+                } catch (error) {
+                    console.error('데이터 로드 실패:', error);
+                    this.showNotification('데이터 로드 실패', 'error');
+                } finally {
+                    btn.disabled = false;
+                }
+            },
             
-            try {
-                const { startDate, endDate } = getTodayRange();
+            // UI 업데이트
+            updateUI() {
+                // 통계 계산
+                const stats = this.calculateStats();
                 
-                const { data, error } = await supabaseClient
-                    .from('counselor_stats')
-                    .select('*')
-                    .eq('period_start', startDate)
-                    .eq('period_end', endDate)
-                    .order('help_count', { ascending: false });
+                // 통계 카드 업데이트
+                this.updateStatCard('totalNonAssignee', stats.totalResponses);
+                this.updateStatCard('totalChars', stats.totalChars);
+                this.updateStatCard('activeCounselors', stats.activeCounselors);
+                this.updateStatCard('avgResponseTime', stats.avgResponseTime);
+                this.updateStatCard('helpRate', stats.helpRate + '%');
                 
-                if (error) throw error;
+                // 랭킹 업데이트
+                this.updateRanking(stats.counselorStats);
                 
-                currentData = data || [];
-                updateUI();
-                setStatus('active', '업데이트 완료');
-                updateLastTime();
+                // 시간대별 통계 업데이트
+                this.updateHourlyStats(stats.hourlyStats);
                 
-            } catch (error) {
-                console.error('데이터 로드 실패:', error);
-                setStatus('error', '로드 실패');
-                showNotification('데이터 로드 실패', 'error');
-            } finally {
-                btn.disabled = false;
-            }
-        }
-        
-        // API 동기화 (순수한 데이터만)
-        async function syncData() {
-            const btn = document.getElementById('syncBtn');
-            btn.disabled = true;
-            setStatus('loading', 'API 동기화 중...');
+                // 이전 통계와 비교
+                this.compareStats(stats);
+                this.lastStats = stats;
+            },
             
-            try {
-                // API 서버가 있다면 호출
-                if (window.location.hostname !== 'localhost' && window.location.protocol !== 'file:') {
-                    const response = await fetch('/api/sync', {
+            // 통계 계산
+            calculateStats() {
+                const counselorStats = {};
+                const hourlyStats = {};
+                let totalChars = 0;
+                let totalResponseTime = 0;
+                let responseCount = 0;
+                
+                this.currentData.forEach(item => {
+                    // 상담사별 통계
+                    const counselorId = item.counselor_id;
+                    const counselorName = counselorMap[counselorId] || `상담사${counselorId}`;
+                    
+                    if (!counselorStats[counselorId]) {
+                        counselorStats[counselorId] = {
+                            name: counselorName,
+                            count: 0,
+                            chars: 0
+                        };
+                    }
+                    counselorStats[counselorId].count++;
+                    counselorStats[counselorId].chars += item.char_count || 0;
+                    
+                    // 시간대별 통계
+                    const hour = new Date(item.created_at).getHours();
+                    if (!hourlyStats[hour]) {
+                        hourlyStats[hour] = {
+                            count: 0,
+                            chars: 0,
+                            counselors: new Set()
+                        };
+                    }
+                    hourlyStats[hour].count++;
+                    hourlyStats[hour].chars += item.char_count || 0;
+                    hourlyStats[hour].counselors.add(counselorId);
+                    
+                    // 전체 통계
+                    totalChars += item.char_count || 0;
+                    
+                    if (item.response_time) {
+                        totalResponseTime += item.response_time;
+                        responseCount++;
+                    }
+                });
+                
+                return {
+                    totalResponses: this.currentData.length,
+                    totalChars: totalChars,
+                    activeCounselors: Object.keys(counselorStats).length,
+                    avgResponseTime: responseCount > 0 ? Math.round(totalResponseTime / responseCount) : 0,
+                    helpRate: this.currentData.length > 0 ? Math.round((this.currentData.filter(d => d.is_helpful).length / this.currentData.length) * 100) : 0,
+                    counselorStats: Object.entries(counselorStats)
+                        .map(([id, stats]) => ({ id, ...stats }))
+                        .sort((a, b) => b.count - a.count),
+                    hourlyStats: hourlyStats
+                };
+            },
+            
+            // 통계 카드 업데이트
+            updateStatCard(id, value) {
+                const element = document.getElementById(id);
+                if (element) {
+                    element.textContent = typeof value === 'number' ? value.toLocaleString() : value;
+                }
+            },
+            
+            // 통계 비교
+            compareStats(newStats) {
+                if (this.lastStats.totalResponses !== undefined) {
+                    this.updateChange('changeNonAssignee', 
+                        newStats.totalResponses - this.lastStats.totalResponses);
+                    this.updateChange('changeChars', 
+                        newStats.totalChars - this.lastStats.totalChars);
+                    this.updateChange('changeCounselors', 
+                        newStats.activeCounselors - this.lastStats.activeCounselors);
+                    this.updateChange('changeResponseTime', 
+                        newStats.avgResponseTime - this.lastStats.avgResponseTime);
+                    this.updateChange('changeHelpRate', 
+                        newStats.helpRate - this.lastStats.helpRate, '%');
+                }
+            },
+            
+            // 변화량 표시
+            updateChange(id, value, suffix = '') {
+                const element = document.getElementById(id);
+                if (element && value !== 0) {
+                    const sign = value > 0 ? '+' : '';
+                    element.textContent = `${sign}${value}${suffix}`;
+                    element.className = value > 0 ? 'stat-change' : 'stat-change down';
+                }
+            },
+            
+            // 랭킹 업데이트
+            updateRanking(counselorStats) {
+                const tbody = document.getElementById('todayRanking');
+                if (!tbody) return;
+                
+                if (counselorStats.length === 0) {
+                    tbody.innerHTML = `
+                        <tr><td colspan="4" style="text-align:center;padding:50px;color:#666;">
+                            오늘 비담당 답변 데이터가 없습니다
+                        </td></tr>
+                    `;
+                    return;
+                }
+                
+                tbody.innerHTML = counselorStats.slice(0, 10).map((stat, index) => {
+                    const rankClass = index < 3 ? `rank-${index + 1}` : '';
+                    const rankDisplay = index < 3 ? 
+                        `<span class="rank-badge ${rankClass}">${index + 1}</span>` : 
+                        `${index + 1}`;
+                    
+                    return `
+                        <tr>
+                            <td>${rankDisplay}</td>
+                            <td>${stat.name}</td>
+                            <td>${stat.count}</td>
+                            <td>${stat.chars.toLocaleString()}</td>
+                        </tr>
+                    `;
+                }).join('');
+            },
+            
+            // 시간대별 통계 업데이트
+            updateHourlyStats(hourlyStats) {
+                const tbody = document.getElementById('hourlyStats');
+                if (!tbody) return;
+                
+                const hours = [];
+                for (let h = 0; h < 24; h++) {
+                    const stat = hourlyStats[h] || { count: 0, chars: 0, counselors: new Set() };
+                    hours.push({
+                        hour: h,
+                        count: stat.count,
+                        counselors: stat.counselors ? stat.counselors.size : 0,
+                        avgChars: stat.count > 0 ? Math.round(stat.chars / stat.count) : 0
+                    });
+                }
+                
+                // 현재 시간 기준으로 정렬
+                const currentHour = new Date().getHours();
+                const sortedHours = hours.slice(currentHour - 5, currentHour + 1)
+                    .filter(h => h.count > 0);
+                
+                if (sortedHours.length === 0) {
+                    tbody.innerHTML = `
+                        <tr><td colspan="4" style="text-align:center;padding:50px;color:#666;">
+                            시간대별 데이터가 없습니다
+                        </td></tr>
+                    `;
+                    return;
+                }
+                
+                tbody.innerHTML = sortedHours.map(stat => `
+                    <tr>
+                        <td>${stat.hour.toString().padStart(2, '0')}:00</td>
+                        <td>${stat.count}</td>
+                        <td>${stat.counselors}</td>
+                        <td>${stat.avgChars.toLocaleString()}</td>
+                    </tr>
+                `).join('');
+            },
+            
+            // 실시간 모드 설정
+            setupRealtime() {
+                // Supabase Realtime 구독
+                this.realtimeChannel = supabase
+                    .channel('non-assignee-changes')
+                    .on(
+                        'postgres_changes',
+                        {
+                            event: 'INSERT',
+                            schema: 'public',
+                            table: 'non_assignee_responses'
+                        },
+                        (payload) => {
+                            this.handleRealtimeUpdate(payload.new);
+                        }
+                    )
+                    .subscribe((status) => {
+                        this.updateRealtimeStatus(status);
+                    });
+            },
+            
+            // 실시간 업데이트 처리
+            handleRealtimeUpdate(newData) {
+                // 새 데이터 추가
+                this.currentData.unshift(newData);
+                
+                // 활동 피드에 추가
+                this.addToActivityFeed(newData);
+                
+                // UI 업데이트
+                this.updateUI();
+                
+                // 알림 표시
+                const counselorName = counselorMap[newData.counselor_id] || `상담사${newData.counselor_id}`;
+                this.showNotification(`${counselorName}님이 비담당 상담에 답변했습니다`);
+            },
+            
+            // 활동 피드에 추가
+            addToActivityFeed(data) {
+                const feed = document.getElementById('activityFeed');
+                const counselorName = counselorMap[data.counselor_id] || `상담사${data.counselor_id}`;
+                const time = new Date(data.created_at).toLocaleTimeString('ko-KR');
+                
+                const activityHtml = `
+                    <div class="activity-item">
+                        <div class="activity-time">${time}</div>
+                        <div class="activity-text">
+                            <span class="activity-counselor">${counselorName}</span>님이 
+                            비담당 상담에 답변
+                            <span class="activity-chars">(${data.char_count}자)</span>
+                        </div>
+                    </div>
+                `;
+                
+                // 최대 20개까지만 표시
+                this.activityFeed.unshift(activityHtml);
+                if (this.activityFeed.length > 20) {
+                    this.activityFeed.pop();
+                }
+                
+                feed.innerHTML = this.activityFeed.join('');
+                document.getElementById('feedCount').textContent = `${this.activityFeed.length}개 활동`;
+            },
+            
+            // 실시간 상태 업데이트
+            updateRealtimeStatus(status) {
+                const dot = document.getElementById('realtimeDot');
+                const text = document.getElementById('realtimeText');
+                
+                switch(status) {
+                    case 'SUBSCRIBED':
+                        dot.className = 'pulse-dot';
+                        text.textContent = '실시간 연결됨';
+                        break;
+                    case 'CHANNEL_ERROR':
+                        dot.className = 'pulse-dot disconnected';
+                        text.textContent = '연결 오류';
+                        break;
+                    case 'TIMED_OUT':
+                        dot.className = 'pulse-dot disconnected';
+                        text.textContent = '연결 시간초과';
+                        break;
+                    default:
+                        dot.className = 'pulse-dot connecting';
+                        text.textContent = '연결 중...';
+                }
+            },
+            
+            // 실시간 모드 토글
+            toggleRealtime() {
+                const btn = document.getElementById('realtimeBtn');
+                if (this.realtimeChannel) {
+                    supabase.removeChannel(this.realtimeChannel);
+                    this.realtimeChannel = null;
+                    btn.textContent = '실시간 모드 켜기';
+                    this.updateRealtimeStatus('CLOSED');
+                } else {
+                    this.setupRealtime();
+                    btn.textContent = '실시간 모드 끄기';
+                }
+            },
+            
+            // API 동기화
+            async syncFromAPI() {
+                const btn = document.getElementById('syncBtn');
+                btn.disabled = true;
+                
+                try {
+                    // Vercel API 호출
+                    const response = await fetch('/api/sync-non-assignee', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ 
-                            sync: true  // 수동 동기화 요청
+                            date: new Date().toISOString().split('T')[0]
                         })
                     });
                     
                     if (response.ok) {
                         const result = await response.json();
-                        showNotification(`동기화 완료: ${result.newMessages || 0}개 새 메시지`);
+                        this.showNotification(`동기화 완료: ${result.processed}개 처리됨`);
+                        await this.loadData();
                     } else {
-                        showNotification('API 동기화 실패', 'error');
+                        // 로컬 환경이거나 API가 없는 경우
+                        this.showNotification('API 서버를 찾을 수 없습니다', 'error');
                     }
+                    
+                } catch (error) {
+                    console.error('API 동기화 실패:', error);
+                    this.showNotification('동기화 실패', 'error');
+                } finally {
+                    btn.disabled = false;
+                }
+            },
+            
+            // 데이터 내보내기
+            exportData() {
+                if (this.currentData.length === 0) {
+                    this.showNotification('내보낼 데이터가 없습니다', 'error');
+                    return;
                 }
                 
-                // 데이터 다시 로드
-                await loadData();
+                const csv = this.convertToCSV(this.currentData);
+                const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+                const link = document.createElement('a');
+                const url = URL.createObjectURL(blob);
                 
-            } catch (error) {
-                console.error('API 동기화 실패:', error);
-                showNotification('API 서버 연결 실패', 'error');
-            } finally {
-                btn.disabled = false;
-            }
-        }
-        
-        // UI 업데이트
-        function updateUI() {
-            // 데이터가 없을 때
-            if (!currentData || currentData.length === 0) {
-                // 통계를 0으로
-                document.getElementById('totalHelps').textContent = '0';
-                document.getElementById('totalChars').textContent = '0';
-                document.getElementById('activeCounselors').textContent = '0';
-                document.getElementById('avgChars').textContent = '0';
+                link.setAttribute('href', url);
+                link.setAttribute('download', `non_assignee_responses_${new Date().toISOString().split('T')[0]}.csv`);
+                link.style.visibility = 'hidden';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
                 
-                // 테이블에 "데이터 없음" 표시
-                const tbody = document.getElementById('tableBody');
-                tbody.innerHTML = `
-                    <tr>
-                        <td colspan="5" style="text-align:center;padding:50px;color:#666;">
-                            <div style="font-size:18px;margin-bottom:10px;">📊 오늘 데이터가 없습니다</div>
-                            <div style="font-size:14px;">Webhook을 통해 실시간 데이터가 들어오기를 기다리는 중...</div>
-                            <div style="font-size:12px;margin-top:10px;color:#999;">또는 "API 동기화" 버튼을 눌러 수동으로 가져올 수 있습니다</div>
-                        </td>
-                    </tr>
-                `;
-                return;
+                this.showNotification('데이터 내보내기 완료');
+            },
+            
+            // CSV 변환
+            convertToCSV(data) {
+                const headers = ['시간', '상담사ID', '상담사명', '글자수', '응답시간(분)', '도움여부'];
+                const rows = data.map(item => [
+                    new Date(item.created_at).toLocaleString('ko-KR'),
+                    item.counselor_id,
+                    counselorMap[item.counselor_id] || `상담사${item.counselor_id}`,
+                    item.char_count,
+                    item.response_time || '',
+                    item.is_helpful ? 'Y' : 'N'
+                ]);
+                
+                return [headers, ...rows].map(row => row.join(',')).join('\n');
+            },
+            
+            // 마지막 업데이트 시간
+            updateLastTime() {
+                const now = new Date();
+                document.getElementById('lastUpdate').textContent = 
+                    `마지막 업데이트: ${now.getHours()}:${now.getMinutes().toString().padStart(2,'0')}:${now.getSeconds().toString().padStart(2,'0')}`;
+            },
+            
+            // 알림 표시
+            showNotification(message, type = 'success') {
+                const notification = document.getElementById('notification');
+                notification.textContent = message;
+                notification.className = `notification show ${type === 'error' ? 'error' : ''}`;
+                
+                setTimeout(() => {
+                    notification.classList.remove('show');
+                }, 3000);
             }
-            
-            // 통계 계산
-            const totalHelps = currentData.reduce((sum, item) => sum + item.help_count, 0);
-            const totalChars = currentData.reduce((sum, item) => sum + item.total_chars, 0);
-            const avgChars = totalHelps > 0 ? Math.round(totalChars / totalHelps) : 0;
-            
-            // 숫자 업데이트
-            document.getElementById('totalHelps').textContent = totalHelps.toLocaleString();
-            document.getElementById('totalChars').textContent = totalChars.toLocaleString();
-            document.getElementById('activeCounselors').textContent = currentData.length;
-            document.getElementById('avgChars').textContent = avgChars.toLocaleString();
-            
-            // 테이블 업데이트
-            const tbody = document.getElementById('tableBody');
-            tbody.innerHTML = currentData.map((item, index) => `
-                <tr>
-                    <td>${index + 1}</td>
-                    <td>
-                        ${item.counselor_name}
-                        <br><small style="color:#666">${item.counselor_id}</small>
-                    </td>
-                    <td>${item.help_count.toLocaleString()}</td>
-                    <td>${item.total_chars.toLocaleString()}</td>
-                    <td>${item.avg_chars.toLocaleString()}</td>
-                </tr>
-            `).join('');
-        }
+        };
         
-        // 상태 표시
-        function setStatus(type, text) {
-            document.getElementById('statusDot').className = 'status-dot ' + type;
-            document.getElementById('statusText').textContent = text;
-        }
-        
-        // 마지막 업데이트 시간
-        function updateLastTime() {
-            const now = new Date();
-            document.getElementById('lastUpdate').textContent = 
-                `마지막 업데이트: ${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}`;
-        }
-        
-        // 알림 표시
-        function showNotification(message, type = 'success') {
-            const notification = document.getElementById('notification');
-            notification.textContent = message;
-            notification.style.borderColor = type === 'error' ? '#FF0000' : '#1E6FFF';
-            notification.classList.add('show');
-            
-            setTimeout(() => {
-                notification.classList.remove('show');
-            }, 3000);
-        }
-        
-        // 시작
-        init();
+        // 앱 시작
+        app.init();
     </script>
 </body>
 </html>
