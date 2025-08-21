@@ -67,7 +67,7 @@
         <div class="control-bar">
             <div class="control-buttons">
                 <button class="btn primary" onclick="loadData()" id="refreshBtn">새로고침</button>
-                <button class="btn" onclick="generateDemoData()" id="demoBtn">데모 데이터 생성</button>
+                <button class="btn" onclick="syncData()" id="syncBtn">API 동기화</button>
             </div>
             <div class="status-indicator">
                 <span class="status-dot" id="statusDot"></span>
@@ -241,39 +241,37 @@
             }
         }
         
-        // 데모 데이터 생성
-        async function generateDemoData() {
-            const btn = document.getElementById('demoBtn');
+        // API 동기화 (순수한 데이터만)
+        async function syncData() {
+            const btn = document.getElementById('syncBtn');
             btn.disabled = true;
-            setStatus('loading', '데모 데이터 생성 중...');
+            setStatus('loading', 'API 동기화 중...');
             
             try {
-                const { startDate, endDate } = getTodayRange();
-                const counselorList = Object.entries(counselorMap).slice(0, 15);
-                
-                for (const [id, name] of counselorList) {
-                    const helpCount = Math.floor(Math.random() * 50) + 10;
-                    const totalChars = Math.floor(Math.random() * 20000) + 5000;
-                    
-                    await supabaseClient.from('counselor_stats').upsert({
-                        counselor_id: id,
-                        counselor_name: name,
-                        period_start: startDate,
-                        period_end: endDate,
-                        help_count: helpCount,
-                        total_chars: totalChars,
-                        avg_chars: Math.round(totalChars / helpCount)
-                    }, { 
-                        onConflict: 'counselor_id,period_start,period_end' 
+                // API 서버가 있다면 호출
+                if (window.location.hostname !== 'localhost' && window.location.protocol !== 'file:') {
+                    const response = await fetch('/api/sync', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ 
+                            sync: true  // 수동 동기화 요청
+                        })
                     });
+                    
+                    if (response.ok) {
+                        const result = await response.json();
+                        showNotification(`동기화 완료: ${result.newMessages || 0}개 새 메시지`);
+                    } else {
+                        showNotification('API 동기화 실패', 'error');
+                    }
                 }
                 
+                // 데이터 다시 로드
                 await loadData();
-                showNotification('데모 데이터 생성 완료');
                 
             } catch (error) {
-                console.error('데모 데이터 생성 실패:', error);
-                showNotification('생성 실패', 'error');
+                console.error('API 동기화 실패:', error);
+                showNotification('API 서버 연결 실패', 'error');
             } finally {
                 btn.disabled = false;
             }
@@ -281,6 +279,28 @@
         
         // UI 업데이트
         function updateUI() {
+            // 데이터가 없을 때
+            if (!currentData || currentData.length === 0) {
+                // 통계를 0으로
+                document.getElementById('totalHelps').textContent = '0';
+                document.getElementById('totalChars').textContent = '0';
+                document.getElementById('activeCounselors').textContent = '0';
+                document.getElementById('avgChars').textContent = '0';
+                
+                // 테이블에 "데이터 없음" 표시
+                const tbody = document.getElementById('tableBody');
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="5" style="text-align:center;padding:50px;color:#666;">
+                            <div style="font-size:18px;margin-bottom:10px;">📊 오늘 데이터가 없습니다</div>
+                            <div style="font-size:14px;">Webhook을 통해 실시간 데이터가 들어오기를 기다리는 중...</div>
+                            <div style="font-size:12px;margin-top:10px;color:#999;">또는 "API 동기화" 버튼을 눌러 수동으로 가져올 수 있습니다</div>
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+            
             // 통계 계산
             const totalHelps = currentData.reduce((sum, item) => sum + item.help_count, 0);
             const totalChars = currentData.reduce((sum, item) => sum + item.total_chars, 0);
@@ -294,19 +314,18 @@
             
             // 테이블 업데이트
             const tbody = document.getElementById('tableBody');
-            if (currentData.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:50px;color:#666;">오늘 데이터가 없습니다</td></tr>';
-            } else {
-                tbody.innerHTML = currentData.map((item, index) => `
-                    <tr>
-                        <td>${index + 1}</td>
-                        <td>${item.counselor_name}<br><small style="color:#666">${item.counselor_id}</small></td>
-                        <td>${item.help_count.toLocaleString()}</td>
-                        <td>${item.total_chars.toLocaleString()}</td>
-                        <td>${item.avg_chars.toLocaleString()}</td>
-                    </tr>
-                `).join('');
-            }
+            tbody.innerHTML = currentData.map((item, index) => `
+                <tr>
+                    <td>${index + 1}</td>
+                    <td>
+                        ${item.counselor_name}
+                        <br><small style="color:#666">${item.counselor_id}</small>
+                    </td>
+                    <td>${item.help_count.toLocaleString()}</td>
+                    <td>${item.total_chars.toLocaleString()}</td>
+                    <td>${item.avg_chars.toLocaleString()}</td>
+                </tr>
+            `).join('');
         }
         
         // 상태 표시
