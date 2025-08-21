@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SNS센터 도움 카운팅 프로그램</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #000; color: #fff; min-height: 100vh; }
+        .container { max-width: 1400px; margin: 0 auto; padding: 40px 20px; }
+        .header { text-align: center; margin-bottom: 50px; }
+        .header h1 { font-size: 48px; font-weight: 200; margin-bottom: 10px; }
+        .header h1 span { color: #1E6FFF; font-weight: 400; }
+        .date-display { color: #666; font-size: 14px; text-transform: uppercase; letter-spacing: 2px; }
+        
+        .control-bar { display: flex; justify-content: space-between; align-items: center; padding: 20px 30px; background: #000; border: 1px solid #222; margin-bottom: 40px; flex-wrap: wrap; gap: 20px; }
+        .date-controls { display: flex; gap: 15px; align-items: center; }
+        .date-input { background: transparent; border: 1px solid #333; color: #fff; padding: 10px 15px; font-size: 14px; outline: none; }
+        .date-input:focus { border-color: #1E6FFF; }
+        
+        .btn { padding: 10px 25px; background: transparent; color: #666; border: 1px solid #333; font-size: 14px; font-weight: 500; letter-spacing: 1px; text-transform: uppercase; cursor: pointer; transition: all 0.3s; }
+        .btn:hover { color: #1E6FFF; border-color: #1E6FFF; }
+        .btn.primary { color: #1E6FFF; border-color: #1E6FFF; }
+        .btn.primary:hover { background: #1E6FFF; color: #000; }
+        
+        .status-indicator { display: flex; align-items: center; gap: 10px; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; }
+        .status-dot { width: 8px; height: 8px; border-radius: 50%; background: #666; animation: pulse 2s infinite; }
+        .status-dot.active { background: #00FF00; }
+        .status-dot.loading { background: #1E6FFF; }
+        .status-dot.error { background: #FF0000; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+        
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 2px; margin-bottom: 50px; background: #111; padding: 2px; }
+        .stat-card { background: #000; padding: 30px; text-align: center; }
+        .stat-value { font-size: 48px; font-weight: 200; color: #1E6FFF; margin-bottom: 10px; }
+        .stat-label { font-size: 12px; color: #666; text-transform: uppercase; letter-spacing: 2px; }
+        
+        .podium { display: flex; justify-content: center; align-items: flex-end; gap: 40px; margin-bottom: 60px; height: 400px; }
+        .podium-item { flex: 1; max-width: 280px; display: flex; flex-direction: column; align-items: center; position: relative; }
+        .podium-rank { font-size: 60px; font-weight: 100; margin-bottom: 20px; opacity: 0.8; }
+        .podium-item.rank-1 .podium-rank { color: #FFD700; opacity: 1; }
+        .podium-item.rank-2 { margin-top: 50px; }
+        .podium-item.rank-2 .podium-rank { color: #C0C0C0; }
+        .podium-item.rank-3 { margin-top: 100px; }
+        .podium-item.rank-3 .podium-rank { color: #CD7F32; }
+        .podium-bar { width: 100%; background: #0a0a0a; border: 1px solid #222; position: relative; overflow: hidden; }
+        .podium-item.rank-1 .podium-bar { height: 250px; border-color: #FFD700; background: linear-gradient(180deg, rgba(255,215,0,0.1), transparent); }
+        .podium-item.rank-2 .podium-bar { height: 200px; border-color: #C0C0C0; background: linear-gradient(180deg, rgba(192,192,192,0.1), transparent); }
+        .podium-item.rank-3 .podium-bar { height: 150px; border-color: #CD7F32; background: linear-gradient(180deg, rgba(205,127,50,0.1), transparent); }
+        .podium-content { position: absolute; bottom: 20px; left: 0; right: 0; padding: 0 15px; text-align: center; }
+        .podium-name { font-size: 18px; font-weight: 500; margin-bottom: 5px; }
+        .podium-helps { font-size: 36px; font-weight: 200; color: #1E6FFF; }
+        .podium-chars { font-size: 12px; color: #999; }
+        
+        .ranking-table { background: #000; border: 1px solid #222; margin-bottom: 40px; }
+        .table-header { padding: 25px 30px; border-bottom: 1px solid #222; display: flex; justify-content: space-between; align-items: center; }
+        .table-title { font-size: 16px; font-weight: 300; letter-spacing: 1px; text-transform: uppercase; }
+        table { width: 100%; border-collapse: collapse; }
+        th { padding: 20px; text-align: left; font-size: 12px; color: #666; text-transform: uppercase; letter-spacing: 2px; border-bottom: 1px solid #222; }
+        td { padding: 20px; font-size: 15px; border-bottom: 1px solid #111; }
+        tr:hover { background: #050505; }
+        .rank-number { display: inline-block; width: 32px; height: 32px; line-height: 32px; text-align: center; font-size: 16px; color: #666; }
+        .rank-number.gold { background: linear-gradient(135deg, #FFD700, #FFA500); color: #000; border-radius: 50%; }
+        .rank-number.silver { background: linear-gradient(135deg, #C0C0C0, #808080); color: #000; border-radius: 50%; }
+        .rank-number.bronze { background: linear-gradient(135deg, #CD7F32, #8B4513); color: #fff; border-radius: 50%; }
+        
+        .loading { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.9); display: none; align-items: center; justify-content: center; z-index: 9999; }
+        .loading.active { display: flex; }
+        .spinner { width: 50px; height: 50px; border: 2px solid #222; border-top-color: #1E6FFF; border-radius: 50%; animation: spin 1s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        
+        @media (max-width: 768px) {
+            .control-bar { flex-direction: column; }
+            .podium { flex-direction: column; height: auto; gap: 30px; }
+            .podium-item.rank-2, .podium-item.rank-3 { margin-top: 0; }
+            .stats-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>SNS센터 <span>도움 카운팅 프로그램</span></h1>
+            <div class="date-display" id="dateDisplay"></div>
+        </div>
+        
+        <div class="control-bar">
+            <div class="date-controls">
+                <input type="date" id="startDate" class="date-input">
+                <span style="color: #333;">—</span>
+                <input type="date" id="endDate" class="date-input">
+                <button class="btn primary" onclick="syncData()">조회</button>
+                <button class="btn" onclick="toggleAuto()" id="autoBtn">자동 새로고침</button>
+            </div>
+            <div class="status-indicator">
+                <span class="status-dot" id="statusDot"></span>
+                <span id="statusText">대기 중</span>
+            </div>
+        </div>
+        
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-value" id="totalHelps">0</div>
+                <div class="stat-label">총 도움 횟수</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="totalChars">0</div>
+                <div class="stat-label">총 글자수</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="activeCounselors">0</div>
+                <div class="stat-label">참여 상담사</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="avgChars">0</div>
+                <div class="stat-label">평균 글자수</div>
+            </div>
+        </div>
+        
+        <div class="podium" id="podium"></div>
+        
+        <div class="ranking-table">
+            <div class="table-header">
+                <div class="table-title">전체 상담사 랭킹</div>
+                <button class="btn" onclick="exportCSV()">CSV 내보내기</button>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>순위</th>
+                        <th>상담사</th>
+                        <th>도움 횟수</th>
+                        <th>총 글자수</th>
+                        <th>평균 글자수</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody">
+                    <tr><td colspan="5" style="text-align:center;padding:50px;color:#666;">데이터를 조회하려면 날짜를 선택하고 조회 버튼을 클릭하세요</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+    
+    <div class="loading" id="loading"><div class="spinner"></div></div>
+    
+    <script>
+        // Supabase 설정
+        const SUPABASE_URL = 'https://bhtqjipygkawoyieidgp.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJodHFqaXB5Z2thd295aWVpZGdwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ0ODg5NjgsImV4cCI6MjA3MDA2NDk2OH0.hu2EAj9RCq436QBtfbEVF4aGOau4WWomLMDKahN4iAA';
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        
+        let currentData = [];
+        let autoInterval = null;
+        
+        // 초기화
+        async function init() {
+            // 테이블 생성
+            await createTables();
+            
+            // 날짜 표시
+            const now = new Date();
+            document.getElementById('dateDisplay').textContent = now.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+            
+            // 기본 날짜 설정
+            const today = new Date();
+            const weekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
+            document.getElementById('startDate').value = weekAgo.toISOString().split('T')[0];
+            document.getElementById('endDate').value = today.toISOString().split('T')[0];
+            
+            // 데이터 로드
+            await loadData();
+            
+            // 실시간 구독
+            supabase.channel('changes')
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'counselor_stats' }, () => loadData())
+                .subscribe();
+        }
+        
+        // 테이블 생성
+        async function createTables() {
+            const { error } = await supabase.rpc('exec_sql', {
+                sql: `
+                    CREATE TABLE IF NOT EXISTS counselor_stats (
+                        id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+                        counselor_id TEXT NOT NULL,
+                        counselor_name TEXT NOT NULL,
+                        period_start DATE NOT NULL,
+                        period_end DATE NOT NULL,
+                        help_count INTEGER DEFAULT 0,
+                        total_chars BIGINT DEFAULT 0,
+                        avg_chars FLOAT DEFAULT 0,
+                        updated_at TIMESTAMP DEFAULT NOW(),
+                        UNIQUE(counselor_id, period_start, period_end)
+                    );
+                    CREATE INDEX IF NOT EXISTS idx_period ON counselor_stats(period_start, period_end);
+                `
+            }).catch(() => {});
+        }
+        
+        // 데이터 동기화 (API 호출 시뮬레이션)
+        async function syncData() {
+            showLoading(true);
+            setStatus('loading', '데이터 조회 중...');
+            
+            const startDate = document.getElementById('startDate').value;
+            const endDate = document.getElementById('endDate').value;
+            
+            if (!startDate || !endDate) {
+                alert('날짜를 선택해주세요');
+                showLoading(false);
+                return;
+            }
+            
+            try {
+                // 실제 환경에서는 API 호출
+                // const response = await fetch('/api/sync', {...});
+                
+                // 데모 데이터 생성
+                const demoData = [
+                    { counselor_id: 'CS001', counselor_name: '김도움', help_count: 245, total_chars: 73500 },
+                    { counselor_id: 'CS002', counselor_name: '이지원', help_count: 198, total_chars: 59400 },
+                    { counselor_id: 'CS003', counselor_name: '박상담', help_count: 176, total_chars: 61600 },
+                    { counselor_id: 'CS004', counselor_name: '최서포트', help_count: 165, total_chars: 49500 },
+                    { counselor_id: 'CS005', counselor_name: '정헬프', help_count: 143, total_chars: 50050 },
+                    { counselor_id: 'CS006', counselor_name: '강어시스트', help_count: 132, total_chars: 46200 },
+                    { counselor_id: 'CS007', counselor_name: '조도우미', help_count: 121, total_chars: 36300 },
+                    { counselor_id: 'CS008', counselor_name: '윤케어', help_count: 110, total_chars: 38500 }
+                ].map(item => ({
+                    ...item,
+                    period_start: startDate,
+                    period_end: endDate,
+                    avg_chars: Math.round(item.total_chars / item.help_count)
+                }));
+                
+                // 데이터 저장
+                for (const item of demoData) {
+                    await supabase.from('counselor_stats').upsert(item, { onConflict: 'counselor_id,period_start,period_end' });
+                }
+                
+                await loadData();
+                setStatus('active', '조회 완료');
+            } catch (error) {
+                console.error('동기화 실패:', error);
+                setStatus('error', '오류 발생');
+            } finally {
+                showLoading(false);
+            }
+        }
+        
+        // 데이터 로드
+        async function loadData() {
+            const startDate = document.getElementById('startDate').value;
+            const endDate = document.getElementById('endDate').value;
+            
+            if (!startDate || !endDate) return;
+            
+            const { data, error } = await supabase
+                .from('counselor_stats')
+                .select('*')
+                .gte('period_start', startDate)
+                .lte('period_end', endDate)
+                .order('help_count', { ascending: false });
+            
+            if (data) {
+                currentData = data;
+                updateUI();
+            }
+        }
+        
+        // UI 업데이트
+        function updateUI() {
+            // 통계
+            const totalHelps = currentData.reduce((sum, item) => sum + item.help_count, 0);
+            const totalChars = currentData.reduce((sum, item) => sum + item.total_chars, 0);
+            const avgChars = totalHelps > 0 ? Math.round(totalChars / totalHelps) : 0;
+            
+            animateNumber('totalHelps', totalHelps);
+            animateNumber('totalChars', totalChars);
+            animateNumber('activeCounselors', currentData.length);
+            animateNumber('avgChars', avgChars);
+            
+            // 포디움
+            const podium = document.getElementById('podium');
+            const top3 = currentData.slice(0, 3);
+            if (top3.length > 0) {
+                const order = [1, 0, 2]; // 2등, 1등, 3등 순서
+                podium.innerHTML = order.map(idx => {
+                    if (!top3[idx]) return '';
+                    const item = top3[idx];
+                    const rank = idx + 1;
+                    return `
+                        <div class="podium-item rank-${rank}">
+                            <div class="podium-rank">${rank}</div>
+                            <div class="podium-bar">
+                                <div class="podium-content">
+                                    <div class="podium-name">${item.counselor_name}</div>
+                                    <div class="podium-helps">${item.help_count}</div>
+                                    <div class="podium-chars">${item.total_chars.toLocaleString()} chars</div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
+            
+            // 테이블
+            const tbody = document.getElementById('tableBody');
+            if (currentData.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:50px;color:#666;">데이터가 없습니다</td></tr>';
+            } else {
+                tbody.innerHTML = currentData.map((item, index) => {
+                    const rank = index + 1;
+                    let rankClass = rank === 1 ? 'gold' : rank === 2 ? 'silver' : rank === 3 ? 'bronze' : '';
+                    return `
+                        <tr>
+                            <td><span class="rank-number ${rankClass}">${rank}</span></td>
+                            <td>${item.counselor_name}<br><small style="color:#666">${item.counselor_id}</small></td>
+                            <td>${item.help_count.toLocaleString()}</td>
+                            <td>${item.total_chars.toLocaleString()}</td>
+                            <td>${item.avg_chars.toLocaleString()}</td>
+                        </tr>
+                    `;
+                }).join('');
+            }
+        }
+        
+        // 숫자 애니메이션
+        function animateNumber(id, target) {
+            const element = document.getElementById(id);
+            const start = parseInt(element.textContent.replace(/,/g, '')) || 0;
+            const duration = 1000;
+            const startTime = Date.now();
+            
+            function update() {
+                const progress = Math.min((Date.now() - startTime) / duration, 1);
+                const current = Math.floor(start + (target - start) * progress);
+                element.textContent = current.toLocaleString();
+                if (progress < 1) requestAnimationFrame(update);
+            }
+            update();
+        }
+        
+        // 상태 표시
+        function setStatus(type, text) {
+            document.getElementById('statusDot').className = 'status-dot ' + type;
+            document.getElementById('statusText').textContent = text;
+        }
+        
+        // 로딩
+        function showLoading(show) {
+            document.getElementById('loading').classList.toggle('active', show);
+        }
+        
+        // 자동 새로고침
+        function toggleAuto() {
+            const btn = document.getElementById('autoBtn');
+            if (autoInterval) {
+                clearInterval(autoInterval);
+                autoInterval = null;
+                btn.textContent = '자동 새로고침';
+                setStatus('active', '수동 모드');
+            } else {
+                syncData();
+                autoInterval = setInterval(syncData, 5 * 60 * 1000);
+                btn.textContent = '중지';
+                setStatus('active', '자동 새로고침 (5분)');
+            }
+        }
+        
+        // CSV 내보내기
+        function exportCSV() {
+            if (currentData.length === 0) {
+                alert('내보낼 데이터가 없습니다');
+                return;
+            }
+            
+            const csv = '\uFEFF순위,상담사ID,상담사명,도움횟수,총글자수,평균글자수\n' +
+                currentData.map((item, i) => 
+                    `${i+1},${item.counselor_id},${item.counselor_name},${item.help_count},${item.total_chars},${item.avg_chars}`
+                ).join('\n');
+            
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = `도움카운팅_${new Date().toISOString().split('T')[0]}.csv`;
+            link.click();
+        }
+        
+        // 시작
+        init();
+    </script>
+</body>
+</html>
