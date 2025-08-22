@@ -3,25 +3,91 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>채널톡 비담당 상담 추적 시스템</title>
+    <title>채널톡 비담당 상담 추적 시스템 - Pro Version</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='50%' x='50%' text-anchor='middle' font-size='80'>💬</text></svg>">
+    
+    <!-- Supabase Client -->
     <script src="https://unpkg.com/@supabase/supabase-js@2.39.0/dist/umd/supabase.min.js"></script>
+    
+    <!-- Chart.js for Analytics -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        :root {
+            --primary: #1E6FFF;
+            --success: #00FF00;
+            --error: #FF4444;
+            --warning: #FFD700;
+            --bg: #000;
+            --bg-secondary: #111;
+            --border: #222;
+            --text: #fff;
+            --text-muted: #888;
+            --text-bright: #ccc;
+        }
+        
         body { 
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans KR', sans-serif; 
-            background: #000; 
-            color: #fff; 
+            background: var(--bg); 
+            color: var(--text); 
             min-height: 100vh; 
+            overflow-x: hidden;
         }
-        .container { max-width: 1600px; margin: 0 auto; padding: 40px 20px; }
         
-        /* 헤더 스타일 */
+        .container { 
+            max-width: 1600px; 
+            margin: 0 auto; 
+            padding: 40px 20px; 
+        }
+        
+        /* Loading Screen */
+        .loading-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: var(--bg);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            transition: opacity 0.5s;
+        }
+        .loading-screen.hide {
+            opacity: 0;
+            pointer-events: none;
+        }
+        .loader {
+            width: 50px;
+            height: 50px;
+            border: 3px solid var(--border);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        /* Header */
         .header { 
             text-align: center; 
             margin-bottom: 50px;
             padding: 30px;
-            background: #000;
-            border: 1px solid #222;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            position: relative;
+            overflow: hidden;
+        }
+        .header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--primary), transparent);
+            animation: scan 3s linear infinite;
         }
         .header h1 { 
             font-size: 52px; 
@@ -29,73 +95,64 @@
             margin-bottom: 15px;
         }
         .header h1 span { 
-            color: #1E6FFF; 
+            color: var(--primary); 
             font-weight: 400;
         }
         .subtitle { 
-            color: #999; 
+            color: var(--text-muted); 
             font-size: 16px; 
             margin-top: 10px;
             letter-spacing: 0.5px;
         }
         .date-display { 
-            color: #888; 
+            color: var(--text-muted); 
             font-size: 15px; 
             text-transform: uppercase; 
             letter-spacing: 2px; 
             margin-top: 20px;
         }
-        .today-info { 
-            color: #1E6FFF; 
-            font-size: 20px; 
-            margin-top: 10px;
-            font-weight: 300;
+        .live-indicator {
+            display: inline-block;
+            padding: 5px 15px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--success);
+            border-radius: 20px;
+            margin-top: 15px;
+            font-size: 13px;
+            color: var(--success);
         }
-        
-        /* 실시간 상태 표시 */
-        .realtime-status {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            background: #111;
-            padding: 15px 20px;
-            border: 1px solid #333;
-            border-radius: 4px;
-            z-index: 1000;
-        }
-        .realtime-indicator {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-        .pulse-dot {
-            width: 10px;
-            height: 10px;
+        .live-indicator::before {
+            content: '';
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            background: var(--success);
             border-radius: 50%;
-            background: #00FF00;
+            margin-right: 8px;
             animation: pulse 2s infinite;
         }
-        .pulse-dot.disconnected { background: #FF0000; }
-        .pulse-dot.connecting { background: #FFD700; }
         
-        /* 컨트롤 바 */
+        /* Control Bar */
         .control-bar { 
             display: flex; 
             justify-content: space-between; 
             align-items: center; 
             padding: 25px 30px; 
-            background: #000; 
-            border: 1px solid #222;
+            background: var(--bg); 
+            border: 1px solid var(--border);
             margin-bottom: 40px; 
             flex-wrap: wrap; 
             gap: 20px;
         }
-        .control-buttons { display: flex; gap: 15px; flex-wrap: wrap; }
-        
+        .control-buttons { 
+            display: flex; 
+            gap: 15px; 
+            flex-wrap: wrap; 
+        }
         .btn { 
             padding: 12px 30px; 
             background: transparent; 
-            color: #999; 
+            color: var(--text-muted); 
             border: 1px solid #333; 
             font-size: 15px; 
             font-weight: 500; 
@@ -103,62 +160,63 @@
             text-transform: uppercase; 
             cursor: pointer; 
             transition: all 0.3s;
+            position: relative;
+            overflow: hidden;
+        }
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            background: var(--primary);
+            opacity: 0.3;
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            transition: width 0.5s, height 0.5s;
+        }
+        .btn:active::before {
+            width: 300px;
+            height: 300px;
         }
         .btn:hover { 
-            color: #1E6FFF; 
-            border-color: #1E6FFF;
+            color: var(--primary); 
+            border-color: var(--primary);
         }
         .btn.primary { 
-            color: #1E6FFF; 
-            border-color: #1E6FFF;
+            color: var(--primary); 
+            border-color: var(--primary);
         }
         .btn.primary:hover { 
-            background: #1E6FFF; 
-            color: #000;
+            background: var(--primary); 
+            color: var(--bg);
         }
         .btn:disabled { 
             opacity: 0.5; 
             cursor: not-allowed; 
         }
         
-        /* 상태 인디케이터 */
-        .status-indicator { 
-            display: flex; 
-            align-items: center; 
-            gap: 10px; 
-            font-size: 13px; 
-            text-transform: uppercase; 
-            letter-spacing: 1px;
-        }
-        .status-dot { 
-            width: 8px; 
-            height: 8px; 
-            border-radius: 50%; 
-            background: #666; 
-            animation: pulse 2s infinite;
-        }
-        .status-dot.active { background: #00FF00; }
-        .status-dot.loading { background: #1E6FFF; }
-        .status-dot.error { background: #FF0000; }
-        
-        /* 통계 카드 그리드 */
+        /* Stats Grid */
         .stats-grid { 
             display: grid; 
             grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); 
             gap: 2px; 
             margin-bottom: 50px;
-            background: #111;
+            background: var(--bg-secondary);
             padding: 2px;
         }
         .stat-card { 
-            background: #000; 
+            background: var(--bg); 
             padding: 35px; 
             text-align: center; 
             position: relative; 
             overflow: hidden;
+            transition: all 0.3s;
         }
         .stat-card:hover {
             background: #050505;
+            transform: translateY(-2px);
         }
         .stat-icon {
             font-size: 36px;
@@ -168,36 +226,80 @@
         .stat-value { 
             font-size: 52px; 
             font-weight: 200; 
-            color: #1E6FFF; 
+            color: var(--primary); 
             margin-bottom: 12px;
             font-variant-numeric: tabular-nums;
+            transition: all 0.3s;
+        }
+        .stat-value.updating {
+            transform: scale(1.1);
         }
         .stat-label { 
             font-size: 14px; 
-            color: #888; 
+            color: var(--text-muted); 
             text-transform: uppercase; 
             letter-spacing: 2px;
             font-weight: 400;
         }
         .stat-change {
             font-size: 15px;
-            color: #00FF00;
+            color: var(--success);
             margin-top: 10px;
             font-weight: 500;
         }
-        .stat-change.down { color: #FF4444; }
+        .stat-change.down { 
+            color: var(--error); 
+        }
         
-        /* 실시간 활동 피드 */
+        /* Tabs */
+        .tabs-container {
+            margin-bottom: 40px;
+        }
+        .tabs-header {
+            display: flex;
+            gap: 2px;
+            background: var(--bg-secondary);
+            padding: 2px;
+            margin-bottom: 2px;
+        }
+        .tab-button {
+            flex: 1;
+            padding: 15px;
+            background: var(--bg);
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            transition: all 0.3s;
+        }
+        .tab-button:hover {
+            color: var(--text-bright);
+        }
+        .tab-button.active {
+            color: var(--primary);
+            background: var(--bg-secondary);
+        }
+        .tab-content {
+            display: none;
+            animation: fadeIn 0.3s;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        
+        /* Activity Feed */
         .activity-feed {
-            background: #000;
-            border: 1px solid #222;
+            background: var(--bg);
+            border: 1px solid var(--border);
             margin-bottom: 40px;
             max-height: 500px;
             overflow: hidden;
         }
         .feed-header {
             padding: 25px 30px;
-            border-bottom: 1px solid #222;
+            border-bottom: 1px solid var(--border);
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -207,11 +309,7 @@
             font-weight: 300;
             letter-spacing: 1px;
             text-transform: uppercase;
-            color: #1E6FFF;
-        }
-        .feed-count {
-            color: #888;
-            font-size: 14px;
+            color: var(--primary);
         }
         .feed-content {
             max-height: 400px;
@@ -222,13 +320,15 @@
             padding: 20px 30px;
             border-bottom: 1px solid #111;
             transition: all 0.2s;
+            animation: slideIn 0.3s;
         }
         .activity-item:hover {
             background: #050505;
+            padding-left: 35px;
         }
         .activity-time {
             font-size: 13px;
-            color: #888;
+            color: var(--text-muted);
             margin-bottom: 8px;
             text-transform: uppercase;
             letter-spacing: 1px;
@@ -236,70 +336,58 @@
         .activity-text {
             font-size: 16px;
             line-height: 1.6;
-            color: #ccc;
+            color: var(--text-bright);
         }
         .activity-counselor {
-            color: #1E6FFF;
+            color: var(--primary);
             font-weight: 500;
         }
         .activity-customer {
-            color: #FFD700;
+            color: var(--warning);
             font-weight: 500;
         }
-        .activity-chars {
-            color: #888;
-            font-size: 14px;
-            margin-left: 10px;
-        }
         
-        /* 랭킹 테이블 */
-        .ranking-section {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 30px;
-            margin-bottom: 40px;
+        /* Tables */
+        .table-container {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            margin-bottom: 30px;
+            overflow: hidden;
         }
-        @media (max-width: 1024px) {
-            .ranking-section { grid-template-columns: 1fr; }
-        }
-        
-        .ranking-table { 
-            background: #000;
-            border: 1px solid #222;
-        }
-        .table-header { 
+        .table-header {
             padding: 25px 30px;
-            border-bottom: 1px solid #222;
+            border-bottom: 1px solid var(--border);
+            background: var(--bg-secondary);
         }
-        .table-title { 
+        .table-title {
             font-size: 17px;
             font-weight: 300;
             letter-spacing: 1px;
             text-transform: uppercase;
-            color: #1E6FFF;
+            color: var(--primary);
         }
-        table { 
-            width: 100%; 
+        table {
+            width: 100%;
             border-collapse: collapse;
         }
-        th { 
-            padding: 20px; 
-            text-align: left; 
-            font-size: 13px; 
-            color: #888; 
-            text-transform: uppercase; 
-            letter-spacing: 2px; 
-            border-bottom: 1px solid #222;
+        th {
+            padding: 20px;
+            text-align: left;
+            font-size: 13px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            border-bottom: 1px solid var(--border);
             font-weight: 500;
         }
-        td { 
-            padding: 20px; 
-            font-size: 16px; 
+        td {
+            padding: 20px;
+            font-size: 16px;
             border-bottom: 1px solid #111;
-            color: #ccc;
+            color: var(--text-bright);
             font-variant-numeric: tabular-nums;
         }
-        tr:hover { 
+        tr:hover {
             background: #050505;
         }
         .rank-number {
@@ -311,134 +399,182 @@
             border-radius: 50%;
             font-weight: 600;
             font-size: 16px;
-            background: #111;
+            background: var(--bg-secondary);
             border: 1px solid #333;
         }
-        .rank-1 { 
-            background: #FFD700; 
-            color: #000;
-            border: none;
-        }
-        .rank-2 { 
-            background: #C0C0C0; 
-            color: #000;
-            border: none;
-        }
-        .rank-3 { 
-            background: #CD7F32; 
-            color: #fff;
-            border: none;
+        .rank-1 { background: var(--warning); color: var(--bg); border: none; }
+        .rank-2 { background: #C0C0C0; color: var(--bg); border: none; }
+        .rank-3 { background: #CD7F32; color: var(--text); border: none; }
+        
+        /* Chart Container */
+        .chart-container {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            padding: 30px;
+            margin-bottom: 30px;
+            height: 400px;
+            position: relative;
         }
         
-        /* 알림 */
-        .notification { 
-            position: fixed; 
-            top: 20px; 
-            right: 20px; 
-            padding: 18px 25px; 
-            background: #111;
-            border: 1px solid #1E6FFF;
-            color: #fff; 
+        /* Settings Panel */
+        .settings-panel {
+            position: fixed;
+            top: 0;
+            right: -400px;
+            width: 400px;
+            height: 100vh;
+            background: var(--bg-secondary);
+            border-left: 1px solid var(--border);
+            transition: right 0.3s;
+            z-index: 1000;
+            overflow-y: auto;
+        }
+        .settings-panel.open {
+            right: 0;
+        }
+        .settings-header {
+            padding: 20px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .settings-content {
+            padding: 20px;
+        }
+        .setting-group {
+            margin-bottom: 30px;
+        }
+        .setting-label {
+            display: block;
+            margin-bottom: 10px;
+            color: var(--text-muted);
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .setting-input {
+            width: 100%;
+            padding: 10px;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            color: var(--text);
+            font-size: 14px;
+        }
+        
+        /* Notifications */
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 18px 25px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--primary);
+            color: var(--text);
             font-size: 15px;
             font-weight: 500;
-            z-index: 1000; 
-            animation: slideIn 0.3s; 
+            z-index: 1000;
+            animation: slideInRight 0.3s;
             display: none;
+            max-width: 400px;
         }
         .notification.show { display: block; }
-        .notification.error { 
-            border-color: #FF0000;
-        }
-        .notification.success {
-            border-color: #00FF00;
-        }
+        .notification.error { border-color: var(--error); }
+        .notification.success { border-color: var(--success); }
         
-        @keyframes pulse { 
-            0%, 100% { opacity: 1; } 
-            50% { opacity: 0.5; } 
-        }
-        @keyframes slideIn { 
-            from { transform: translateX(100%); } 
-            to { transform: translateX(0); } 
-        }
-        
-        /* 스크롤바 스타일 */
-        ::-webkit-scrollbar { width: 10px; }
-        ::-webkit-scrollbar-track { background: #111; }
-        ::-webkit-scrollbar-thumb { 
-            background: #333; 
-            border-radius: 0;
-        }
-        ::-webkit-scrollbar-thumb:hover { background: #444; }
-
-        /* 로딩 스피너 */
-        .loading-spinner {
-            display: inline-block;
-            width: 16px;
-            height: 16px;
-            border: 2px solid #333;
-            border-radius: 50%;
-            border-top-color: #1E6FFF;
-            animation: spin 1s ease-in-out infinite;
+        /* Animations */
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
         }
         @keyframes spin {
             to { transform: rotate(360deg); }
         }
+        @keyframes scan {
+            to { left: 100%; }
+        }
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateX(-20px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+        @keyframes slideInRight {
+            from { opacity: 0; transform: translateX(20px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
         
-        /* 모바일 반응형 */
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 10px; }
+        ::-webkit-scrollbar-track { background: var(--bg-secondary); }
+        ::-webkit-scrollbar-thumb { background: #333; }
+        ::-webkit-scrollbar-thumb:hover { background: #444; }
+        
+        /* Responsive */
         @media (max-width: 768px) {
-            .control-bar { flex-direction: column; }
-            .stats-grid { grid-template-columns: 1fr; }
+            .container { padding: 20px 10px; }
             .header h1 { font-size: 36px; }
             .stat-value { font-size: 42px; }
+            .control-bar { flex-direction: column; }
+            .stats-grid { grid-template-columns: 1fr; }
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <!-- 실시간 연결 상태 -->
-        <div class="realtime-status">
-            <div class="realtime-indicator">
-                <span class="pulse-dot" id="realtimeDot"></span>
-                <span id="realtimeText" style="color: #888; font-size: 13px;">연결 대기중</span>
-            </div>
-        </div>
+    <!-- Loading Screen -->
+    <div class="loading-screen" id="loadingScreen">
+        <div class="loader"></div>
+    </div>
 
-        <!-- 헤더 -->
+    <!-- Main Container -->
+    <div class="container">
+        <!-- Header -->
         <div class="header">
             <h1>채널톡 <span>비담당 상담 추적</span></h1>
             <div class="subtitle">담당자(ASSIGNEE)가 아닌 매니저의 답변을 실시간으로 모니터링합니다</div>
             <div class="date-display" id="dateDisplay"></div>
-            <div class="today-info">오늘 하루 실시간 집계</div>
+            <div class="live-indicator">LIVE MONITORING</div>
         </div>
         
-        <!-- 컨트롤 바 -->
+        <!-- Control Bar -->
         <div class="control-bar">
             <div class="control-buttons">
-                <button class="btn primary" onclick="app.loadData()" id="refreshBtn">새로고침</button>
-                <button class="btn" onclick="app.syncChannelTalk()" id="syncBtn">채널톡 동기화</button>
-                <button class="btn" onclick="app.exportData()" id="exportBtn">데이터 내보내기</button>
-                <button class="btn" onclick="app.generateDemoData()" id="demoBtn">데모 데이터</button>
+                <button class="btn primary" onclick="App.loadData()" id="refreshBtn">
+                    <span id="refreshIcon">↻</span> 새로고침
+                </button>
+                <button class="btn" onclick="App.generateTestData()" id="testBtn">
+                    테스트 데이터
+                </button>
+                <button class="btn" onclick="App.exportData()" id="exportBtn">
+                    CSV 내보내기
+                </button>
+                <button class="btn" onclick="App.toggleSettings()" id="settingsBtn">
+                    설정
+                </button>
+                <button class="btn" onclick="App.clearData()" id="clearBtn">
+                    초기화
+                </button>
             </div>
             <div class="status-indicator">
-                <span class="status-dot" id="statusDot"></span>
-                <span id="statusText" style="color: #888;">대기 중</span>
-                <span id="lastUpdate" style="margin-left: 20px; color: #888;"></span>
+                <span id="statusText" style="color: var(--text-muted);">대기 중</span>
+                <span id="lastUpdate" style="margin-left: 20px; color: var(--text-muted);"></span>
             </div>
         </div>
         
-        <!-- 통계 카드 -->
+        <!-- Stats Grid -->
         <div class="stats-grid">
             <div class="stat-card">
                 <div class="stat-icon">💬</div>
-                <div class="stat-value" id="totalNonAssignee">0</div>
-                <div class="stat-label">오늘 비담당 답변</div>
-                <div class="stat-change" id="changeNonAssignee">-</div>
+                <div class="stat-value" id="totalResponses">0</div>
+                <div class="stat-label">비담당 답변</div>
+                <div class="stat-change" id="changeResponses">-</div>
             </div>
             <div class="stat-card">
                 <div class="stat-icon">✍️</div>
                 <div class="stat-value" id="totalChars">0</div>
-                <div class="stat-label">오늘 총 글자수</div>
+                <div class="stat-label">총 글자수</div>
                 <div class="stat-change" id="changeChars">-</div>
             </div>
             <div class="stat-card">
@@ -450,130 +586,230 @@
             <div class="stat-card">
                 <div class="stat-icon">⏱️</div>
                 <div class="stat-value" id="avgResponseTime">0</div>
-                <div class="stat-label">평균 응답시간(분)</div>
-                <div class="stat-change" id="changeResponseTime">-</div>
+                <div class="stat-label">평균 응답(분)</div>
+                <div class="stat-change" id="changeTime">-</div>
             </div>
             <div class="stat-card">
                 <div class="stat-icon">📊</div>
                 <div class="stat-value" id="avgChars">0</div>
                 <div class="stat-label">평균 글자수</div>
-                <div class="stat-change" id="changeAvgChars">-</div>
+                <div class="stat-change" id="changeAvg">-</div>
             </div>
         </div>
-        
-        <!-- 실시간 활동 피드 -->
-        <div class="activity-feed">
-            <div class="feed-header">
-                <div class="feed-title">실시간 활동</div>
-                <span class="feed-count" id="feedCount">0개 활동</span>
+
+        <!-- Tabs -->
+        <div class="tabs-container">
+            <div class="tabs-header">
+                <button class="tab-button active" onclick="App.switchTab('realtime')">실시간</button>
+                <button class="tab-button" onclick="App.switchTab('ranking')">랭킹</button>
+                <button class="tab-button" onclick="App.switchTab('analytics')">분석</button>
+                <button class="tab-button" onclick="App.switchTab('history')">히스토리</button>
             </div>
-            <div class="feed-content" id="activityFeed">
-                <div style="padding: 50px; text-align: center; color: #666;">
-                    실시간 활동이 여기에 표시됩니다
+
+            <!-- 실시간 탭 -->
+            <div class="tab-content active" id="tab-realtime">
+                <div class="activity-feed">
+                    <div class="feed-header">
+                        <div class="feed-title">실시간 활동</div>
+                        <span id="feedCount" style="color: var(--text-muted);">0개 활동</span>
+                    </div>
+                    <div class="feed-content" id="activityFeed">
+                        <div style="padding: 50px; text-align: center; color: var(--text-muted);">
+                            실시간 활동이 여기에 표시됩니다
+                        </div>
+                    </div>
                 </div>
             </div>
-        </div>
-        
-        <!-- 랭킹 테이블 -->
-        <div class="ranking-section">
-            <!-- 오늘의 매니저 랭킹 -->
-            <div class="ranking-table">
-                <div class="table-header">
-                    <div class="table-title">오늘의 비담당 도움 랭킹</div>
+
+            <!-- 랭킹 탭 -->
+            <div class="tab-content" id="tab-ranking">
+                <div class="table-container">
+                    <div class="table-header">
+                        <div class="table-title">오늘의 비담당 도움 랭킹</div>
+                    </div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th width="80">순위</th>
+                                <th>매니저</th>
+                                <th width="100">횟수</th>
+                                <th width="120">글자수</th>
+                                <th width="120">평균</th>
+                            </tr>
+                        </thead>
+                        <tbody id="rankingTable">
+                            <tr><td colspan="5" style="text-align:center;padding:50px;color:var(--text-muted);">
+                                데이터를 불러오는 중...
+                            </td></tr>
+                        </tbody>
+                    </table>
                 </div>
-                <table>
-                    <thead>
-                        <tr>
-                            <th width="80">순위</th>
-                            <th>매니저</th>
-                            <th width="100">횟수</th>
-                            <th width="120">글자수</th>
-                            <th width="120">평균</th>
-                        </tr>
-                    </thead>
-                    <tbody id="todayRanking">
-                        <tr><td colspan="5" style="text-align:center;padding:50px;color:#666;">
-                            데이터를 불러오는 중...
-                        </td></tr>
-                    </tbody>
-                </table>
             </div>
-            
-            <!-- 시간대별 통계 -->
-            <div class="ranking-table">
-                <div class="table-header">
-                    <div class="table-title">시간대별 활동 통계</div>
+
+            <!-- 분석 탭 -->
+            <div class="tab-content" id="tab-analytics">
+                <div class="chart-container">
+                    <canvas id="hourlyChart"></canvas>
                 </div>
-                <table>
-                    <thead>
-                        <tr>
-                            <th>시간대</th>
-                            <th>답변 수</th>
-                            <th>매니저</th>
-                            <th>평균 글자</th>
-                        </tr>
-                    </thead>
-                    <tbody id="hourlyStats">
-                        <tr><td colspan="4" style="text-align:center;padding:50px;color:#666;">
-                            데이터를 불러오는 중...
-                        </td></tr>
-                    </tbody>
-                </table>
+                <div class="chart-container">
+                    <canvas id="managerChart"></canvas>
+                </div>
+            </div>
+
+            <!-- 히스토리 탭 -->
+            <div class="tab-content" id="tab-history">
+                <div class="table-container">
+                    <div class="table-header">
+                        <div class="table-title">최근 30일 통계</div>
+                    </div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>날짜</th>
+                                <th>답변 수</th>
+                                <th>매니저 수</th>
+                                <th>총 글자수</th>
+                                <th>평균 응답</th>
+                            </tr>
+                        </thead>
+                        <tbody id="historyTable">
+                            <tr><td colspan="5" style="text-align:center;padding:50px;color:var(--text-muted);">
+                                데이터를 불러오는 중...
+                            </td></tr>
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
     </div>
-    
+
+    <!-- Settings Panel -->
+    <div class="settings-panel" id="settingsPanel">
+        <div class="settings-header">
+            <h3>설정</h3>
+            <button onclick="App.toggleSettings()" style="background:none;border:none;color:var(--text);font-size:20px;cursor:pointer;">✕</button>
+        </div>
+        <div class="settings-content">
+            <div class="setting-group">
+                <label class="setting-label">자동 새로고침 (초)</label>
+                <input type="number" class="setting-input" id="refreshInterval" value="300" min="10">
+            </div>
+            <div class="setting-group">
+                <label class="setting-label">데이터 보관 기간 (일)</label>
+                <input type="number" class="setting-input" id="dataRetention" value="30" min="1">
+            </div>
+            <div class="setting-group">
+                <label class="setting-label">알림 사운드</label>
+                <select class="setting-input" id="notificationSound">
+                    <option value="on">켜기</option>
+                    <option value="off">끄기</option>
+                </select>
+            </div>
+            <button class="btn primary" onclick="App.saveSettings()" style="width:100%;">저장</button>
+        </div>
+    </div>
+
+    <!-- Notification -->
     <div class="notification" id="notification"></div>
-    
+
     <script>
-        // ✅ Supabase 설정 (키 자동 적용 완료!)
+        // =====================================================
+        // Supabase 설정
+        // =====================================================
         const SUPABASE_URL = 'https://bhtqjipygkawoyieidgp.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJodHFqaXB5Z2thd295aWVpZGdwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ0ODg5NjgsImV4cCI6MjA3MDA2NDk2OH0.hu2EAj9RCq436QBtfbEVF4aGOau4WWomLMDKahN4iAA';
         
         const { createClient } = window.supabase;
         const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
-        
-        // 채널톡 매니저(상담사) 매핑
-        const managerMap = {
-            '520798': '채주은', '520799': '윤도우리', '521212': '손진우',
-            '521213': '차정환', '521214': '서민국', '521215': '구본영',
-            '521217': '권재현', '521218': '조시현', '521220': '김상아',
-            '521221': '김지원', '521222': '정다혜', '521223': '김시진',
-            '521224': '신혜서', '521226': '이민주', '521227': '정주연',
-            '521230': '김진후', '521231': '이혜영', '521232': '김영진',
-            '521233': '최호익', '521234': '서정국', '521236': '박해영',
-            '521239': '이종민', '521243': '강형욱', '521378': '오민경',
-            '521379': '최수능', '521381': '김채영', '521382': '전지윤',
-            '521383': '이유주', '521384': '김범주', '521385': '김예진',
-            '521386': '차승현', '521392': '이성철', '521393': '박은진',
-            '521410': '오민환', '521416': '전미란', '521564': '김국현',
-            '521567': '김성현', '521902': '김시윤', '521937': '김종현',
-            '521942': '주은지', '521965': '강헌준', '522038': '문홍주',
-            '523260': '주수현', '523268': '오현수', '527833': '유종현',
-            '527836': '김진협', '527910': '옥서아', '528425': '정용욱',
-            '528628': '김소영', '529149': '동수진', '529561': '한승윤',
-            '544751': '성일훈', '555633': '아정당', '555865': '공현준'
-        };
-        
-        // 앱 상태 관리
-        const app = {
+
+        // =====================================================
+        // 메인 앱 객체
+        // =====================================================
+        const App = {
+            // 데이터
             currentData: [],
-            realtimeChannel: null,
             activityFeed: [],
             lastStats: {},
-            
+            charts: {},
+            realtimeChannel: null,
+            refreshTimer: null,
+
+            // 매니저 매핑
+            managerMap: {
+                '520798': '채주은', '520799': '윤도우리', '521212': '손진우',
+                '521213': '차정환', '521214': '서민국', '521215': '구본영',
+                '521217': '권재현', '521218': '조시현', '521220': '김상아',
+                '521221': '김지원', '521222': '정다혜', '521223': '김시진',
+                '521224': '신혜서', '521226': '이민주', '521227': '정주연',
+                '521230': '김진후', '521231': '이혜영', '521232': '김영진',
+                '521233': '최호익', '521234': '서정국', '521236': '박해영',
+                '521239': '이종민', '521243': '강형욱', '521378': '오민경',
+                '521379': '최수능', '521381': '김채영', '521382': '전지윤',
+                '521383': '이유주', '521384': '김범주', '521385': '김예진',
+                '521386': '차승현', '521392': '이성철', '521393': '박은진',
+                '521410': '오민환', '521416': '전미란', '521564': '김국현',
+                '521567': '김성현', '521902': '김시윤', '521937': '김종현',
+                '521942': '주은지', '521965': '강헌준', '522038': '문홍주',
+                '523260': '주수현', '523268': '오현수', '527833': '유종현',
+                '527836': '김진협', '527910': '옥서아', '528425': '정용욱',
+                '528628': '김소영', '529149': '동수진', '529561': '한승윤',
+                '544751': '성일훈', '555633': '아정당', '555865': '공현준'
+            },
+
             // 초기화
             async init() {
+                console.log('앱 초기화 시작...');
+                
+                // 날짜 표시
                 this.updateDateTime();
                 setInterval(() => this.updateDateTime(), 60000);
                 
+                // 테이블 생성
+                await this.createTables();
+                
+                // 데이터 로드
                 await this.loadData();
+                
+                // 실시간 구독
                 this.setupRealtime();
                 
-                // 자동 새로고침 (5분마다)
-                setInterval(() => this.loadData(), 300000);
+                // 차트 초기화
+                this.initCharts();
+                
+                // 자동 새로고침
+                this.startAutoRefresh();
+                
+                // 로딩 화면 숨기기
+                setTimeout(() => {
+                    document.getElementById('loadingScreen').classList.add('hide');
+                }, 500);
             },
-            
+
+            // 테이블 생성 (없으면)
+            async createTables() {
+                // RPC 함수로 테이블 체크 및 생성
+                const { error } = await supabase.rpc('create_tables_if_not_exists', {
+                    sql: `
+                        CREATE TABLE IF NOT EXISTS channel_non_assignee_responses (
+                            id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+                            manager_id VARCHAR(20) NOT NULL,
+                            manager_name VARCHAR(100),
+                            user_chat_id VARCHAR(50) NOT NULL,
+                            assignee_id VARCHAR(20) NOT NULL,
+                            customer_name VARCHAR(100),
+                            message_content TEXT,
+                            char_count INTEGER DEFAULT 0,
+                            response_time INTEGER,
+                            is_helpful BOOLEAN DEFAULT false,
+                            created_at TIMESTAMPTZ DEFAULT NOW()
+                        );
+                    `
+                }).catch(() => {
+                    // 테이블이 이미 있거나 RPC가 없는 경우 무시
+                    console.log('테이블 체크 완료');
+                });
+            },
+
             // 날짜시간 업데이트
             updateDateTime() {
                 const now = new Date();
@@ -581,23 +817,21 @@
                 document.getElementById('dateDisplay').textContent = 
                     `${now.getFullYear()}년 ${now.getMonth()+1}월 ${now.getDate()}일 ${days[now.getDay()]}요일`;
                 document.getElementById('lastUpdate').textContent = 
-                    `마지막 업데이트: ${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}`;
+                    `마지막 업데이트: ${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}:${now.getSeconds().toString().padStart(2,'0')}`;
             },
-            
+
             // 데이터 로드
             async loadData() {
                 const btn = document.getElementById('refreshBtn');
                 btn.disabled = true;
-                this.setStatus('loading', '데이터 로드 중...');
+                document.getElementById('statusText').textContent = '데이터 로드 중...';
                 
                 try {
-                    // 오늘 날짜
                     const today = new Date();
                     const startDate = new Date(today.getFullYear(), today.getMonth(), today.getDate()).toISOString();
                     const endDate = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1).toISOString();
                     
-                    // 비담당 답변 데이터 가져오기
-                    const { data: responses, error } = await supabase
+                    const { data, error } = await supabase
                         .from('channel_non_assignee_responses')
                         .select('*')
                         .gte('created_at', startDate)
@@ -606,46 +840,52 @@
                     
                     if (error) throw error;
                     
-                    this.currentData = responses || [];
+                    this.currentData = data || [];
                     this.updateUI();
                     this.updateDateTime();
-                    this.setStatus('active', '업데이트 완료');
+                    document.getElementById('statusText').textContent = '업데이트 완료';
                     
                 } catch (error) {
                     console.error('데이터 로드 실패:', error);
-                    this.setStatus('error', '로드 실패');
+                    document.getElementById('statusText').textContent = '로드 실패';
                     this.showNotification('데이터 로드 실패', 'error');
                 } finally {
                     btn.disabled = false;
                 }
             },
-            
-            // 데모 데이터 생성
-            async generateDemoData() {
-                const btn = document.getElementById('demoBtn');
+
+            // 테스트 데이터 생성
+            async generateTestData() {
+                const btn = document.getElementById('testBtn');
                 btn.disabled = true;
-                this.setStatus('loading', '데모 데이터 생성 중...');
+                document.getElementById('statusText').textContent = '테스트 데이터 생성 중...';
                 
                 try {
-                    const managers = Object.entries(managerMap).slice(0, 10);
-                    const customers = ['고객A', '고객B', '고객C', '고객D', '고객E'];
+                    const managers = Object.entries(this.managerMap).slice(0, 10);
+                    const customers = ['김고객', '이고객', '박고객', '최고객', '정고객'];
+                    const messages = [
+                        '안녕하세요. 문의하신 내용 확인했습니다. 처리 도와드리겠습니다.',
+                        '네, 확인해보니 해당 문제는 이렇게 해결하시면 됩니다.',
+                        '추가로 궁금하신 점이 있으시면 말씀해주세요.',
+                        '빠른 시일 내에 처리해드리겠습니다. 감사합니다.',
+                        '상세한 안내를 위해 담당 부서에 확인 후 연락드리겠습니다.'
+                    ];
                     
+                    const testData = [];
                     for (let i = 0; i < 20; i++) {
                         const [managerId, managerName] = managers[Math.floor(Math.random() * managers.length)];
-                        const [assigneeId, assigneeName] = managers[Math.floor(Math.random() * managers.length)];
+                        const [assigneeId] = managers[Math.floor(Math.random() * managers.length)];
                         
-                        // 담당자가 아닌 경우만 생성
                         if (managerId !== assigneeId) {
-                            const charCount = Math.floor(Math.random() * 500) + 100;
-                            
-                            await supabase.from('channel_non_assignee_responses').insert({
+                            const message = messages[Math.floor(Math.random() * messages.length)];
+                            testData.push({
                                 manager_id: managerId,
                                 manager_name: managerName,
                                 user_chat_id: `chat_${Date.now()}_${i}`,
                                 assignee_id: assigneeId,
                                 customer_name: customers[Math.floor(Math.random() * customers.length)],
-                                message_content: '데모 메시지 내용입니다.',
-                                char_count: charCount,
+                                message_content: message,
+                                char_count: message.length,
                                 response_time: Math.floor(Math.random() * 10) + 1,
                                 is_helpful: Math.random() > 0.3,
                                 created_at: new Date()
@@ -653,24 +893,29 @@
                         }
                     }
                     
+                    const { error } = await supabase
+                        .from('channel_non_assignee_responses')
+                        .insert(testData);
+                    
+                    if (error) throw error;
+                    
                     await this.loadData();
-                    this.showNotification('데모 데이터 생성 완료', 'success');
+                    this.showNotification(`${testData.length}개 테스트 데이터 생성 완료`, 'success');
                     
                 } catch (error) {
-                    console.error('데모 데이터 생성 실패:', error);
+                    console.error('테스트 데이터 생성 실패:', error);
                     this.showNotification('생성 실패', 'error');
                 } finally {
                     btn.disabled = false;
                 }
             },
-            
+
             // UI 업데이트
             updateUI() {
-                // 통계 계산
                 const stats = this.calculateStats();
                 
                 // 통계 카드 업데이트
-                this.updateStatCard('totalNonAssignee', stats.totalResponses);
+                this.updateStatCard('totalResponses', stats.totalResponses);
                 this.updateStatCard('totalChars', stats.totalChars);
                 this.updateStatCard('activeManagers', stats.activeManagers);
                 this.updateStatCard('avgResponseTime', stats.avgResponseTime);
@@ -679,26 +924,25 @@
                 // 랭킹 업데이트
                 this.updateRanking(stats.managerStats);
                 
-                // 시간대별 통계 업데이트
-                this.updateHourlyStats(stats.hourlyStats);
+                // 차트 업데이트
+                this.updateCharts(stats);
                 
-                // 이전 통계와 비교
+                // 변화량 표시
                 this.compareStats(stats);
                 this.lastStats = stats;
             },
-            
+
             // 통계 계산
             calculateStats() {
                 const managerStats = {};
-                const hourlyStats = {};
+                const hourlyStats = new Array(24).fill(0);
                 let totalChars = 0;
                 let totalResponseTime = 0;
                 let responseCount = 0;
                 
                 this.currentData.forEach(item => {
-                    // 매니저별 통계
                     const managerId = item.manager_id;
-                    const managerName = item.manager_name || managerMap[managerId] || `매니저${managerId}`;
+                    const managerName = item.manager_name || this.managerMap[managerId] || `매니저${managerId}`;
                     
                     if (!managerStats[managerId]) {
                         managerStats[managerId] = {
@@ -710,20 +954,9 @@
                     managerStats[managerId].count++;
                     managerStats[managerId].chars += item.char_count || 0;
                     
-                    // 시간대별 통계
                     const hour = new Date(item.created_at).getHours();
-                    if (!hourlyStats[hour]) {
-                        hourlyStats[hour] = {
-                            count: 0,
-                            chars: 0,
-                            managers: new Set()
-                        };
-                    }
-                    hourlyStats[hour].count++;
-                    hourlyStats[hour].chars += item.char_count || 0;
-                    hourlyStats[hour].managers.add(managerId);
+                    hourlyStats[hour]++;
                     
-                    // 전체 통계
                     totalChars += item.char_count || 0;
                     
                     if (item.response_time) {
@@ -748,31 +981,28 @@
                     hourlyStats: hourlyStats
                 };
             },
-            
+
             // 통계 카드 업데이트
             updateStatCard(id, value) {
                 const element = document.getElementById(id);
                 if (element) {
+                    element.classList.add('updating');
                     element.textContent = typeof value === 'number' ? value.toLocaleString() : value;
+                    setTimeout(() => element.classList.remove('updating'), 300);
                 }
             },
-            
+
             // 통계 비교
             compareStats(newStats) {
                 if (this.lastStats.totalResponses !== undefined) {
-                    this.updateChange('changeNonAssignee', 
-                        newStats.totalResponses - this.lastStats.totalResponses);
-                    this.updateChange('changeChars', 
-                        newStats.totalChars - this.lastStats.totalChars);
-                    this.updateChange('changeManagers', 
-                        newStats.activeManagers - this.lastStats.activeManagers);
-                    this.updateChange('changeResponseTime', 
-                        newStats.avgResponseTime - this.lastStats.avgResponseTime);
-                    this.updateChange('changeAvgChars', 
-                        newStats.avgChars - this.lastStats.avgChars);
+                    this.updateChange('changeResponses', newStats.totalResponses - this.lastStats.totalResponses);
+                    this.updateChange('changeChars', newStats.totalChars - this.lastStats.totalChars);
+                    this.updateChange('changeManagers', newStats.activeManagers - this.lastStats.activeManagers);
+                    this.updateChange('changeTime', newStats.avgResponseTime - this.lastStats.avgResponseTime);
+                    this.updateChange('changeAvg', newStats.avgChars - this.lastStats.avgChars);
                 }
             },
-            
+
             // 변화량 표시
             updateChange(id, value) {
                 const element = document.getElementById(id);
@@ -787,29 +1017,24 @@
                     }
                 }
             },
-            
+
             // 랭킹 업데이트
             updateRanking(managerStats) {
-                const tbody = document.getElementById('todayRanking');
+                const tbody = document.getElementById('rankingTable');
                 if (!tbody) return;
                 
                 if (managerStats.length === 0) {
-                    tbody.innerHTML = `
-                        <tr><td colspan="5" style="text-align:center;padding:50px;color:#666;">
-                            오늘 비담당 답변 데이터가 없습니다
-                        </td></tr>
-                    `;
+                    tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:50px;color:var(--text-muted);">
+                        데이터가 없습니다</td></tr>`;
                     return;
                 }
                 
                 tbody.innerHTML = managerStats.slice(0, 10).map((stat, index) => {
                     const rankClass = index < 3 ? `rank-${index + 1}` : '';
-                    const rankDisplay = `<span class="rank-number ${rankClass}">${index + 1}</span>`;
-                    
                     return `
                         <tr>
-                            <td>${rankDisplay}</td>
-                            <td>${stat.name}<br><small style="color:#666;">${stat.id}</small></td>
+                            <td><span class="rank-number ${rankClass}">${index + 1}</span></td>
+                            <td>${stat.name}<br><small style="color:var(--text-muted);">${stat.id}</small></td>
                             <td>${stat.count.toLocaleString()}</td>
                             <td>${stat.chars.toLocaleString()}</td>
                             <td>${stat.avgChars.toLocaleString()}</td>
@@ -817,49 +1042,11 @@
                     `;
                 }).join('');
             },
-            
-            // 시간대별 통계 업데이트
-            updateHourlyStats(hourlyStats) {
-                const tbody = document.getElementById('hourlyStats');
-                if (!tbody) return;
-                
-                const hours = [];
-                for (let h = 0; h < 24; h++) {
-                    const stat = hourlyStats[h] || { count: 0, chars: 0, managers: new Set() };
-                    if (stat.count > 0) {
-                        hours.push({
-                            hour: h,
-                            count: stat.count,
-                            managers: stat.managers ? stat.managers.size : 0,
-                            avgChars: Math.round(stat.chars / stat.count)
-                        });
-                    }
-                }
-                
-                if (hours.length === 0) {
-                    tbody.innerHTML = `
-                        <tr><td colspan="4" style="text-align:center;padding:50px;color:#666;">
-                            시간대별 데이터가 없습니다
-                        </td></tr>
-                    `;
-                    return;
-                }
-                
-                tbody.innerHTML = hours.map(stat => `
-                    <tr>
-                        <td>${stat.hour.toString().padStart(2, '0')}:00</td>
-                        <td>${stat.count.toLocaleString()}</td>
-                        <td>${stat.managers}</td>
-                        <td>${stat.avgChars.toLocaleString()}</td>
-                    </tr>
-                `).join('');
-            },
-            
-            // 실시간 모드 설정
+
+            // 실시간 설정
             setupRealtime() {
-                // Supabase Realtime 구독
                 this.realtimeChannel = supabase
-                    .channel('channel-talk-changes')
+                    .channel('channel-changes')
                     .on(
                         'postgres_changes',
                         {
@@ -871,31 +1058,23 @@
                             this.handleRealtimeUpdate(payload.new);
                         }
                     )
-                    .subscribe((status) => {
-                        this.updateRealtimeStatus(status);
-                    });
+                    .subscribe();
             },
-            
+
             // 실시간 업데이트 처리
             handleRealtimeUpdate(newData) {
-                // 새 데이터 추가
                 this.currentData.unshift(newData);
-                
-                // 활동 피드에 추가
                 this.addToActivityFeed(newData);
-                
-                // UI 업데이트
                 this.updateUI();
                 
-                // 알림 표시
-                const managerName = newData.manager_name || managerMap[newData.manager_id] || `매니저${newData.manager_id}`;
+                const managerName = newData.manager_name || this.managerMap[newData.manager_id] || `매니저${newData.manager_id}`;
                 this.showNotification(`${managerName}님이 비담당 상담에 답변했습니다`, 'success');
             },
-            
+
             // 활동 피드에 추가
             addToActivityFeed(data) {
                 const feed = document.getElementById('activityFeed');
-                const managerName = data.manager_name || managerMap[data.manager_id] || `매니저${data.manager_id}`;
+                const managerName = data.manager_name || this.managerMap[data.manager_id] || `매니저${data.manager_id}`;
                 const time = new Date(data.created_at).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
                 
                 const activityHtml = `
@@ -904,79 +1083,133 @@
                         <div class="activity-text">
                             <span class="activity-counselor">${managerName}</span>님이 
                             <span class="activity-customer">${data.customer_name || '고객'}</span>님의
-                            비담당 상담에 답변
-                            <span class="activity-chars">(${data.char_count}자)</span>
+                            비담당 상담에 답변 (${data.char_count}자)
                         </div>
                     </div>
                 `;
                 
-                // 최대 20개까지만 표시
                 this.activityFeed.unshift(activityHtml);
-                if (this.activityFeed.length > 20) {
-                    this.activityFeed.pop();
-                }
+                if (this.activityFeed.length > 20) this.activityFeed.pop();
                 
                 feed.innerHTML = this.activityFeed.join('');
                 document.getElementById('feedCount').textContent = `${this.activityFeed.length}개 활동`;
             },
-            
-            // 실시간 상태 업데이트
-            updateRealtimeStatus(status) {
-                const dot = document.getElementById('realtimeDot');
-                const text = document.getElementById('realtimeText');
-                
-                switch(status) {
-                    case 'SUBSCRIBED':
-                        dot.className = 'pulse-dot';
-                        text.textContent = '실시간 연결됨';
-                        break;
-                    case 'CHANNEL_ERROR':
-                        dot.className = 'pulse-dot disconnected';
-                        text.textContent = '연결 오류';
-                        break;
-                    case 'TIMED_OUT':
-                        dot.className = 'pulse-dot disconnected';
-                        text.textContent = '연결 시간초과';
-                        break;
-                    default:
-                        dot.className = 'pulse-dot connecting';
-                        text.textContent = '연결 중...';
-                }
-            },
-            
-            // 채널톡 API 동기화
-            async syncChannelTalk() {
-                const btn = document.getElementById('syncBtn');
-                btn.disabled = true;
-                btn.innerHTML = '<span class="loading-spinner"></span> 동기화 중...';
-                
-                try {
-                    // Vercel API 호출
-                    const response = await fetch('/api/channel-sync', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ 
-                            date: new Date().toISOString().split('T')[0]
-                        })
+
+            // 차트 초기화
+            initCharts() {
+                // 시간대별 차트
+                const hourlyCtx = document.getElementById('hourlyChart');
+                if (hourlyCtx) {
+                    this.charts.hourly = new Chart(hourlyCtx, {
+                        type: 'bar',
+                        data: {
+                            labels: Array.from({length: 24}, (_, i) => `${i}시`),
+                            datasets: [{
+                                label: '답변 수',
+                                data: new Array(24).fill(0),
+                                backgroundColor: 'rgba(30, 111, 255, 0.5)',
+                                borderColor: 'rgba(30, 111, 255, 1)',
+                                borderWidth: 1
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: { display: false }
+                            },
+                            scales: {
+                                y: { 
+                                    beginAtZero: true,
+                                    grid: { color: '#222' },
+                                    ticks: { color: '#888' }
+                                },
+                                x: {
+                                    grid: { color: '#222' },
+                                    ticks: { color: '#888' }
+                                }
+                            }
+                        }
                     });
-                    
-                    if (response.ok) {
-                        const result = await response.json();
-                        this.showNotification(`채널톡 동기화 완료: ${result.processed}개 처리됨`, 'success');
-                        await this.loadData();
-                    } else {
-                        this.showNotification('API 서버를 찾을 수 없습니다', 'error');
-                    }
-                    
-                } catch (error) {
-                    console.error('채널톡 동기화 실패:', error);
-                    this.showNotification('채널톡 동기화 실패', 'error');
-                } finally {
-                    btn.disabled = false;
-                    btn.innerHTML = '채널톡 동기화';
+                }
+
+                // 매니저별 차트
+                const managerCtx = document.getElementById('managerChart');
+                if (managerCtx) {
+                    this.charts.manager = new Chart(managerCtx, {
+                        type: 'doughnut',
+                        data: {
+                            labels: [],
+                            datasets: [{
+                                data: [],
+                                backgroundColor: [
+                                    '#1E6FFF', '#00D4FF', '#FFD700', '#FF6B6B', '#4ECDC4',
+                                    '#95E77E', '#FF9F43', '#6C5CE7', '#A29BFE', '#FD79A8'
+                                ]
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: {
+                                    position: 'right',
+                                    labels: { color: '#888' }
+                                }
+                            }
+                        }
+                    });
                 }
             },
-            
+
+            // 차트 업데이트
+            updateCharts(stats) {
+                if (this.charts.hourly) {
+                    this.charts.hourly.data.datasets[0].data = stats.hourlyStats;
+                    this.charts.hourly.update();
+                }
+
+                if (this.charts.manager && stats.managerStats.length > 0) {
+                    const top5 = stats.managerStats.slice(0, 5);
+                    this.charts.manager.data.labels = top5.map(s => s.name);
+                    this.charts.manager.data.datasets[0].data = top5.map(s => s.count);
+                    this.charts.manager.update();
+                }
+            },
+
+            // 탭 전환
+            switchTab(tabName) {
+                document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+                
+                event.target.classList.add('active');
+                document.getElementById(`tab-${tabName}`).classList.add('active');
+            },
+
+            // 설정 패널 토글
+            toggleSettings() {
+                const panel = document.getElementById('settingsPanel');
+                panel.classList.toggle('open');
+            },
+
+            // 설정 저장
+            saveSettings() {
+                const interval = document.getElementById('refreshInterval').value;
+                localStorage.setItem('refreshInterval', interval);
+                
+                this.startAutoRefresh();
+                this.showNotification('설정이 저장되었습니다', 'success');
+                this.toggleSettings();
+            },
+
+            // 자동 새로고침
+            startAutoRefresh() {
+                if (this.refreshTimer) clearInterval(this.refreshTimer);
+                
+                const interval = localStorage.getItem('refreshInterval') || 300;
+                this.refreshTimer = setInterval(() => this.loadData(), interval * 1000);
+            },
+
             // 데이터 내보내기
             exportData() {
                 if (this.currentData.length === 0) {
@@ -998,30 +1231,47 @@
                 
                 this.showNotification('데이터 내보내기 완료', 'success');
             },
-            
+
             // CSV 변환
             convertToCSV(data) {
-                const headers = ['시간', '매니저ID', '매니저명', '고객명', '대화ID', '글자수', '응답시간(분)', '도움여부'];
+                const headers = ['시간', '매니저ID', '매니저명', '고객명', '대화ID', '글자수', '응답시간(분)'];
                 const rows = data.map(item => [
                     new Date(item.created_at).toLocaleString('ko-KR'),
                     item.manager_id,
-                    item.manager_name || managerMap[item.manager_id] || `매니저${item.manager_id}`,
+                    item.manager_name || this.managerMap[item.manager_id] || `매니저${item.manager_id}`,
                     item.customer_name || '-',
                     item.user_chat_id,
                     item.char_count,
-                    item.response_time || '',
-                    item.is_helpful ? 'Y' : 'N'
+                    item.response_time || ''
                 ]);
                 
                 return [headers, ...rows].map(row => row.join(',')).join('\n');
             },
-            
-            // 상태 표시
-            setStatus(type, text) {
-                document.getElementById('statusDot').className = 'status-dot ' + type;
-                document.getElementById('statusText').textContent = text;
+
+            // 데이터 초기화
+            async clearData() {
+                if (!confirm('정말로 오늘 데이터를 모두 삭제하시겠습니까?')) return;
+                
+                try {
+                    const today = new Date();
+                    const startDate = new Date(today.getFullYear(), today.getMonth(), today.getDate()).toISOString();
+                    
+                    const { error } = await supabase
+                        .from('channel_non_assignee_responses')
+                        .delete()
+                        .gte('created_at', startDate);
+                    
+                    if (error) throw error;
+                    
+                    await this.loadData();
+                    this.showNotification('데이터가 초기화되었습니다', 'success');
+                    
+                } catch (error) {
+                    console.error('초기화 실패:', error);
+                    this.showNotification('초기화 실패', 'error');
+                }
             },
-            
+
             // 알림 표시
             showNotification(message, type = 'success') {
                 const notification = document.getElementById('notification');
@@ -1033,9 +1283,11 @@
                 }, 3000);
             }
         };
-        
+
         // 앱 시작
-        app.init();
+        window.addEventListener('DOMContentLoaded', () => {
+            App.init();
+        });
     </script>
 </body>
 </html>
