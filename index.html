@@ -234,9 +234,6 @@
         .messages-header { 
             padding: 28px 32px; 
             border-bottom: 1px solid #222;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
         }
         .messages-container { 
             max-height: 700px; 
@@ -354,46 +351,6 @@
         }
         .date-info.past { 
             color: #FF6B6B;
-        }
-        
-        /* 더보기 버튼 스타일 */
-        .load-more-btn {
-            width: 100%;
-            padding: 20px;
-            background: #111;
-            border: 1px solid #333;
-            color: #1E6FFF;
-            font-size: 16px;
-            cursor: pointer;
-            transition: all 0.3s;
-            text-align: center;
-            font-weight: 500;
-        }
-        .load-more-btn:hover {
-            background: #1E6FFF;
-            color: #000;
-        }
-        .load-more-btn:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
-        
-        /* 메시지 필터 스타일 */
-        .message-filters {
-            display: flex;
-            gap: 15px;
-            align-items: center;
-        }
-        .filter-select {
-            background: #000;
-            color: #1E6FFF;
-            border: 1px solid #333;
-            padding: 8px 12px;
-            font-size: 14px;
-            cursor: pointer;
-        }
-        .filter-select:hover {
-            border-color: #1E6FFF;
         }
         
         /* 모달 스타일 */
@@ -568,6 +525,7 @@
                 <button class="date-nav-btn" onclick="app.changeDate(-1)">◀ 이전날</button>
                 <input type="date" class="date-input" id="dateSelector" onchange="app.selectDate(this.value)">
                 <button class="date-nav-btn" onclick="app.changeDate(1)" id="nextDayBtn">다음날 ▶</button>
+                <button class="date-nav-btn" onclick="app.goToToday()" id="todayBtn" style="margin-left: 10px;">오늘</button>
                 <span class="date-info" id="dateInfo"></span>
             </div>
             <div class="control-row">
@@ -667,14 +625,6 @@
                     <div class="table-title" id="messagesTitle">최근 1시간 도움 메시지</div>
                     <div class="table-subtitle" id="messageCount" style="color: #8BA5FF; margin-top: 5px;">전체 0개 메시지</div>
                 </div>
-                <div class="message-filters">
-                    <select class="filter-select" id="messageFilter" onchange="app.filterMessages(this.value)">
-                        <option value="all">전체 보기</option>
-                        <option value="form">신청서 포함만</option>
-                        <option value="team">팀별 보기</option>
-                    </select>
-                    <button class="btn" onclick="app.toggleAllMessages()" id="toggleAllBtn">오늘 전체 보기</button>
-                </div>
             </div>
             <div class="messages-container" id="messagesContainer">
                 <div style="padding:50px;text-align:center;color:#999;">최근 메시지가 없습니다</div>
@@ -702,7 +652,6 @@
         window.app = {
             supabaseClient: null,
             currentMessages: [],
-            displayedMessages: [],
             currentStats: [],
             currentTab: 'score',
             autoRefreshInterval: null,
@@ -710,9 +659,6 @@
             selectedDate: new Date(),
             isToday: true,
             realtimeSubscription: null,
-            messagesPerPage: 50,
-            currentPage: 1,
-            showAllMessages: false,
             
             // 팀 정보
             teamInfo: {
@@ -742,6 +688,10 @@
                     const today = new Date();
                     const maxDate = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
                     document.getElementById('dateSelector').max = maxDate;
+                    
+                    // 오늘 버튼 초기 상태 (오늘이므로 숨김)
+                    const todayBtn = document.getElementById('todayBtn');
+                    if (todayBtn) todayBtn.style.display = 'none';
                     
                     // 로딩 화면 숨기기
                     document.getElementById('loadingScreen').style.display = 'none';
@@ -804,9 +754,12 @@
                 
                 // 날짜 정보 표시
                 const dateInfo = document.getElementById('dateInfo');
+                const todayBtn = document.getElementById('todayBtn');
                 if (this.isToday) {
                     dateInfo.innerHTML = '✨ 오늘';
                     dateInfo.className = 'date-info today';
+                    // 오늘일 때는 오늘 버튼 숨기기
+                    if (todayBtn) todayBtn.style.display = 'none';
                     // 실시간 업데이트 활성화
                     if (!this.autoRefreshInterval && this.isAutoRefresh) {
                         this.startAutoRefresh();
@@ -820,6 +773,8 @@
                         dateInfo.innerHTML = `📅 ${Math.abs(daysDiff)}일 후`;
                         dateInfo.className = 'date-info';
                     }
+                    // 과거 날짜일 때는 오늘 버튼 표시
+                    if (todayBtn) todayBtn.style.display = 'inline-block';
                     // 과거 데이터는 자동 업데이트 비활성화
                     if (this.autoRefreshInterval) {
                         clearInterval(this.autoRefreshInterval);
@@ -856,8 +811,6 @@
                 
                 this.selectedDate = new Date(dateString + 'T00:00:00');
                 this.updateDateDisplay();
-                this.currentPage = 1;
-                this.showAllMessages = false;
                 this.loadData();
                 
                 // 오늘이면 실시간 구독 재시작
@@ -882,8 +835,6 @@
                 
                 this.selectedDate = newDate;
                 this.updateDateDisplay();
-                this.currentPage = 1;
-                this.showAllMessages = false;
                 this.loadData();
                 
                 // 오늘이면 실시간 구독 재시작
@@ -892,15 +843,39 @@
                 }
             },
             
+            // 전체 UI 부드럽게 업데이트
+            smoothUpdateAllUI: function() {
+                this.updateRankingSmoothly();
+                this.updateRecentMessages();
+                
+                const messageCount = document.getElementById('messageCount');
+                if (messageCount) {
+                    const totalCount = this.currentMessages.length;
+                    
+                    if (this.isToday) {
+                        const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+                        const recentCount = this.currentMessages.filter(msg => 
+                            new Date(msg.created_at) > oneHourAgo
+                        ).length;
+                        messageCount.innerHTML = `최근 1시간: ${recentCount}개 | 오늘 전체: ${totalCount}개`;
+                    } else {
+                        messageCount.innerHTML = `전체 ${totalCount}개 메시지`;
+                    }
+                }
+            },
+            
             // 오늘로 이동
             goToToday: function() {
+                // 이미 오늘이면 아무것도 하지 않음
+                if (this.isToday) {
+                    return;
+                }
+                
                 // 기존 실시간 구독 해제
                 this.unsubscribeFromChanges();
                 
                 this.selectedDate = new Date();
                 this.updateDateDisplay();
-                this.currentPage = 1;
-                this.showAllMessages = false;
                 this.loadData();
                 
                 // 실시간 구독 재시작
@@ -1158,30 +1133,22 @@
                 }
             },
             
-            // 최근 메시지 업데이트 - 1시간 이내 또는 전체 표시
+            // 최근 메시지 업데이트 - 1시간 이내만 표시
             updateRecentMessages: function() {
                 const container = document.getElementById('messagesContainer');
                 
-                // 표시할 메시지 결정
+                // 표시할 메시지 결정 (1시간 이내만)
                 let messagesToShow;
                 
-                if (this.showAllMessages) {
-                    // 전체 보기 모드: 당일 전체 메시지 표시
-                    messagesToShow = this.currentMessages;
+                if (this.isToday) {
+                    // 오늘: 1시간 이내 메시지만
+                    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+                    messagesToShow = this.currentMessages.filter(msg => 
+                        new Date(msg.created_at) > oneHourAgo
+                    );
                 } else {
-                    // 기본 모드: 1시간 이내 메시지만
-                    if (this.isToday) {
-                        const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
-                        messagesToShow = this.currentMessages.filter(msg => 
-                            new Date(msg.created_at) > oneHourAgo
-                        );
-                    } else {
-                        // 과거 날짜는 전체 표시
-                        messagesToShow = this.currentMessages;
-                    }
-                    
-                    // 페이지네이션 적용
-                    messagesToShow = messagesToShow.slice(0, this.messagesPerPage * this.currentPage);
+                    // 과거 날짜: 최근 50개만
+                    messagesToShow = this.currentMessages.slice(0, 50);
                 }
                 
                 // 메시지 개수 표시
@@ -1190,40 +1157,16 @@
                     const totalCount = this.currentMessages.length;
                     
                     if (this.isToday) {
-                        const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
-                        const recentCount = this.currentMessages.filter(msg => 
-                            new Date(msg.created_at) > oneHourAgo
-                        ).length;
-                        
-                        if (this.showAllMessages) {
-                            messageCount.innerHTML = `<strong style="color:#FFD700;">오늘 전체 ${totalCount}개 메시지 표시중</strong>`;
-                        } else {
-                            messageCount.innerHTML = `최근 1시간: ${recentCount}개 표시 | 오늘 전체: ${totalCount}개`;
-                        }
+                        const recentCount = messagesToShow.length;
+                        messageCount.innerHTML = `최근 1시간: ${recentCount}개 | 오늘 전체: ${totalCount}개`;
                     } else {
-                        if (this.showAllMessages) {
-                            messageCount.innerHTML = `<strong style="color:#FFD700;">전체 ${totalCount}개 메시지 표시중</strong>`;
-                        } else {
-                            const displayCount = messagesToShow.length;
-                            messageCount.innerHTML = `전체 ${totalCount}개 메시지 중 ${displayCount}개 표시`;
-                        }
-                    }
-                }
-                
-                // 토글 버튼 텍스트 업데이트
-                const toggleBtn = document.getElementById('toggleAllBtn');
-                if (toggleBtn) {
-                    if (this.showAllMessages) {
-                        toggleBtn.textContent = this.isToday ? '최근 1시간만 보기' : '최근 메시지만 보기';
-                    } else {
-                        toggleBtn.textContent = this.isToday ? 
-                            `오늘 전체 보기 (${this.currentMessages.length}개)` : 
-                            `전체 메시지 보기 (${this.currentMessages.length}개)`;
+                        const displayCount = messagesToShow.length;
+                        messageCount.innerHTML = `${displayCount}개 표시 | 전체: ${totalCount}개`;
                     }
                 }
                 
                 if (messagesToShow.length === 0) {
-                    const noDataMessage = this.isToday && !this.showAllMessages ? 
+                    const noDataMessage = this.isToday ? 
                         '최근 1시간 내 메시지가 없습니다' : 
                         '선택한 날짜에 메시지가 없습니다';
                     container.innerHTML = `<div style="padding:50px;text-align:center;color:#999;">${noDataMessage}</div>`;
@@ -1264,35 +1207,7 @@
                         `;
                     }).join('');
                     
-                    // 더보기 버튼 추가 (전체보기 모드가 아니고, 더 볼 메시지가 있을 때만)
-                    let loadMoreButton = '';
-                    if (!this.showAllMessages && this.isToday) {
-                        const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
-                        const recentTotal = this.currentMessages.filter(msg => 
-                            new Date(msg.created_at) > oneHourAgo
-                        ).length;
-                        
-                        if (messagesToShow.length < recentTotal) {
-                            const remaining = recentTotal - messagesToShow.length;
-                            loadMoreButton = `
-                                <button class="load-more-btn" onclick="app.loadMoreMessages()">
-                                    더 보기 (${remaining}개 남음)
-                                </button>
-                            `;
-                        }
-                    } else if (!this.showAllMessages && !this.isToday) {
-                        // 과거 날짜의 경우
-                        if (messagesToShow.length < this.currentMessages.length) {
-                            const remaining = this.currentMessages.length - messagesToShow.length;
-                            loadMoreButton = `
-                                <button class="load-more-btn" onclick="app.loadMoreMessages()">
-                                    더 보기 (${remaining}개 남음)
-                                </button>
-                            `;
-                        }
-                    }
-                    
-                    container.innerHTML = messagesHTML + loadMoreButton;
+                    container.innerHTML = messagesHTML;
                 }
             },
             
@@ -1338,19 +1253,35 @@
                 this.showNotification('🔍 필터 기능 준비중');
             },
             
-            // 상담사 메시지 보기
+            // 상담사 메시지 보기 - 당일 전체 메시지 표시
             showManagerMessages: function(managerName) {
                 const modal = document.getElementById('managerModal');
                 const modalTitle = document.getElementById('modalTitle');
                 const modalBody = document.getElementById('modalBody');
                 
-                // 해당 상담사의 메시지 필터링
+                // 해당 상담사의 당일 전체 메시지 필터링
                 const managerMessages = this.currentMessages.filter(msg => 
                     msg.writer_manager_name === managerName
                 );
                 
-                // 통계 계산
-                const stats = this.currentStats.find(s => s.name === managerName);
+                // 통계 계산 (당일 전체 기준)
+                const stats = this.currentStats.find(s => s.name === managerName) || {
+                    name: managerName,
+                    team: this.getTeam(managerName),
+                    helpScore: 0,
+                    messageCount: managerMessages.length,
+                    messagesPerMinute: 0,
+                    formCount: 0,
+                    totalChars: 0
+                };
+                
+                // 통계가 없는 경우 직접 계산
+                if (!this.currentStats.find(s => s.name === managerName)) {
+                    stats.totalChars = managerMessages.reduce((sum, msg) => sum + msg.message_length, 0);
+                    stats.formCount = managerMessages.reduce((sum, msg) => sum + this.countValidFormLinks(msg.message_text), 0);
+                    stats.helpScore = managerMessages.reduce((sum, msg) => sum + this.calculateHelpScore(msg, this.currentMessages), 0);
+                    stats.helpScore = Math.round(stats.helpScore * 100) / 100;
+                }
                 
                 const dateStr = `${this.selectedDate.getFullYear()}년 ${this.selectedDate.getMonth()+1}월 ${this.selectedDate.getDate()}일`;
                 
@@ -1358,7 +1289,7 @@
                 
                 let html = `
                     <div style="margin-bottom: 35px; padding: 25px; background: rgba(255, 255, 255, 0.05); border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.1);">
-                        <h3 style="margin-bottom: 20px; color: #4A9EFF; font-size: 20px; font-weight: 700;">${dateStr} 통계</h3>
+                        <h3 style="margin-bottom: 20px; color: #4A9EFF; font-size: 20px; font-weight: 700;">${dateStr} 전체 통계</h3>
                         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 20px;">
                             <div style="text-align: center; padding: 15px; background: rgba(0, 0, 0, 0.3); border-radius: 8px;">
                                 <div style="color: #8BA5FF; font-size: 13px; margin-bottom: 8px; font-weight: 600;">도움 점수</div>
@@ -1366,23 +1297,30 @@
                             </div>
                             <div style="text-align: center; padding: 15px; background: rgba(0, 0, 0, 0.3); border-radius: 8px;">
                                 <div style="color: #8BA5FF; font-size: 13px; margin-bottom: 8px; font-weight: 600;">메시지 수</div>
-                                <div class="message-number" style="font-size: 32px;">${stats.messageCount}</div>
+                                <div class="message-number" style="font-size: 32px;">${managerMessages.length}</div>
                             </div>
                             <div style="text-align: center; padding: 15px; background: rgba(0, 0, 0, 0.3); border-radius: 8px;">
-                                <div style="color: #8BA5FF; font-size: 13px; margin-bottom: 8px; font-weight: 600;">분당 메시지</div>
-                                <div class="rate-number" style="font-size: 28px;">${stats.messagesPerMinute.toFixed(1)}/분</div>
+                                <div style="color: #8BA5FF; font-size: 13px; margin-bottom: 8px; font-weight: 600;">총 글자수</div>
+                                <div class="char-number" style="font-size: 28px;">${stats.totalChars.toLocaleString()}</div>
                             </div>
                             <div style="text-align: center; padding: 15px; background: rgba(0, 0, 0, 0.3); border-radius: 8px;">
                                 <div style="color: #8BA5FF; font-size: 13px; margin-bottom: 8px; font-weight: 600;">신청서 발송</div>
                                 <div class="score-number" style="font-size: 32px;">${stats.formCount}</div>
-                                <div style="font-size: 12px; color: #8BA5FF; margin-top: 4px;">(평균 ${(stats.formCount / stats.messageCount).toFixed(1)}개)</div>
+                                <div style="font-size: 12px; color: #8BA5FF; margin-top: 4px;">${managerMessages.length > 0 ? `(평균 ${(stats.formCount / managerMessages.length).toFixed(1)}개)` : ''}</div>
                             </div>
                         </div>
                     </div>
-                    <h3 style="margin-bottom: 25px; color: #fff; font-size: 18px; font-weight: 700;">${dateStr} 작성한 메시지 (${managerMessages.length}개)</h3>
+                    <h3 style="margin-bottom: 25px; color: #fff; font-size: 18px; font-weight: 700;">
+                        ${dateStr} ${this.isToday ? '오늘' : ''} 작성한 전체 메시지 (${managerMessages.length}개)
+                    </h3>
                 `;
                 
-                managerMessages.forEach(msg => {
+                // 시간순으로 정렬 (오래된 것부터)
+                const sortedMessages = [...managerMessages].sort((a, b) => 
+                    new Date(a.created_at) - new Date(b.created_at)
+                );
+                
+                sortedMessages.forEach(msg => {
                     const time = new Date(msg.created_at);
                     const timeStr = `${time.getHours().toString().padStart(2,'0')}:${time.getMinutes().toString().padStart(2,'0')}`;
                     const formCount = this.countValidFormLinks(msg.message_text);
@@ -1407,6 +1345,10 @@
                         </div>
                     `;
                 });
+                
+                if (managerMessages.length === 0) {
+                    html += `<div style="padding: 40px; text-align: center; color: #999;">오늘 작성한 메시지가 없습니다</div>`;
+                }
                 
                 modalBody.innerHTML = html;
                 modal.classList.add('show');
@@ -1573,8 +1515,14 @@
                 }, 1000);
             },
             
-            // 새 메시지를 리스트에 추가
+            // 새 메시지를 리스트에 추가 (1시간 이내만)
             addNewMessageToList: function(msg) {
+                // 1시간 이내 메시지만 추가
+                const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+                if (new Date(msg.created_at) <= oneHourAgo) {
+                    return; // 1시간 이상 된 메시지는 표시하지 않음
+                }
+                
                 const container = document.getElementById('messagesContainer');
                 const time = new Date(msg.created_at);
                 const timeStr = `${time.getHours().toString().padStart(2,'0')}:${time.getMinutes().toString().padStart(2,'0')}`;
@@ -1614,7 +1562,7 @@
                 newMessageHTML.style.transform = 'translateY(-20px)';
                 
                 const firstChild = container.firstElementChild;
-                if (firstChild && firstChild.textContent.includes('최근 메시지가 없습니다')) {
+                if (firstChild && firstChild.textContent.includes('최근 1시간 내 메시지가 없습니다')) {
                     container.innerHTML = '';
                 }
                 container.insertBefore(newMessageHTML, container.firstChild);
@@ -1627,6 +1575,18 @@
                     setTimeout(() => {
                         newMessageHTML.classList.remove('new-message');
                     }, 3000);
+                });
+                
+                // 1시간 지난 오래된 메시지 제거
+                const allMessages = container.querySelectorAll('.message-item');
+                allMessages.forEach(item => {
+                    const msgId = item.dataset.messageId;
+                    const msgData = this.currentMessages.find(m => m.id === msgId);
+                    if (msgData && new Date(msgData.created_at) <= oneHourAgo) {
+                        item.style.transition = 'opacity 0.3s ease';
+                        item.style.opacity = '0';
+                        setTimeout(() => item.remove(), 300);
+                    }
                 });
             },
             
@@ -1824,6 +1784,27 @@
                     this.updateLastTime();
                 } catch (error) {
                     console.error('전체 동기화 실패:', error);
+                }
+            },
+            
+            // 전체 UI 부드럽게 업데이트
+            smoothUpdateAllUI: function() {
+                this.updateRankingSmoothly();
+                this.updateRecentMessages();
+                
+                const messageCount = document.getElementById('messageCount');
+                if (messageCount) {
+                    const totalCount = this.currentMessages.length;
+                    
+                    if (this.isToday) {
+                        const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+                        const recentCount = this.currentMessages.filter(msg => 
+                            new Date(msg.created_at) > oneHourAgo
+                        ).length;
+                        messageCount.innerHTML = `최근 1시간: ${recentCount}개 | 오늘 전체: ${totalCount}개`;
+                    } else {
+                        messageCount.innerHTML = `전체 ${totalCount}개 메시지`;
+                    }
                 }
             },
             
