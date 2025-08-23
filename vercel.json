@@ -1,7 +1,13 @@
 {
-  "buildCommand": false,
-  "outputDirectory": ".",
-  "framework": null,
-  "installCommand": false,
-  "devCommand": false
+  "functions": {
+    "api/track.js": {
+      "maxDuration": 60
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/",
+      "destination": "/index.html"
+    }
+  ]
 }
