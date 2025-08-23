@@ -4,7 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SNS센터 도움 카운팅 프로그램</title>
-    <script src="https://unpkg.com/@supabase/supabase-js@2.39.0/dist/umd/supabase.min.js"></script>
+    <!-- Supabase CDN 최신 버전 -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #000; color: #fff; min-height: 100vh; }
@@ -69,6 +70,9 @@
         .notification.show { display: block; }
         @keyframes slideIn { from { transform: translateX(100%); } to { transform: translateX(0); } }
         
+        .loading-screen { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: #000; display: flex; justify-content: center; align-items: center; z-index: 9999; }
+        .loading-text { color: #1E6FFF; font-size: 18px; animation: pulse 1s infinite; }
+        
         @media (max-width: 768px) {
             .control-bar { flex-direction: column; }
             .tabs { flex-direction: column; }
@@ -76,6 +80,10 @@
     </style>
 </head>
 <body>
+    <div class="loading-screen" id="loadingScreen">
+        <div class="loading-text">시스템 초기화 중...</div>
+    </div>
+    
     <div class="container">
         <div class="header">
             <h1>SNS센터 <span>도움 카운팅 프로그램</span></h1>
@@ -85,8 +93,8 @@
         
         <div class="control-bar">
             <div class="control-buttons">
-                <button class="btn primary" onclick="loadData()" id="refreshBtn">새로고침</button>
-                <button class="btn" onclick="toggleAutoRefresh()" id="autoRefreshBtn">자동 새로고침 OFF</button>
+                <button class="btn primary" onclick="app.loadData()" id="refreshBtn">새로고침</button>
+                <button class="btn" onclick="app.toggleAutoRefresh()" id="autoRefreshBtn">자동 새로고침 OFF</button>
             </div>
             <div class="status-indicator">
                 <span class="status-dot" id="statusDot"></span>
@@ -96,9 +104,9 @@
         </div>
         
         <div class="tabs">
-            <button class="tab active" onclick="switchTab('messages')" id="tab-messages">메시지 수 랭킹</button>
-            <button class="tab" onclick="switchTab('chars')" id="tab-chars">글자수 랭킹</button>
-            <button class="tab" onclick="switchTab('team')" id="tab-team">팀별 통계</button>
+            <button class="tab active" onclick="app.switchTab('messages')" id="tab-messages">메시지 수 랭킹</button>
+            <button class="tab" onclick="app.switchTab('chars')" id="tab-chars">글자수 랭킹</button>
+            <button class="tab" onclick="app.switchTab('team')" id="tab-team">팀별 통계</button>
         </div>
         
         <div class="ranking-table" id="ranking-messages">
@@ -183,334 +191,356 @@
     <div class="notification" id="notification"></div>
     
     <script>
-        // Supabase 설정
-        const SUPABASE_URL = 'https://bhtqjipygkawoyieidgp.supabase.co';
-        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJodHFqaXB5Z2thd295aWVpZGdwIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDQ4ODk2OCwiZXhwIjoyMDcwMDY0OTY4fQ.HRngdvqtWBmGgd4VgcFsE7iYhQuTnxUuVyq7fiQHNng';
-        
-        const { createClient } = window.supabase;
-        const supabaseClient = createClient(SUPABASE_URL, SUPABASE_KEY);
-        
-        let currentMessages = [];
-        let currentStats = [];
-        let currentTab = 'messages';
-        let autoRefreshInterval = null;
-        let isAutoRefresh = false;
-        
-        // 팀 정보
-        const teamInfo = {
-            'SNS 1팀': ['이종민', '정주연', '이혜영', '김국현', '정다혜', '조시현', '김시윤'],
-            'SNS 2팀': ['윤도우리', '신혜서', '김상아', '박은진', '오민환', '서정국'],
-            'SNS 3팀': ['김진후', '김시진', '권재현', '김지원', '최호익', '김진협', '박해영'],
-            'SNS 4팀': ['이민주', '전지윤', '전미란', '김채영', '김영진', '공현준'],
-            '의정부 SNS': ['차정환', '최수능', '구본영', '서민국', '오민경', '김범주', '동수진', '성일훈']
-        };
-        
-        // 팀 찾기 함수
-        function getTeam(name) {
-            for (const [team, members] of Object.entries(teamInfo)) {
-                if (members.includes(name)) {
-                    return team;
+        // 전역 앱 객체
+        window.app = {
+            supabaseClient: null,
+            currentMessages: [],
+            currentStats: [],
+            currentTab: 'messages',
+            autoRefreshInterval: null,
+            isAutoRefresh: false,
+            
+            // 팀 정보
+            teamInfo: {
+                'SNS 1팀': ['이종민', '정주연', '이혜영', '김국현', '정다혜', '조시현', '김시윤'],
+                'SNS 2팀': ['윤도우리', '신혜서', '김상아', '박은진', '오민환', '서정국'],
+                'SNS 3팀': ['김진후', '김시진', '권재현', '김지원', '최호익', '김진협', '박해영'],
+                'SNS 4팀': ['이민주', '전지윤', '전미란', '김채영', '김영진', '공현준'],
+                '의정부 SNS': ['차정환', '최수능', '구본영', '서민국', '오민경', '김범주', '동수진', '성일훈']
+            },
+            
+            // 초기화
+            init: async function() {
+                try {
+                    // Supabase 클라이언트 생성
+                    const SUPABASE_URL = 'https://bhtqjipygkawoyieidgp.supabase.co';
+                    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJodHFqaXB5Z2thd295aWVpZGdwIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDQ4ODk2OCwiZXhwIjoyMDcwMDY0OTY4fQ.HRngdvqtWBmGgd4VgcFsE7iYhQuTnxUuVyq7fiQHNng';
+                    
+                    this.supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+                    
+                    // 날짜 표시
+                    const now = new Date();
+                    const days = ['일', '월', '화', '수', '목', '금', '토'];
+                    document.getElementById('dateDisplay').textContent = 
+                        `${now.getFullYear()}년 ${now.getMonth()+1}월 ${now.getDate()}일 ${days[now.getDay()]}요일`;
+                    
+                    // 로딩 화면 숨기기
+                    document.getElementById('loadingScreen').style.display = 'none';
+                    
+                    // 데이터 로드
+                    await this.loadData();
+                    
+                    // 실시간 구독
+                    this.subscribeToChanges();
+                    
+                } catch (error) {
+                    console.error('초기화 실패:', error);
+                    this.showNotification('시스템 초기화 실패', 'error');
+                    document.getElementById('loadingScreen').style.display = 'none';
                 }
-            }
-            return '미지정';
-        }
-        
-        // 팀 색상 클래스
-        function getTeamClass(team) {
-            const classes = {
-                'SNS 1팀': 'team-1',
-                'SNS 2팀': 'team-2',
-                'SNS 3팀': 'team-3',
-                'SNS 4팀': 'team-4',
-                '의정부 SNS': 'team-5'
-            };
-            return classes[team] || '';
-        }
-        
-        // 오늘 날짜 범위
-        function getTodayRange() {
-            const today = new Date();
-            const start = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 0, 0, 0);
-            const end = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59);
-            return {
-                start: start.toISOString(),
-                end: end.toISOString()
-            };
-        }
-        
-        // 초기화
-        async function init() {
-            // 날짜 표시
-            const now = new Date();
-            const days = ['일', '월', '화', '수', '목', '금', '토'];
-            document.getElementById('dateDisplay').textContent = 
-                `${now.getFullYear()}년 ${now.getMonth()+1}월 ${now.getDate()}일 ${days[now.getDay()]}요일`;
+            },
+            
+            // 팀 찾기
+            getTeam: function(name) {
+                for (const [team, members] of Object.entries(this.teamInfo)) {
+                    if (members.includes(name)) {
+                        return team;
+                    }
+                }
+                return '미지정';
+            },
+            
+            // 팀 색상 클래스
+            getTeamClass: function(team) {
+                const classes = {
+                    'SNS 1팀': 'team-1',
+                    'SNS 2팀': 'team-2',
+                    'SNS 3팀': 'team-3',
+                    'SNS 4팀': 'team-4',
+                    '의정부 SNS': 'team-5'
+                };
+                return classes[team] || '';
+            },
+            
+            // 오늘 날짜 범위
+            getTodayRange: function() {
+                const today = new Date();
+                const start = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 0, 0, 0);
+                const end = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59);
+                return {
+                    start: start.toISOString(),
+                    end: end.toISOString()
+                };
+            },
             
             // 데이터 로드
-            await loadData();
-            
-            // 실시간 구독
-            subscribeToChanges();
-        }
-        
-        // 데이터 로드
-        async function loadData() {
-            const btn = document.getElementById('refreshBtn');
-            btn.disabled = true;
-            setStatus('loading', '데이터 로드 중...');
-            
-            try {
-                const { start, end } = getTodayRange();
+            loadData: async function() {
+                const btn = document.getElementById('refreshBtn');
+                btn.disabled = true;
+                this.setStatus('loading', '데이터 로드 중...');
                 
-                // 메시지 데이터 로드
-                const { data: messages, error: msgError } = await supabaseClient
-                    .from('manager_messages')
-                    .select('*')
-                    .gte('created_at', start)
-                    .lte('created_at', end)
-                    .order('created_at', { ascending: false })
-                    .limit(50);
-                
-                if (msgError) throw msgError;
-                
-                currentMessages = messages || [];
-                
-                // 통계 계산
-                calculateStats();
-                
-                // UI 업데이트
-                updateAllRankings();
-                updateRecentMessages();
-                
-                setStatus('active', '업데이트 완료');
-                updateLastTime();
-                
-            } catch (error) {
-                console.error('데이터 로드 실패:', error);
-                setStatus('error', '로드 실패');
-                showNotification('데이터 로드 실패', 'error');
-            } finally {
-                btn.disabled = false;
-            }
-        }
-        
-        // 통계 계산
-        function calculateStats() {
-            const stats = {};
-            
-            currentMessages.forEach(msg => {
-                const managerId = msg.writer_manager_id;
-                const managerName = msg.writer_manager_name;
-                
-                if (!stats[managerId]) {
-                    stats[managerId] = {
-                        id: managerId,
-                        name: managerName,
-                        team: getTeam(managerName),
-                        messageCount: 0,
-                        totalChars: 0,
-                        uniqueChats: new Set()
-                    };
-                }
-                
-                stats[managerId].messageCount++;
-                stats[managerId].totalChars += msg.message_length;
-                stats[managerId].uniqueChats.add(msg.user_chat_id);
-            });
-            
-            currentStats = Object.values(stats).map(s => ({
-                ...s,
-                uniqueChats: s.uniqueChats.size,
-                avgChars: Math.round(s.totalChars / s.messageCount)
-            }));
-        }
-        
-        // 랭킹 업데이트
-        function updateAllRankings() {
-            // 메시지 수 랭킹
-            const messageRanking = [...currentStats].sort((a, b) => b.messageCount - a.messageCount);
-            const messageBody = document.getElementById('messageRankingBody');
-            
-            if (messageRanking.length === 0) {
-                messageBody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:50px;color:#666;">오늘 데이터가 없습니다</td></tr>';
-            } else {
-                messageBody.innerHTML = messageRanking.map((item, index) => `
-                    <tr>
-                        <td><span class="rank-number">#${index + 1}</span></td>
-                        <td>${item.name}</td>
-                        <td><span class="team-badge ${getTeamClass(item.team)}">${item.team}</span></td>
-                        <td style="font-size:20px;color:#1E6FFF;font-weight:600;">${item.messageCount}</td>
-                        <td>${item.totalChars.toLocaleString()}</td>
-                    </tr>
-                `).join('');
-            }
-            
-            // 글자수 랭킹
-            const charRanking = [...currentStats].sort((a, b) => b.totalChars - a.totalChars);
-            const charBody = document.getElementById('charRankingBody');
-            
-            if (charRanking.length === 0) {
-                charBody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:50px;color:#666;">오늘 데이터가 없습니다</td></tr>';
-            } else {
-                charBody.innerHTML = charRanking.map((item, index) => `
-                    <tr>
-                        <td><span class="rank-number">#${index + 1}</span></td>
-                        <td>${item.name}</td>
-                        <td><span class="team-badge ${getTeamClass(item.team)}">${item.team}</span></td>
-                        <td style="font-size:20px;color:#1E6FFF;font-weight:600;">${item.totalChars.toLocaleString()}</td>
-                        <td>${item.messageCount}</td>
-                    </tr>
-                `).join('');
-            }
-            
-            // 팀별 통계
-            updateTeamStats();
-        }
-        
-        // 팀별 통계 업데이트
-        function updateTeamStats() {
-            const teamStats = {};
-            
-            Object.keys(teamInfo).forEach(team => {
-                teamStats[team] = {
-                    team: team,
-                    activeMembers: 0,
-                    totalMessages: 0,
-                    totalChars: 0
-                };
-            });
-            
-            currentStats.forEach(manager => {
-                const team = manager.team;
-                if (teamStats[team]) {
-                    teamStats[team].activeMembers++;
-                    teamStats[team].totalMessages += manager.messageCount;
-                    teamStats[team].totalChars += manager.totalChars;
-                }
-            });
-            
-            const teamBody = document.getElementById('teamRankingBody');
-            const teamArray = Object.values(teamStats).sort((a, b) => b.totalMessages - a.totalMessages);
-            
-            teamBody.innerHTML = teamArray.map(team => `
-                <tr>
-                    <td><span class="team-badge ${getTeamClass(team.team)}">${team.team}</span></td>
-                    <td>${team.activeMembers}명</td>
-                    <td>${team.totalMessages}</td>
-                    <td>${team.totalChars.toLocaleString()}</td>
-                    <td>${team.totalMessages > 0 ? Math.round(team.totalChars / team.totalMessages) : 0}</td>
-                </tr>
-            `).join('');
-        }
-        
-        // 최근 메시지 업데이트
-        function updateRecentMessages() {
-            const container = document.getElementById('messagesContainer');
-            const recentMessages = currentMessages.slice(0, 20);
-            
-            if (recentMessages.length === 0) {
-                container.innerHTML = '<div style="padding:50px;text-align:center;color:#666;">최근 메시지가 없습니다</div>';
-            } else {
-                container.innerHTML = recentMessages.map(msg => {
-                    const time = new Date(msg.created_at);
-                    const timeStr = `${time.getHours().toString().padStart(2,'0')}:${time.getMinutes().toString().padStart(2,'0')}`;
-                    const team = getTeam(msg.writer_manager_name);
+                try {
+                    const { start, end } = this.getTodayRange();
                     
-                    return `
-                        <div class="message-item">
-                            <div class="message-time">${timeStr}</div>
-                            <div class="message-content">
-                                <div class="message-manager">
-                                    ${msg.writer_manager_name}
-                                    <span class="team-badge ${getTeamClass(team)}">${team}</span>
-                                </div>
-                                <div class="message-text">${msg.message_text}</div>
-                                <div class="message-meta">
-                                    ${msg.message_length}자 | ${msg.assigned_manager_name} 상담사 도움
+                    // Supabase에서 직접 조회
+                    const { data: messages, error } = await this.supabaseClient
+                        .from('manager_messages')
+                        .select('*')
+                        .gte('created_at', start)
+                        .lte('created_at', end)
+                        .order('created_at', { ascending: false });
+                    
+                    if (error) throw error;
+                    
+                    this.currentMessages = messages || [];
+                    
+                    // 통계 계산
+                    this.calculateStats();
+                    
+                    // UI 업데이트
+                    this.updateAllRankings();
+                    this.updateRecentMessages();
+                    
+                    this.setStatus('active', '업데이트 완료');
+                    this.updateLastTime();
+                    
+                } catch (error) {
+                    console.error('데이터 로드 실패:', error);
+                    this.setStatus('error', '로드 실패');
+                    this.showNotification('데이터 로드 실패: ' + error.message, 'error');
+                } finally {
+                    btn.disabled = false;
+                }
+            },
+            
+            // 통계 계산
+            calculateStats: function() {
+                const stats = {};
+                
+                this.currentMessages.forEach(msg => {
+                    const managerId = msg.writer_manager_id;
+                    const managerName = msg.writer_manager_name;
+                    
+                    if (!stats[managerId]) {
+                        stats[managerId] = {
+                            id: managerId,
+                            name: managerName,
+                            team: this.getTeam(managerName),
+                            messageCount: 0,
+                            totalChars: 0,
+                            uniqueChats: new Set()
+                        };
+                    }
+                    
+                    stats[managerId].messageCount++;
+                    stats[managerId].totalChars += msg.message_length;
+                    stats[managerId].uniqueChats.add(msg.user_chat_id);
+                });
+                
+                this.currentStats = Object.values(stats).map(s => ({
+                    ...s,
+                    uniqueChats: s.uniqueChats.size,
+                    avgChars: Math.round(s.totalChars / s.messageCount)
+                }));
+            },
+            
+            // 랭킹 업데이트
+            updateAllRankings: function() {
+                // 메시지 수 랭킹
+                const messageRanking = [...this.currentStats].sort((a, b) => b.messageCount - a.messageCount);
+                const messageBody = document.getElementById('messageRankingBody');
+                
+                if (messageRanking.length === 0) {
+                    messageBody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:50px;color:#666;">오늘 데이터가 없습니다</td></tr>';
+                } else {
+                    messageBody.innerHTML = messageRanking.map((item, index) => `
+                        <tr>
+                            <td><span class="rank-number">#${index + 1}</span></td>
+                            <td>${item.name}</td>
+                            <td><span class="team-badge ${this.getTeamClass(item.team)}">${item.team}</span></td>
+                            <td style="font-size:20px;color:#1E6FFF;font-weight:600;">${item.messageCount}</td>
+                            <td>${item.totalChars.toLocaleString()}</td>
+                        </tr>
+                    `).join('');
+                }
+                
+                // 글자수 랭킹
+                const charRanking = [...this.currentStats].sort((a, b) => b.totalChars - a.totalChars);
+                const charBody = document.getElementById('charRankingBody');
+                
+                if (charRanking.length === 0) {
+                    charBody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:50px;color:#666;">오늘 데이터가 없습니다</td></tr>';
+                } else {
+                    charBody.innerHTML = charRanking.map((item, index) => `
+                        <tr>
+                            <td><span class="rank-number">#${index + 1}</span></td>
+                            <td>${item.name}</td>
+                            <td><span class="team-badge ${this.getTeamClass(item.team)}">${item.team}</span></td>
+                            <td style="font-size:20px;color:#1E6FFF;font-weight:600;">${item.totalChars.toLocaleString()}</td>
+                            <td>${item.messageCount}</td>
+                        </tr>
+                    `).join('');
+                }
+                
+                // 팀별 통계
+                this.updateTeamStats();
+            },
+            
+            // 팀별 통계 업데이트
+            updateTeamStats: function() {
+                const teamStats = {};
+                
+                Object.keys(this.teamInfo).forEach(team => {
+                    teamStats[team] = {
+                        team: team,
+                        activeMembers: 0,
+                        totalMessages: 0,
+                        totalChars: 0
+                    };
+                });
+                
+                this.currentStats.forEach(manager => {
+                    const team = manager.team;
+                    if (teamStats[team]) {
+                        teamStats[team].activeMembers++;
+                        teamStats[team].totalMessages += manager.messageCount;
+                        teamStats[team].totalChars += manager.totalChars;
+                    }
+                });
+                
+                const teamBody = document.getElementById('teamRankingBody');
+                const teamArray = Object.values(teamStats).sort((a, b) => b.totalMessages - a.totalMessages);
+                
+                teamBody.innerHTML = teamArray.map(team => `
+                    <tr>
+                        <td><span class="team-badge ${this.getTeamClass(team.team)}">${team.team}</span></td>
+                        <td>${team.activeMembers}명</td>
+                        <td>${team.totalMessages}</td>
+                        <td>${team.totalChars.toLocaleString()}</td>
+                        <td>${team.totalMessages > 0 ? Math.round(team.totalChars / team.totalMessages) : 0}</td>
+                    </tr>
+                `).join('');
+            },
+            
+            // 최근 메시지 업데이트
+            updateRecentMessages: function() {
+                const container = document.getElementById('messagesContainer');
+                const recentMessages = this.currentMessages.slice(0, 20);
+                
+                if (recentMessages.length === 0) {
+                    container.innerHTML = '<div style="padding:50px;text-align:center;color:#666;">최근 메시지가 없습니다</div>';
+                } else {
+                    container.innerHTML = recentMessages.map(msg => {
+                        const time = new Date(msg.created_at);
+                        const timeStr = `${time.getHours().toString().padStart(2,'0')}:${time.getMinutes().toString().padStart(2,'0')}`;
+                        const team = this.getTeam(msg.writer_manager_name);
+                        
+                        return `
+                            <div class="message-item">
+                                <div class="message-time">${timeStr}</div>
+                                <div class="message-content">
+                                    <div class="message-manager">
+                                        ${msg.writer_manager_name}
+                                        <span class="team-badge ${this.getTeamClass(team)}">${team}</span>
+                                    </div>
+                                    <div class="message-text">${msg.message_text || '(내용 없음)'}</div>
+                                    <div class="message-meta">
+                                        ${msg.message_length}자 | ${msg.assigned_manager_name} 상담사 도움
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                    `;
-                }).join('');
-            }
-        }
-        
-        // 실시간 구독
-        function subscribeToChanges() {
-            supabaseClient
-                .channel('manager_messages_changes')
-                .on('postgres_changes', 
-                    { event: 'INSERT', schema: 'public', table: 'manager_messages' },
-                    (payload) => {
-                        console.log('새 메시지:', payload.new);
-                        showNotification('새로운 도움 메시지가 도착했습니다');
-                        loadData();
-                    }
-                )
-                .subscribe();
-        }
-        
-        // 탭 전환
-        function switchTab(tab) {
-            currentTab = tab;
-            
-            // 탭 버튼 스타일
-            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-            document.getElementById(`tab-${tab}`).classList.add('active');
-            
-            // 테이블 표시/숨김
-            document.getElementById('ranking-messages').style.display = tab === 'messages' ? 'block' : 'none';
-            document.getElementById('ranking-chars').style.display = tab === 'chars' ? 'block' : 'none';
-            document.getElementById('ranking-team').style.display = tab === 'team' ? 'block' : 'none';
-        }
-        
-        // 자동 새로고침 토글
-        function toggleAutoRefresh() {
-            isAutoRefresh = !isAutoRefresh;
-            const btn = document.getElementById('autoRefreshBtn');
-            
-            if (isAutoRefresh) {
-                btn.textContent = '자동 새로고침 ON';
-                btn.classList.add('primary');
-                autoRefreshInterval = setInterval(loadData, 30000); // 30초마다
-                showNotification('자동 새로고침 활성화 (30초)');
-            } else {
-                btn.textContent = '자동 새로고침 OFF';
-                btn.classList.remove('primary');
-                if (autoRefreshInterval) {
-                    clearInterval(autoRefreshInterval);
+                        `;
+                    }).join('');
                 }
-                showNotification('자동 새로고침 비활성화');
-            }
-        }
-        
-        // 상태 표시
-        function setStatus(type, text) {
-            document.getElementById('statusDot').className = 'status-dot ' + type;
-            document.getElementById('statusText').textContent = text;
-        }
-        
-        // 마지막 업데이트 시간
-        function updateLastTime() {
-            const now = new Date();
-            document.getElementById('lastUpdate').textContent = 
-                `마지막 업데이트: ${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}`;
-        }
-        
-        // 알림 표시
-        function showNotification(message, type = 'success') {
-            const notification = document.getElementById('notification');
-            notification.textContent = message;
-            notification.style.borderColor = type === 'error' ? '#FF0000' : '#1E6FFF';
-            notification.classList.add('show');
+            },
             
-            setTimeout(() => {
-                notification.classList.remove('show');
-            }, 3000);
-        }
+            // 실시간 구독
+            subscribeToChanges: function() {
+                this.supabaseClient
+                    .channel('manager_messages_changes')
+                    .on('postgres_changes', 
+                        { event: 'INSERT', schema: 'public', table: 'manager_messages' },
+                        (payload) => {
+                            console.log('새 메시지:', payload.new);
+                            this.showNotification('새로운 도움 메시지가 도착했습니다');
+                            this.loadData();
+                        }
+                    )
+                    .subscribe();
+            },
+            
+            // 탭 전환
+            switchTab: function(tab) {
+                this.currentTab = tab;
+                
+                // 탭 버튼 스타일
+                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                document.getElementById(`tab-${tab}`).classList.add('active');
+                
+                // 테이블 표시/숨김
+                document.getElementById('ranking-messages').style.display = tab === 'messages' ? 'block' : 'none';
+                document.getElementById('ranking-chars').style.display = tab === 'chars' ? 'block' : 'none';
+                document.getElementById('ranking-team').style.display = tab === 'team' ? 'block' : 'none';
+            },
+            
+            // 자동 새로고침 토글
+            toggleAutoRefresh: function() {
+                this.isAutoRefresh = !this.isAutoRefresh;
+                const btn = document.getElementById('autoRefreshBtn');
+                
+                if (this.isAutoRefresh) {
+                    btn.textContent = '자동 새로고침 ON';
+                    btn.classList.add('primary');
+                    this.autoRefreshInterval = setInterval(() => this.loadData(), 30000);
+                    this.showNotification('자동 새로고침 활성화 (30초)');
+                } else {
+                    btn.textContent = '자동 새로고침 OFF';
+                    btn.classList.remove('primary');
+                    if (this.autoRefreshInterval) {
+                        clearInterval(this.autoRefreshInterval);
+                    }
+                    this.showNotification('자동 새로고침 비활성화');
+                }
+            },
+            
+            // 상태 표시
+            setStatus: function(type, text) {
+                document.getElementById('statusDot').className = 'status-dot ' + type;
+                document.getElementById('statusText').textContent = text;
+            },
+            
+            // 마지막 업데이트 시간
+            updateLastTime: function() {
+                const now = new Date();
+                document.getElementById('lastUpdate').textContent = 
+                    `마지막 업데이트: ${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}`;
+            },
+            
+            // 알림 표시
+            showNotification: function(message, type = 'success') {
+                const notification = document.getElementById('notification');
+                notification.textContent = message;
+                notification.style.borderColor = type === 'error' ? '#FF0000' : '#1E6FFF';
+                notification.classList.add('show');
+                
+                setTimeout(() => {
+                    notification.classList.remove('show');
+                }, 3000);
+            }
+        };
         
-        // 시작
-        init();
+        // 페이지 로드 완료 후 초기화
+        window.addEventListener('DOMContentLoaded', () => {
+            // Supabase 라이브러리 로드 확인
+            if (typeof supabase === 'undefined') {
+                console.error('Supabase 라이브러리 로드 실패');
+                alert('시스템 초기화 실패. 페이지를 새로고침해주세요.');
+                return;
+            }
+            
+            // 앱 초기화
+            app.init();
+        });
     </script>
 </body>
 </html>
