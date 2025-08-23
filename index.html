@@ -17,7 +17,22 @@
         .date-display { color: #999; font-size: 15px; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 5px; }
         .today-info { color: #1E6FFF; font-size: 20px; margin-top: 10px; }
         
-        .control-bar { display: flex; justify-content: space-between; align-items: center; padding: 20px 30px; background: #000; border: 1px solid #222; margin-bottom: 40px; flex-wrap: wrap; gap: 20px; }
+        .control-bar { 
+            display: flex; 
+            flex-direction: column;
+            gap: 15px;
+            padding: 20px 30px; 
+            background: #000; 
+            border: 1px solid #222; 
+            margin-bottom: 40px; 
+        }
+        .control-row {
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            flex-wrap: wrap; 
+            gap: 15px;
+        }
         .control-buttons { display: flex; gap: 15px; flex-wrap: wrap; }
         
         .btn { padding: 12px 28px; background: transparent; color: #888; border: 1px solid #333; font-size: 15px; font-weight: 500; letter-spacing: 1px; text-transform: uppercase; cursor: pointer; transition: all 0.3s; }
@@ -97,6 +112,11 @@
             border-radius: 3px;
             animation: pulse 2s infinite;
         }
+        .form-indicator.multiple {
+            background: rgba(255, 100, 0, 0.3);
+            color: #FFA500;
+            font-weight: 700;
+        }
         
         /* 모달 스타일 */
         .modal { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.9); z-index: 1000; overflow-y: auto; }
@@ -137,9 +157,68 @@
         .loading-text { color: #1E6FFF; font-size: 20px; animation: pulse 1s infinite; }
         
         
+        .date-selector { 
+            display: flex; 
+            align-items: center; 
+            gap: 15px; 
+            padding: 15px 20px; 
+            background: #111; 
+            border: 1px solid #222; 
+            border-radius: 5px;
+            margin-bottom: 15px;
+        }
+        .date-input { 
+            background: #000; 
+            color: #1E6FFF; 
+            border: 1px solid #333; 
+            padding: 8px 12px; 
+            font-size: 14px; 
+            cursor: pointer;
+        }
+        .date-input:hover { border-color: #1E6FFF; }
+        .date-nav-btn { 
+            padding: 8px 12px; 
+            background: transparent; 
+            color: #888; 
+            border: 1px solid #333; 
+            cursor: pointer; 
+            font-size: 13px;
+            transition: all 0.3s;
+        }
+        .date-nav-btn:hover { 
+            color: #1E6FFF; 
+            border-color: #1E6FFF; 
+        }
+        .date-nav-btn:disabled { 
+            opacity: 0.3; 
+            cursor: not-allowed; 
+        }
+        .date-info { 
+            color: #999; 
+            font-size: 13px; 
+            margin-left: 10px;
+        }
+        .date-info.today { 
+            color: #00FF00; 
+            font-weight: 600; 
+        }
+        .date-info.past { 
+            color: #FF6B6B; 
+        }
+        
         @media (max-width: 768px) {
-            .control-bar { flex-direction: column; }
+            .control-bar { padding: 15px; }
+            .date-selector { 
+                flex-wrap: wrap;
+                gap: 10px;
+            }
+            .date-input { flex: 1; min-width: 150px; }
+            .date-nav-btn { padding: 8px 10px; font-size: 12px; }
+            .control-row { flex-direction: column; align-items: stretch; }
+            .control-buttons { width: 100%; justify-content: center; }
+            .status-indicator { justify-content: center; }
             .tabs { flex-direction: column; }
+            .date-info { display: block; width: 100%; text-align: center; margin-top: 10px; margin-left: 0; }
         }
     </style>
 </head>
@@ -152,18 +231,27 @@
         <div class="header">
             <h1>SNS센터 <span>도움 카운팅 프로그램</span></h1>
             <div class="date-display" id="dateDisplay"></div>
-            <div class="today-info">오늘 하루 실시간 집계</div>
+            <div class="today-info" id="todayInfo">오늘 하루 실시간 집계</div>
         </div>
         
         <div class="control-bar">
-            <div class="control-buttons">
-                <button class="btn primary" onclick="app.loadData()" id="refreshBtn">전체 새로고침</button>
-                <button class="btn primary" onclick="app.toggleAutoRefresh()" id="autoRefreshBtn">자동 업데이트 ON</button>
+            <div class="date-selector">
+                <button class="date-nav-btn" onclick="app.changeDate(-1)">◀ 이전날</button>
+                <input type="date" class="date-input" id="dateSelector" onchange="app.selectDate(this.value)">
+                <button class="date-nav-btn" onclick="app.changeDate(1)" id="nextDayBtn">다음날 ▶</button>
+                <button class="date-nav-btn" onclick="app.goToToday()">오늘</button>
+                <span class="date-info" id="dateInfo"></span>
             </div>
-            <div class="status-indicator">
-                <span class="status-dot" id="statusDot"></span>
-                <span id="statusText">대기 중</span>
-                <span id="lastUpdate" style="margin-left: 20px; color: #999;"></span>
+            <div class="control-row">
+                <div class="control-buttons">
+                    <button class="btn primary" onclick="app.loadData()" id="refreshBtn">전체 새로고침</button>
+                    <button class="btn primary" onclick="app.toggleAutoRefresh()" id="autoRefreshBtn">자동 업데이트 ON</button>
+                </div>
+                <div class="status-indicator">
+                    <span class="status-dot" id="statusDot"></span>
+                    <span id="statusText">대기 중</span>
+                    <span id="lastUpdate" style="margin-left: 20px; color: #999;"></span>
+                </div>
             </div>
         </div>
         
@@ -246,7 +334,7 @@
         
         <div class="messages-section">
             <div class="messages-header">
-                <div class="table-title">실시간 도움 메시지</div>
+                <div class="table-title" id="messagesTitle">실시간 도움 메시지</div>
             </div>
             <div class="messages-container" id="messagesContainer">
                 <div style="padding:50px;text-align:center;color:#999;">최근 메시지가 없습니다</div>
@@ -278,6 +366,9 @@
             currentTab: 'score',
             autoRefreshInterval: null,
             isAutoRefresh: true, // 기본값을 true로 변경
+            selectedDate: new Date(), // 선택된 날짜
+            isToday: true, // 오늘 날짜인지 여부
+            realtimeSubscription: null, // 실시간 구독 객체
             
             // 팀 정보
             teamInfo: {
@@ -300,11 +391,13 @@
                     
                     this.supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
                     
-                    // 날짜 표시
-                    const now = new Date();
-                    const days = ['일', '월', '화', '수', '목', '금', '토'];
-                    document.getElementById('dateDisplay').textContent = 
-                        `${now.getFullYear()}년 ${now.getMonth()+1}월 ${now.getDate()}일 ${days[now.getDay()]}요일`;
+                    // 날짜 초기화
+                    this.updateDateDisplay();
+                    
+                    // 날짜 선택기 최대값 설정 (오늘까지만)
+                    const today = new Date();
+                    const maxDate = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+                    document.getElementById('dateSelector').max = maxDate;
                     
                     // 로딩 화면 숨기기
                     document.getElementById('loadingScreen').style.display = 'none';
@@ -349,7 +442,137 @@
                 return classes[team] || '';
             },
             
-            // 오늘 날짜 범위
+            // 날짜 표시 업데이트
+            updateDateDisplay: function() {
+                const days = ['일', '월', '화', '수', '목', '금', '토'];
+                const dateStr = `${this.selectedDate.getFullYear()}년 ${this.selectedDate.getMonth()+1}월 ${this.selectedDate.getDate()}일 ${days[this.selectedDate.getDay()]}요일`;
+                document.getElementById('dateDisplay').textContent = dateStr;
+                
+                // 날짜 선택기 값 설정
+                const year = this.selectedDate.getFullYear();
+                const month = String(this.selectedDate.getMonth() + 1).padStart(2, '0');
+                const day = String(this.selectedDate.getDate()).padStart(2, '0');
+                document.getElementById('dateSelector').value = `${year}-${month}-${day}`;
+                
+                // 오늘인지 체크
+                const today = new Date();
+                this.isToday = this.selectedDate.toDateString() === today.toDateString();
+                
+                // 날짜 정보 표시
+                const dateInfo = document.getElementById('dateInfo');
+                const todayInfo = document.getElementById('todayInfo');
+                if (this.isToday) {
+                    dateInfo.textContent = '오늘';
+                    dateInfo.className = 'date-info today';
+                    todayInfo.textContent = '오늘 하루 실시간 집계';
+                    // 실시간 업데이트 활성화
+                    if (!this.autoRefreshInterval && this.isAutoRefresh) {
+                        this.startAutoRefresh();
+                    }
+                } else {
+                    const daysDiff = Math.floor((today - this.selectedDate) / (1000 * 60 * 60 * 24));
+                    if (daysDiff > 0) {
+                        dateInfo.textContent = `${daysDiff}일 전`;
+                        dateInfo.className = 'date-info past';
+                    } else {
+                        dateInfo.textContent = `${Math.abs(daysDiff)}일 후`;
+                        dateInfo.className = 'date-info';
+                    }
+                    todayInfo.textContent = `${dateStr} 집계`;
+                    // 과거 데이터는 자동 업데이트 비활성화
+                    if (this.autoRefreshInterval) {
+                        clearInterval(this.autoRefreshInterval);
+                        this.autoRefreshInterval = null;
+                    }
+                }
+                
+                // 메시지 섹션 타이틀 업데이트
+                const messagesTitle = document.getElementById('messagesTitle');
+                if (this.isToday) {
+                    messagesTitle.textContent = '실시간 도움 메시지';
+                } else {
+                    messagesTitle.textContent = `${dateStr} 도움 메시지`;
+                }
+                
+                // 다음날 버튼 비활성화 (미래 날짜 방지)
+                document.getElementById('nextDayBtn').disabled = this.selectedDate >= today;
+                
+                // 자동 업데이트 버튼 상태
+                const autoBtn = document.getElementById('autoRefreshBtn');
+                if (!this.isToday) {
+                    autoBtn.disabled = true;
+                    autoBtn.textContent = '자동 업데이트 (오늘만 가능)';
+                } else {
+                    autoBtn.disabled = false;
+                    autoBtn.textContent = this.isAutoRefresh ? '자동 업데이트 ON' : '자동 업데이트 OFF';
+                }
+            },
+            
+            // 날짜 선택
+            selectDate: function(dateString) {
+                // 기존 실시간 구독 해제
+                this.unsubscribeFromChanges();
+                
+                this.selectedDate = new Date(dateString + 'T00:00:00');
+                this.updateDateDisplay();
+                this.loadData();
+                
+                // 오늘이면 실시간 구독 재시작
+                if (this.isToday) {
+                    this.subscribeToChanges();
+                }
+            },
+            
+            // 날짜 변경 (이전/다음)
+            changeDate: function(days) {
+                const newDate = new Date(this.selectedDate);
+                newDate.setDate(newDate.getDate() + days);
+                
+                // 미래 날짜 방지
+                const today = new Date();
+                if (newDate > today) {
+                    return;
+                }
+                
+                // 기존 실시간 구독 해제
+                this.unsubscribeFromChanges();
+                
+                this.selectedDate = newDate;
+                this.updateDateDisplay();
+                this.loadData();
+                
+                // 오늘이면 실시간 구독 재시작
+                if (this.isToday) {
+                    this.subscribeToChanges();
+                }
+            },
+            
+            // 오늘로 이동
+            goToToday: function() {
+                // 기존 실시간 구독 해제
+                this.unsubscribeFromChanges();
+                
+                this.selectedDate = new Date();
+                this.updateDateDisplay();
+                this.loadData();
+                
+                // 실시간 구독 재시작
+                this.subscribeToChanges();
+            },
+            
+            // 선택된 날짜 범위
+            getSelectedDateRange: function() {
+                const start = new Date(this.selectedDate);
+                start.setHours(0, 0, 0, 0);
+                const end = new Date(this.selectedDate);
+                end.setHours(23, 59, 59, 999);
+                return {
+                    start: start.toISOString(),
+                    end: end.toISOString()
+                };
+            },
+            
+            // 오늘 날짜 범위 (기존 함수 유지)
             getTodayRange: function() {
                 const today = new Date();
                 const start = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 0, 0, 0);
@@ -360,29 +583,30 @@
                 };
             },
             
-            // 신청서 링크 체크 함수
+            // 신청서 링크 개수 카운트 함수
+            countValidFormLinks: function(text) {
+                if (!text) return 0;
+                
+                // form.ajd.co.kr/r?h= 로 시작하는 링크 찾기
+                const validPattern = /(?:https?:\/\/)?form\.ajd\.co\.kr\/r\?h=[^\s]*/gi;
+                const matches = text.match(validPattern) || [];
+                
+                // attachments는 제외
+                const validLinks = matches.filter(link => !link.includes('/attachments'));
+                
+                return validLinks.length;
+            },
+            
+            // 신청서 링크 체크 함수 (기존 함수 유지 - UI용)
             isValidFormLink: function(text) {
-                if (!text) return false;
-                
-                // form.ajd.co.kr/r?h= 로 시작하는지 체크
-                const validPattern = /(?:https?:\/\/)?form\.ajd\.co\.kr\/r\?h=/i;
-                // form.ajd.co.kr/attachments 로 시작하는지 체크
-                const invalidPattern = /(?:https?:\/\/)?form\.ajd\.co\.kr\/attachments/i;
-                
-                // attachments로 시작하면 false
-                if (invalidPattern.test(text)) {
-                    return false;
-                }
-                
-                // r?h= 로 시작하면 true
-                return validPattern.test(text);
+                return this.countValidFormLinks(text) > 0;
             },
             
             // 신청서 링크 하이라이트 함수
             highlightFormLinks: function(text) {
                 if (!text) return text;
                 
-                // form.ajd.co.kr/r?h= 패턴만 하이라이트
+                // form.ajd.co.kr/r?h= 패턴 모두 하이라이트 (g 플래그로 전역 매치)
                 return text.replace(
                     /((?:https?:\/\/)?form\.ajd\.co\.kr\/r\?h=[^\s]*)/gi,
                     '<span class="form-link">$1</span>'
@@ -393,10 +617,10 @@
             calculateHelpScore: function(message, allMessages) {
                 let score = 1; // 기본 점수
                 
-                // 1. 신청서 가중치 (+5점)
-                if (this.isValidFormLink(message.message_text)) {
-                    score += 5;
-                }
+                // 1. 신청서 가중치 (개당 +5점)
+                // 한 메시지에 여러 신청서가 있으면 각각 카운트
+                const formCount = this.countValidFormLinks(message.message_text);
+                score += (formCount * 5);
                 
                 // 2. 길이 가중치
                 const length = message.message_length;
@@ -430,7 +654,7 @@
                 this.setStatus('loading', '데이터 로드 중...');
                 
                 try {
-                    const { start, end } = this.getTodayRange();
+                    const { start, end } = this.getSelectedDateRange();
                     
                     // Supabase에서 직접 조회
                     const { data: messages, error } = await this.supabaseClient
@@ -454,7 +678,7 @@
                     this.updateAllRankings();
                     this.updateRecentMessages();
                     
-                    this.setStatus('active', this.isAutoRefresh ? '업데이트 완료 | 자동 업데이트 ON' : '업데이트 완료');
+                    this.setStatus('active', this.isToday && this.isAutoRefresh ? '업데이트 완료 | 자동 업데이트 ON' : this.isToday ? '업데이트 완료' : '과거 데이터 표시중');
                     this.updateLastTime();
                     
                 } catch (error) {
@@ -497,10 +721,9 @@
                     const score = this.calculateHelpScore(msg, this.currentMessages);
                     stats[managerId].helpScore += score;
                     
-                    // 신청서 카운트
-                    if (this.isValidFormLink(msg.message_text)) {
-                        stats[managerId].formCount++;
-                    }
+                    // 신청서 개수 카운트 (메시지당 여러 개 가능)
+                    const formLinksCount = this.countValidFormLinks(msg.message_text);
+                    stats[managerId].formCount += formLinksCount;
                 });
                 
                 this.currentStats = Object.values(stats).map(s => {
@@ -529,12 +752,14 @@
             
             // 랭킹 업데이트 (초기 로드용 - 기존 방식 유지)
             updateAllRankings: function() {
+                const noDataMessage = this.isToday ? '오늘 데이터가 없습니다' : '선택한 날짜에 데이터가 없습니다';
+                
                 // 도움 점수 랭킹
                 const scoreRanking = [...this.currentStats].sort((a, b) => b.helpScore - a.helpScore);
                 const scoreBody = document.getElementById('scoreRankingBody');
                 
                 if (scoreRanking.length === 0) {
-                    scoreBody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:50px;color:#999;">오늘 데이터가 없습니다</td></tr>';
+                    scoreBody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:50px;color:#999;">${noDataMessage}</td></tr>`;
                 } else {
                     scoreBody.innerHTML = scoreRanking.map((item, index) => `
                         <tr id="score-row-${item.id}" data-rank="${index + 1}">
@@ -555,7 +780,7 @@
                 const messageBody = document.getElementById('messageRankingBody');
                 
                 if (messageRanking.length === 0) {
-                    messageBody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:50px;color:#999;">오늘 데이터가 없습니다</td></tr>';
+                    messageBody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:50px;color:#999;">${noDataMessage}</td></tr>`;
                 } else {
                     messageBody.innerHTML = messageRanking.map((item, index) => `
                         <tr id="message-row-${item.id}" data-rank="${index + 1}">
@@ -576,7 +801,7 @@
                 const charBody = document.getElementById('charRankingBody');
                 
                 if (charRanking.length === 0) {
-                    charBody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:50px;color:#999;">오늘 데이터가 없습니다</td></tr>';
+                    charBody.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:50px;color:#999;">${noDataMessage}</td></tr>`;
                 } else {
                     charBody.innerHTML = charRanking.map((item, index) => `
                         <tr id="char-row-${item.id}" data-rank="${index + 1}">
@@ -606,11 +831,13 @@
                 // 통계 계산
                 const stats = this.currentStats.find(s => s.name === managerName);
                 
+                const dateStr = `${this.selectedDate.getFullYear()}년 ${this.selectedDate.getMonth()+1}월 ${this.selectedDate.getDate()}일`;
+                
                 modalTitle.innerHTML = `${managerName} <span class="team-badge ${this.getTeamClass(stats.team)}">${stats.team}</span>`;
                 
                 let html = `
                     <div style="margin-bottom: 30px; padding: 20px; background: #111; border: 1px solid #222;">
-                        <h3 style="margin-bottom: 15px; color: #1E6FFF;">오늘 통계</h3>
+                        <h3 style="margin-bottom: 15px; color: #1E6FFF;">${dateStr} 통계</h3>
                         <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px;">
                             <div>
                                 <div style="color: #999; font-size: 13px; margin-bottom: 5px;">도움 점수</div>
@@ -626,17 +853,18 @@
                             </div>
                             <div>
                                 <div style="color: #999; font-size: 13px; margin-bottom: 5px;">신청서 발송</div>
-                                <div style="font-size: 24px; color: #FFD700;">${stats.formCount}</div>
+                                <div style="font-size: 24px; color: #FFD700;">${stats.formCount} <span style="font-size: 14px; color: #999;">(평균 ${(stats.formCount / stats.messageCount).toFixed(1)}개)</span></div>
                             </div>
                         </div>
                     </div>
-                    <h3 style="margin-bottom: 20px;">오늘 작성한 메시지 (${managerMessages.length}개)</h3>
+                    <h3 style="margin-bottom: 20px;">${dateStr} 작성한 메시지 (${managerMessages.length}개)</h3>
                 `;
                 
                 managerMessages.forEach(msg => {
                     const time = new Date(msg.created_at);
                     const timeStr = `${time.getHours().toString().padStart(2,'0')}:${time.getMinutes().toString().padStart(2,'0')}`;
-                    const hasForm = this.isValidFormLink(msg.message_text);
+                    const formCount = this.countValidFormLinks(msg.message_text);
+                    const hasForm = formCount > 0;
                     
                     let messageText = msg.message_text || '(메시지 내용 없음)';
                     if (hasForm) {
@@ -650,7 +878,7 @@
                                 <div class="message-meta">
                                     ${msg.assigned_manager_name} 상담사 도움 | 
                                     ${msg.message_length}자
-                                    ${hasForm ? '<span class="form-indicator">📋 신청서</span>' : ''}
+                                    ${hasForm ? `<span class="form-indicator${formCount > 1 ? ' multiple' : ''}">📋 신청서${formCount > 1 ? ` ×${formCount}` : ''}</span>` : ''}
                                 </div>
                                 <div class="message-text" style="margin-top: 10px;">${messageText}</div>
                             </div>
@@ -673,7 +901,8 @@
                 const recentMessages = this.currentMessages.slice(0, 20);
                 
                 if (recentMessages.length === 0) {
-                    container.innerHTML = '<div style="padding:50px;text-align:center;color:#999;">최근 메시지가 없습니다</div>';
+                    const noDataMessage = this.isToday ? '최근 메시지가 없습니다' : '선택한 날짜에 메시지가 없습니다';
+                    container.innerHTML = `<div style="padding:50px;text-align:center;color:#999;">${noDataMessage}</div>`;
                 } else {
                     container.innerHTML = recentMessages.map(msg => {
                         const time = new Date(msg.created_at);
@@ -699,8 +928,9 @@
                             }
                         }
                         
-                        // 유효한 신청서 링크 포함 여부 체크
-                        const hasForm = this.isValidFormLink(msg.message_text);
+                        // 유효한 신청서 링크 개수 체크
+                        const formCount = this.countValidFormLinks(msg.message_text);
+                        const hasForm = formCount > 0;
                         
                         return `
                             <div class="message-item ${hasForm ? 'has-form' : ''}" data-message-id="${msg.id}">
@@ -709,7 +939,7 @@
                                     <div class="message-manager">
                                         <span class="manager-name" onclick="app.showManagerMessages('${msg.writer_manager_name}')">${msg.writer_manager_name}</span>
                                         <span class="team-badge ${this.getTeamClass(team)}">${team}</span>
-                                        ${hasForm ? '<span class="form-indicator">📋 신청서</span>' : ''}
+                                        ${hasForm ? `<span class="form-indicator${formCount > 1 ? ' multiple' : ''}">📋 신청서${formCount > 1 ? ` ×${formCount}` : ''}</span>` : ''}
                                     </div>
                                     <div class="message-text">${messageText}</div>
                                     <div class="message-meta">
@@ -722,10 +952,28 @@
                 }
             },
             
+            // 실시간 구독 해제
+            unsubscribeFromChanges: function() {
+                if (this.realtimeSubscription) {
+                    this.supabaseClient.removeChannel(this.realtimeSubscription);
+                    this.realtimeSubscription = null;
+                    console.log('실시간 구독 해제됨');
+                }
+            },
+            
             // 실시간 구독 (개선된 버전)
             subscribeToChanges: function() {
+                // 기존 구독 해제
+                this.unsubscribeFromChanges();
+                
+                // 오늘이 아니면 구독하지 않음
+                if (!this.isToday) {
+                    console.log('과거 날짜는 실시간 구독하지 않음');
+                    return;
+                }
+                
                 // Supabase Pro는 더 많은 실시간 연결 지원
-                this.supabaseClient
+                this.realtimeSubscription = this.supabaseClient
                     .channel('manager_messages_changes')
                     .on('postgres_changes', 
                         { 
@@ -830,10 +1078,9 @@
                 managerStat.helpScore += score;
                 managerStat.helpScore = Math.round(managerStat.helpScore * 100) / 100;
                 
-                // 신청서 카운트
-                if (this.isValidFormLink(newMessage.message_text)) {
-                    managerStat.formCount++;
-                }
+                // 신청서 개수 카운트 (메시지당 여러 개 가능)
+                const formLinksCount = this.countValidFormLinks(newMessage.message_text);
+                managerStat.formCount += formLinksCount;
                 
                 // uniqueChats 계산 (전체 메시지에서 다시 계산)
                 const uniqueChatsSet = new Set();
@@ -887,7 +1134,8 @@
                 const team = this.getTeam(msg.writer_manager_name);
                 
                 let messageText = msg.message_text || '(메시지 내용 없음)';
-                const hasForm = this.isValidFormLink(messageText);
+                const formCount = this.countValidFormLinks(messageText);
+                const hasForm = formCount > 0;
                 
                 // 유효한 form 링크만 하이라이트
                 if (hasForm) {
@@ -908,7 +1156,7 @@
                         <div class="message-manager">
                             <span class="manager-name" onclick="app.showManagerMessages('${msg.writer_manager_name}')">${msg.writer_manager_name}</span>
                             <span class="team-badge ${this.getTeamClass(team)}">${team}</span>
-                            ${hasForm ? '<span class="form-indicator">📋 신청서</span>' : ''}
+                                                                ${hasForm ? `<span class="form-indicator${formCount > 1 ? ' multiple' : ''}">📋 신청서${formCount > 1 ? ` ×${formCount}` : ''}</span>` : ''}
                         </div>
                         <div class="message-text">${messageText}</div>
                         <div class="message-meta">
@@ -1128,7 +1376,7 @@
             
             // 자동 새로고침 시작 (부분 업데이트)
             startAutoRefresh: function() {
-                if (this.isAutoRefresh) {
+                if (this.isAutoRefresh && this.isToday) {
                     // 기존 인터벌이 있으면 정리
                     if (this.autoRefreshInterval) {
                         clearInterval(this.autoRefreshInterval);
@@ -1144,6 +1392,11 @@
             
             // 부분 업데이트 (깜빡임 없음)
             partialUpdate: async function() {
+                // 오늘이 아니면 실행하지 않음
+                if (!this.isToday) {
+                    return;
+                }
+                
                 try {
                     const { start, end } = this.getTodayRange();
                     
@@ -1227,7 +1480,8 @@
                         const team = this.getTeam(msg.writer_manager_name);
                         
                         let messageText = msg.message_text || '(메시지 내용 없음)';
-                        const hasForm = this.isValidFormLink(msg.message_text);
+                        const formCount = this.countValidFormLinks(msg.message_text);
+                        const hasForm = formCount > 0;
                         
                         if (hasForm) {
                             messageText = this.highlightFormLinks(messageText);
@@ -1246,7 +1500,7 @@
                                 <div class="message-manager">
                                     <span class="manager-name" onclick="app.showManagerMessages('${msg.writer_manager_name}')">${msg.writer_manager_name}</span>
                                     <span class="team-badge ${this.getTeamClass(team)}">${team}</span>
-                                    ${hasForm ? '<span class="form-indicator">📋 신청서</span>' : ''}
+                                    ${hasForm ? `<span class="form-indicator${formCount > 1 ? ' multiple' : ''}">📋 신청서${formCount > 1 ? ` ×${formCount}` : ''}</span>` : ''}
                                 </div>
                                 <div class="message-text">${messageText}</div>
                                 <div class="message-meta">
@@ -1289,6 +1543,12 @@
             
             // 자동 새로고침 토글
             toggleAutoRefresh: function() {
+                // 오늘이 아니면 작동하지 않음
+                if (!this.isToday) {
+                    this.showNotification('과거 데이터는 자동 업데이트를 사용할 수 없습니다', 'error');
+                    return;
+                }
+                
                 this.isAutoRefresh = !this.isAutoRefresh;
                 const btn = document.getElementById('autoRefreshBtn');
                 
