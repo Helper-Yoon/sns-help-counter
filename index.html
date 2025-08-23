@@ -12,44 +12,44 @@
         .container { max-width: 1400px; margin: 0 auto; padding: 40px 20px; }
         
         .header { text-align: center; margin-bottom: 50px; }
-        .header h1 { font-size: 48px; font-weight: 200; margin-bottom: 10px; }
+        .header h1 { font-size: 52px; font-weight: 200; margin-bottom: 10px; }
         .header h1 span { color: #1E6FFF; font-weight: 400; }
-        .date-display { color: #666; font-size: 14px; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 5px; }
-        .today-info { color: #1E6FFF; font-size: 18px; margin-top: 10px; }
+        .date-display { color: #999; font-size: 15px; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 5px; }
+        .today-info { color: #1E6FFF; font-size: 20px; margin-top: 10px; }
         
         .control-bar { display: flex; justify-content: space-between; align-items: center; padding: 20px 30px; background: #000; border: 1px solid #222; margin-bottom: 40px; flex-wrap: wrap; gap: 20px; }
         .control-buttons { display: flex; gap: 15px; flex-wrap: wrap; }
         
-        .btn { padding: 10px 25px; background: transparent; color: #666; border: 1px solid #333; font-size: 14px; font-weight: 500; letter-spacing: 1px; text-transform: uppercase; cursor: pointer; transition: all 0.3s; }
+        .btn { padding: 12px 28px; background: transparent; color: #888; border: 1px solid #333; font-size: 15px; font-weight: 500; letter-spacing: 1px; text-transform: uppercase; cursor: pointer; transition: all 0.3s; }
         .btn:hover { color: #1E6FFF; border-color: #1E6FFF; }
         .btn.primary { color: #1E6FFF; border-color: #1E6FFF; }
         .btn.primary:hover { background: #1E6FFF; color: #000; }
         .btn:disabled { opacity: 0.5; cursor: not-allowed; }
         
-        .status-indicator { display: flex; align-items: center; gap: 10px; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; }
-        .status-dot { width: 8px; height: 8px; border-radius: 50%; background: #666; animation: pulse 2s infinite; }
+        .status-indicator { display: flex; align-items: center; gap: 10px; font-size: 13px; text-transform: uppercase; letter-spacing: 1px; }
+        .status-dot { width: 8px; height: 8px; border-radius: 50%; background: #888; animation: pulse 2s infinite; }
         .status-dot.active { background: #00FF00; }
         .status-dot.loading { background: #1E6FFF; }
         .status-dot.error { background: #FF0000; }
         @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
         
         .tabs { display: flex; gap: 2px; margin-bottom: 40px; background: #111; padding: 2px; }
-        .tab { flex: 1; padding: 15px; background: #000; color: #666; border: none; cursor: pointer; font-size: 14px; text-transform: uppercase; letter-spacing: 1px; transition: all 0.3s; }
+        .tab { flex: 1; padding: 18px; background: #000; color: #888; border: none; cursor: pointer; font-size: 15px; text-transform: uppercase; letter-spacing: 1px; transition: all 0.3s; }
         .tab:hover { color: #1E6FFF; }
         .tab.active { color: #1E6FFF; background: #0a0a0a; }
         
         .ranking-table { background: #000; border: 1px solid #222; margin-bottom: 40px; }
         .table-header { padding: 25px 30px; border-bottom: 1px solid #222; display: flex; justify-content: space-between; align-items: center; }
-        .table-title { font-size: 16px; font-weight: 300; letter-spacing: 1px; text-transform: uppercase; }
-        .table-subtitle { font-size: 12px; color: #666; }
+        .table-title { font-size: 18px; font-weight: 300; letter-spacing: 1px; text-transform: uppercase; }
+        .table-subtitle { font-size: 13px; color: #999; }
         
         table { width: 100%; border-collapse: collapse; }
-        th { padding: 20px; text-align: left; font-size: 12px; color: #666; text-transform: uppercase; letter-spacing: 2px; border-bottom: 1px solid #222; }
-        td { padding: 20px; font-size: 15px; border-bottom: 1px solid #111; }
+        th { padding: 20px; text-align: left; font-size: 13px; color: #999; text-transform: uppercase; letter-spacing: 2px; border-bottom: 1px solid #222; }
+        td { padding: 20px; font-size: 16px; border-bottom: 1px solid #111; }
         tr:hover { background: #050505; }
         
-        .rank-number { font-size: 18px; font-weight: 200; color: #1E6FFF; }
-        .team-badge { display: inline-block; padding: 2px 8px; background: #1E6FFF; color: #000; font-size: 10px; font-weight: 600; margin-left: 10px; text-transform: uppercase; }
+        .rank-number { font-size: 20px; font-weight: 200; color: #1E6FFF; }
+        .team-badge { display: inline-block; padding: 4px 12px; background: #1E6FFF; color: #000; font-size: 13px; font-weight: 600; margin-left: 10px; text-transform: uppercase; letter-spacing: 0.5px; }
         .team-1 { background: #FF6B6B; }
         .team-2 { background: #4ECDC4; }
         .team-3 { background: #45B7D1; }
@@ -60,18 +60,43 @@
         .messages-header { padding: 25px 30px; border-bottom: 1px solid #222; }
         .messages-container { max-height: 400px; overflow-y: auto; }
         .message-item { padding: 20px 30px; border-bottom: 1px solid #111; display: flex; gap: 20px; align-items: start; }
-        .message-time { color: #666; font-size: 12px; min-width: 60px; }
+        .message-item.has-form { background: rgba(255, 215, 0, 0.03); }
+        .message-time { color: #999; font-size: 13px; min-width: 60px; }
         .message-content { flex: 1; }
-        .message-manager { color: #1E6FFF; font-weight: 600; margin-bottom: 5px; }
-        .message-text { color: #ccc; font-size: 14px; line-height: 1.5; }
-        .message-meta { color: #666; font-size: 12px; margin-top: 5px; }
+        .message-manager { color: #1E6FFF; font-weight: 600; margin-bottom: 5px; font-size: 16px; }
+        .message-text { color: #ddd; font-size: 15px; line-height: 1.5; }
+        .message-meta { color: #999; font-size: 13px; margin-top: 5px; }
         
-        .notification { position: fixed; top: 20px; right: 20px; padding: 15px 20px; background: #111; border: 1px solid #1E6FFF; color: #fff; font-size: 14px; z-index: 1000; animation: slideIn 0.3s; display: none; }
+        .form-link { 
+            color: #FFD700; 
+            font-weight: 600; 
+            text-decoration: underline; 
+            animation: glow 1.5s ease-in-out infinite alternate;
+            padding: 0 2px;
+        }
+        @keyframes glow {
+            from { text-shadow: 0 0 5px #FFD700, 0 0 10px #FFD700; }
+            to { text-shadow: 0 0 10px #FFD700, 0 0 20px #FFD700, 0 0 30px #FFD700; }
+        }
+        
+        .form-indicator {
+            display: inline-block;
+            margin-left: 10px;
+            padding: 2px 8px;
+            background: rgba(255, 215, 0, 0.2);
+            color: #FFD700;
+            font-size: 12px;
+            font-weight: 600;
+            border-radius: 3px;
+            animation: pulse 2s infinite;
+        }
+        
+        .notification { position: fixed; top: 20px; right: 20px; padding: 15px 20px; background: #111; border: 1px solid #1E6FFF; color: #fff; font-size: 15px; z-index: 1000; animation: slideIn 0.3s; display: none; }
         .notification.show { display: block; }
         @keyframes slideIn { from { transform: translateX(100%); } to { transform: translateX(0); } }
         
         .loading-screen { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: #000; display: flex; justify-content: center; align-items: center; z-index: 9999; }
-        .loading-text { color: #1E6FFF; font-size: 18px; animation: pulse 1s infinite; }
+        .loading-text { color: #1E6FFF; font-size: 20px; animation: pulse 1s infinite; }
         
         @media (max-width: 768px) {
             .control-bar { flex-direction: column; }
@@ -99,14 +124,13 @@
             <div class="status-indicator">
                 <span class="status-dot" id="statusDot"></span>
                 <span id="statusText">대기 중</span>
-                <span id="lastUpdate" style="margin-left: 20px; color: #666;"></span>
+                <span id="lastUpdate" style="margin-left: 20px; color: #999;"></span>
             </div>
         </div>
         
         <div class="tabs">
             <button class="tab active" onclick="app.switchTab('messages')" id="tab-messages">메시지 수 랭킹</button>
             <button class="tab" onclick="app.switchTab('chars')" id="tab-chars">글자수 랭킹</button>
-            <button class="tab" onclick="app.switchTab('team')" id="tab-team">팀별 통계</button>
         </div>
         
         <div class="ranking-table" id="ranking-messages">
@@ -127,7 +151,7 @@
                     </tr>
                 </thead>
                 <tbody id="messageRankingBody">
-                    <tr><td colspan="5" style="text-align:center;padding:50px;color:#666;">데이터를 불러오는 중...</td></tr>
+                    <tr><td colspan="5" style="text-align:center;padding:50px;color:#999;">데이터를 불러오는 중...</td></tr>
                 </tbody>
             </table>
         </div>
@@ -150,30 +174,7 @@
                     </tr>
                 </thead>
                 <tbody id="charRankingBody">
-                    <tr><td colspan="5" style="text-align:center;padding:50px;color:#666;">데이터를 불러오는 중...</td></tr>
-                </tbody>
-            </table>
-        </div>
-        
-        <div class="ranking-table" id="ranking-team" style="display:none;">
-            <div class="table-header">
-                <div>
-                    <div class="table-title">팀별 통계</div>
-                    <div class="table-subtitle">오늘 팀별 협업 현황</div>
-                </div>
-            </div>
-            <table>
-                <thead>
-                    <tr>
-                        <th>팀</th>
-                        <th>활동 상담사</th>
-                        <th>총 메시지</th>
-                        <th>총 글자수</th>
-                        <th>평균 글자수</th>
-                    </tr>
-                </thead>
-                <tbody id="teamRankingBody">
-                    <tr><td colspan="5" style="text-align:center;padding:50px;color:#666;">데이터를 불러오는 중...</td></tr>
+                    <tr><td colspan="5" style="text-align:center;padding:50px;color:#999;">데이터를 불러오는 중...</td></tr>
                 </tbody>
             </table>
         </div>
@@ -183,7 +184,7 @@
                 <div class="table-title">실시간 도움 메시지</div>
             </div>
             <div class="messages-container" id="messagesContainer">
-                <div style="padding:50px;text-align:center;color:#666;">최근 메시지가 없습니다</div>
+                <div style="padding:50px;text-align:center;color:#999;">최근 메시지가 없습니다</div>
             </div>
         </div>
     </div>
@@ -351,15 +352,15 @@
                 const messageBody = document.getElementById('messageRankingBody');
                 
                 if (messageRanking.length === 0) {
-                    messageBody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:50px;color:#666;">오늘 데이터가 없습니다</td></tr>';
+                    messageBody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:50px;color:#999;">오늘 데이터가 없습니다</td></tr>';
                 } else {
                     messageBody.innerHTML = messageRanking.map((item, index) => `
                         <tr>
                             <td><span class="rank-number">#${index + 1}</span></td>
-                            <td>${item.name}</td>
+                            <td style="font-size:17px;">${item.name}</td>
                             <td><span class="team-badge ${this.getTeamClass(item.team)}">${item.team}</span></td>
-                            <td style="font-size:20px;color:#1E6FFF;font-weight:600;">${item.messageCount}</td>
-                            <td>${item.totalChars.toLocaleString()}</td>
+                            <td style="font-size:22px;color:#1E6FFF;font-weight:600;">${item.messageCount}</td>
+                            <td style="font-size:17px;">${item.totalChars.toLocaleString()}</td>
                         </tr>
                     `).join('');
                 }
@@ -369,57 +370,18 @@
                 const charBody = document.getElementById('charRankingBody');
                 
                 if (charRanking.length === 0) {
-                    charBody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:50px;color:#666;">오늘 데이터가 없습니다</td></tr>';
+                    charBody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:50px;color:#999;">오늘 데이터가 없습니다</td></tr>';
                 } else {
                     charBody.innerHTML = charRanking.map((item, index) => `
                         <tr>
                             <td><span class="rank-number">#${index + 1}</span></td>
-                            <td>${item.name}</td>
+                            <td style="font-size:17px;">${item.name}</td>
                             <td><span class="team-badge ${this.getTeamClass(item.team)}">${item.team}</span></td>
-                            <td style="font-size:20px;color:#1E6FFF;font-weight:600;">${item.totalChars.toLocaleString()}</td>
-                            <td>${item.messageCount}</td>
+                            <td style="font-size:22px;color:#1E6FFF;font-weight:600;">${item.totalChars.toLocaleString()}</td>
+                            <td style="font-size:17px;">${item.messageCount}</td>
                         </tr>
                     `).join('');
                 }
-                
-                // 팀별 통계
-                this.updateTeamStats();
-            },
-            
-            // 팀별 통계 업데이트
-            updateTeamStats: function() {
-                const teamStats = {};
-                
-                Object.keys(this.teamInfo).forEach(team => {
-                    teamStats[team] = {
-                        team: team,
-                        activeMembers: 0,
-                        totalMessages: 0,
-                        totalChars: 0
-                    };
-                });
-                
-                this.currentStats.forEach(manager => {
-                    const team = manager.team;
-                    if (teamStats[team]) {
-                        teamStats[team].activeMembers++;
-                        teamStats[team].totalMessages += manager.messageCount;
-                        teamStats[team].totalChars += manager.totalChars;
-                    }
-                });
-                
-                const teamBody = document.getElementById('teamRankingBody');
-                const teamArray = Object.values(teamStats).sort((a, b) => b.totalMessages - a.totalMessages);
-                
-                teamBody.innerHTML = teamArray.map(team => `
-                    <tr>
-                        <td><span class="team-badge ${this.getTeamClass(team.team)}">${team.team}</span></td>
-                        <td>${team.activeMembers}명</td>
-                        <td>${team.totalMessages}</td>
-                        <td>${team.totalChars.toLocaleString()}</td>
-                        <td>${team.totalMessages > 0 ? Math.round(team.totalChars / team.totalMessages) : 0}</td>
-                    </tr>
-                `).join('');
             },
             
             // 최근 메시지 업데이트
@@ -428,22 +390,51 @@
                 const recentMessages = this.currentMessages.slice(0, 20);
                 
                 if (recentMessages.length === 0) {
-                    container.innerHTML = '<div style="padding:50px;text-align:center;color:#666;">최근 메시지가 없습니다</div>';
+                    container.innerHTML = '<div style="padding:50px;text-align:center;color:#999;">최근 메시지가 없습니다</div>';
                 } else {
                     container.innerHTML = recentMessages.map(msg => {
                         const time = new Date(msg.created_at);
                         const timeStr = `${time.getHours().toString().padStart(2,'0')}:${time.getMinutes().toString().padStart(2,'0')}`;
                         const team = this.getTeam(msg.writer_manager_name);
                         
+                        // 메시지 텍스트 안전하게 처리
+                        let messageText = msg.message_text;
+                        if (!messageText || messageText.trim() === '') {
+                            messageText = '(메시지 내용 없음)';
+                        } else {
+                            // form.ajd.co.kr 링크를 노란색으로 하이라이트
+                            messageText = messageText.replace(
+                                /(https?:\/\/)?(form\.ajd\.co\.kr[^\s]*)/gi,
+                                '<span class="form-link">$1$2</span>'
+                            );
+                            
+                            if (messageText.length > 200) {
+                                // 긴 메시지 자르기 (HTML 태그 고려)
+                                const tempDiv = document.createElement('div');
+                                tempDiv.innerHTML = messageText;
+                                const textContent = tempDiv.textContent || tempDiv.innerText;
+                                if (textContent.length > 200) {
+                                    messageText = messageText.substring(0, 200) + '...';
+                                }
+                            }
+                        }
+                        
+                        // form.ajd.co.kr 포함 여부 체크
+                        const hasForm = msg.message_text && (
+                            msg.message_text.includes('form.ajd.co.kr') || 
+                            msg.message_text.includes('https://form.ajd.co.kr')
+                        );
+                        
                         return `
-                            <div class="message-item">
+                            <div class="message-item ${hasForm ? 'has-form' : ''}">
                                 <div class="message-time">${timeStr}</div>
                                 <div class="message-content">
                                     <div class="message-manager">
                                         ${msg.writer_manager_name}
                                         <span class="team-badge ${this.getTeamClass(team)}">${team}</span>
+                                        ${hasForm ? '<span class="form-indicator">📋 신청서</span>' : ''}
                                     </div>
-                                    <div class="message-text">${msg.message_text || '(내용 없음)'}</div>
+                                    <div class="message-text">${messageText}</div>
                                     <div class="message-meta">
                                         ${msg.message_length}자 | ${msg.assigned_manager_name} 상담사 도움
                                     </div>
@@ -480,7 +471,6 @@
                 // 테이블 표시/숨김
                 document.getElementById('ranking-messages').style.display = tab === 'messages' ? 'block' : 'none';
                 document.getElementById('ranking-chars').style.display = tab === 'chars' ? 'block' : 'none';
-                document.getElementById('ranking-team').style.display = tab === 'team' ? 'block' : 'none';
             },
             
             // 자동 새로고침 토글
