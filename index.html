@@ -93,7 +93,28 @@
         
         .notification { position: fixed; top: 20px; right: 20px; padding: 15px 20px; background: #111; border: 1px solid #1E6FFF; color: #fff; font-size: 15px; z-index: 1000; animation: slideIn 0.3s; display: none; }
         .notification.show { display: block; }
-        @keyframes slideIn { from { transform: translateX(100%); } to { transform: translateX(0); } }
+        .new-message {
+            animation: slideIn 0.5s ease;
+            background: linear-gradient(90deg, rgba(30, 111, 255, 0.1) 0%, transparent 100%);
+        }
+        @keyframes slideIn {
+            from { 
+                opacity: 0;
+                transform: translateX(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+        
+        .count-animation {
+            display: inline-block;
+        }
+        
+        tr {
+            transition: all 0.3s ease;
+        }
         
         .loading-screen { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: #000; display: flex; justify-content: center; align-items: center; z-index: 9999; }
         .loading-text { color: #1E6FFF; font-size: 20px; animation: pulse 1s infinite; }
@@ -345,7 +366,7 @@
                 }));
             },
             
-            // 랭킹 업데이트
+            // 랭킹 업데이트 (초기 로드용 - 기존 방식 유지)
             updateAllRankings: function() {
                 // 메시지 수 랭킹
                 const messageRanking = [...this.currentStats].sort((a, b) => b.messageCount - a.messageCount);
@@ -355,11 +376,13 @@
                     messageBody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:50px;color:#999;">오늘 데이터가 없습니다</td></tr>';
                 } else {
                     messageBody.innerHTML = messageRanking.map((item, index) => `
-                        <tr>
+                        <tr id="message-row-${item.id}" data-rank="${index + 1}">
                             <td><span class="rank-number">#${index + 1}</span></td>
                             <td style="font-size:17px;">${item.name}</td>
                             <td><span class="team-badge ${this.getTeamClass(item.team)}">${item.team}</span></td>
-                            <td style="font-size:22px;color:#1E6FFF;font-weight:600;">${item.messageCount}</td>
+                            <td style="font-size:22px;color:#1E6FFF;font-weight:600;">
+                                <span class="count-animation">${item.messageCount}</span>
+                            </td>
                             <td style="font-size:17px;">${item.totalChars.toLocaleString()}</td>
                         </tr>
                     `).join('');
@@ -373,11 +396,13 @@
                     charBody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:50px;color:#999;">오늘 데이터가 없습니다</td></tr>';
                 } else {
                     charBody.innerHTML = charRanking.map((item, index) => `
-                        <tr>
+                        <tr id="char-row-${item.id}" data-rank="${index + 1}">
                             <td><span class="rank-number">#${index + 1}</span></td>
                             <td style="font-size:17px;">${item.name}</td>
                             <td><span class="team-badge ${this.getTeamClass(item.team)}">${item.team}</span></td>
-                            <td style="font-size:22px;color:#1E6FFF;font-weight:600;">${item.totalChars.toLocaleString()}</td>
+                            <td style="font-size:22px;color:#1E6FFF;font-weight:600;">
+                                <span class="count-animation">${item.totalChars.toLocaleString()}</span>
+                            </td>
                             <td style="font-size:17px;">${item.messageCount}</td>
                         </tr>
                     `).join('');
@@ -445,19 +470,254 @@
                 }
             },
             
-            // 실시간 구독
+            // 실시간 구독 (개선된 버전)
             subscribeToChanges: function() {
                 this.supabaseClient
                     .channel('manager_messages_changes')
                     .on('postgres_changes', 
                         { event: 'INSERT', schema: 'public', table: 'manager_messages' },
                         (payload) => {
-                            console.log('새 메시지:', payload.new);
-                            this.showNotification('새로운 도움 메시지가 도착했습니다');
-                            this.loadData();
+                            const newMessage = payload.new;
+                            console.log('새 메시지 수신:', newMessage);
+                            
+                            // 오늘 메시지인지 확인
+                            const messageDate = new Date(newMessage.created_at);
+                            const today = new Date();
+                            if (messageDate.toDateString() !== today.toDateString()) {
+                                return; // 오늘 메시지가 아니면 무시
+                            }
+                            
+                            // 1. 메모리 데이터 업데이트 (재로드 없이)
+                            this.currentMessages.unshift(newMessage);
+                            
+                            // 2. 통계 실시간 업데이트
+                            this.updateStatsRealtime(newMessage);
+                            
+                            // 3. UI 부분 업데이트 (깜빡임 없이)
+                            this.smoothUpdateUI(newMessage);
+                            
+                            // 4. 알림
+                            this.showNotification(`${newMessage.writer_manager_name}님이 도움 메시지 전송`);
                         }
                     )
                     .subscribe();
+            },
+            
+            // 통계 실시간 업데이트 (메모리에서만)
+            updateStatsRealtime: function(newMessage) {
+                const managerId = newMessage.writer_manager_id;
+                const managerName = newMessage.writer_manager_name;
+                
+                // 기존 통계 찾기 또는 새로 생성
+                let managerStat = this.currentStats.find(s => s.id === managerId);
+                
+                if (!managerStat) {
+                    // 새로운 상담사
+                    managerStat = {
+                        id: managerId,
+                        name: managerName,
+                        team: this.getTeam(managerName),
+                        messageCount: 0,
+                        totalChars: 0,
+                        uniqueChats: 0,
+                        avgChars: 0
+                    };
+                    this.currentStats.push(managerStat);
+                }
+                
+                // 통계 업데이트
+                managerStat.messageCount++;
+                managerStat.totalChars += newMessage.message_length;
+                
+                // uniqueChats 계산 (전체 메시지에서 다시 계산)
+                const uniqueChatsSet = new Set();
+                this.currentMessages
+                    .filter(msg => msg.writer_manager_id === managerId)
+                    .forEach(msg => uniqueChatsSet.add(msg.user_chat_id));
+                managerStat.uniqueChats = uniqueChatsSet.size;
+                
+                managerStat.avgChars = Math.round(managerStat.totalChars / managerStat.messageCount);
+            },
+            
+            // 부드러운 UI 업데이트 (깜빡임 없음)
+            smoothUpdateUI: function(newMessage) {
+                // 상태 표시
+                this.setStatus('active', '실시간 업데이트');
+                
+                // 1. 실시간 메시지 추가 (맨 위에)
+                this.addNewMessageToList(newMessage);
+                
+                // 2. 랭킹 테이블 부분 업데이트
+                this.updateRankingSmoothly();
+                
+                // 3. 마지막 업데이트 시간
+                this.updateLastTime();
+                
+                // 상태 원복
+                setTimeout(() => {
+                    this.setStatus('active', '실시간 모니터링 중');
+                }, 1000);
+            },
+            
+            // 새 메시지를 리스트에 부드럽게 추가
+            addNewMessageToList: function(msg) {
+                const container = document.getElementById('messagesContainer');
+                const time = new Date(msg.created_at);
+                const timeStr = `${time.getHours().toString().padStart(2,'0')}:${time.getMinutes().toString().padStart(2,'0')}`;
+                const team = this.getTeam(msg.writer_manager_name);
+                
+                let messageText = msg.message_text || '(메시지 내용 없음)';
+                const hasForm = messageText.includes('form.ajd.co.kr');
+                
+                // form.ajd.co.kr 하이라이트
+                if (hasForm) {
+                    messageText = messageText.replace(
+                        /(https?:\/\/)?(form\.ajd\.co\.kr[^\s]*)/gi,
+                        '<span class="form-link">$1$2</span>'
+                    );
+                }
+                
+                if (messageText.length > 200) {
+                    messageText = messageText.substring(0, 200) + '...';
+                }
+                
+                // 새 메시지 HTML 생성
+                const newMessageHTML = document.createElement('div');
+                newMessageHTML.className = `message-item ${hasForm ? 'has-form' : ''} new-message`;
+                newMessageHTML.innerHTML = `
+                    <div class="message-time">${timeStr}</div>
+                    <div class="message-content">
+                        <div class="message-manager">
+                            ${msg.writer_manager_name}
+                            <span class="team-badge ${this.getTeamClass(team)}">${team}</span>
+                            ${hasForm ? '<span class="form-indicator">📋 신청서</span>' : ''}
+                        </div>
+                        <div class="message-text">${messageText}</div>
+                        <div class="message-meta">
+                            ${msg.message_length}자 | ${msg.assigned_manager_name} 상담사 도움
+                        </div>
+                    </div>
+                `;
+                
+                // 애니메이션과 함께 추가
+                newMessageHTML.style.opacity = '0';
+                newMessageHTML.style.transform = 'translateY(-20px)';
+                
+                // 첫 번째 자식으로 추가
+                const firstChild = container.firstElementChild;
+                if (firstChild && firstChild.textContent.includes('최근 메시지가 없습니다')) {
+                    container.innerHTML = '';
+                }
+                container.insertBefore(newMessageHTML, container.firstChild);
+                
+                // 부드러운 등장 애니메이션
+                requestAnimationFrame(() => {
+                    newMessageHTML.style.transition = 'all 0.3s ease';
+                    newMessageHTML.style.opacity = '1';
+                    newMessageHTML.style.transform = 'translateY(0)';
+                    
+                    setTimeout(() => {
+                        newMessageHTML.classList.remove('new-message');
+                    }, 3000);
+                });
+                
+                // 20개 초과 메시지 제거
+                while (container.children.length > 20) {
+                    container.removeChild(container.lastChild);
+                }
+            },
+            
+            // 랭킹 테이블 부드럽게 업데이트
+            updateRankingSmoothly: function() {
+                // 메시지 수 기준 정렬
+                const messageRanking = [...this.currentStats].sort((a, b) => b.messageCount - a.messageCount);
+                const messageBody = document.getElementById('messageRankingBody');
+                
+                // 글자수 기준 정렬
+                const charRanking = [...this.currentStats].sort((a, b) => b.totalChars - a.totalChars);
+                const charBody = document.getElementById('charRankingBody');
+                
+                // 현재 활성 탭에 따라 업데이트
+                if (this.currentTab === 'messages') {
+                    this.updateTableRows(messageBody, messageRanking, 'message');
+                } else if (this.currentTab === 'chars') {
+                    this.updateTableRows(charBody, charRanking, 'char');
+                }
+            },
+            
+            // 테이블 행 부분 업데이트 (깜빡임 방지)
+            updateTableRows: function(tbody, ranking, type) {
+                ranking.forEach((item, index) => {
+                    const rowId = `${type}-row-${item.id}`;
+                    let row = document.getElementById(rowId);
+                    
+                    if (!row) {
+                        // 새 행 생성
+                        row = document.createElement('tr');
+                        row.id = rowId;
+                        tbody.appendChild(row);
+                    }
+                    
+                    // 현재 순위와 이전 순위 비교
+                    const prevRank = parseInt(row.dataset.rank || '999');
+                    const newRank = index + 1;
+                    
+                    // 순위 변동 애니메이션
+                    if (prevRank !== newRank) {
+                        row.style.transition = 'background-color 0.5s ease';
+                        row.style.backgroundColor = prevRank > newRank ? 
+                            'rgba(30, 255, 111, 0.1)' : 'rgba(255, 111, 30, 0.1)';
+                        
+                        setTimeout(() => {
+                            row.style.backgroundColor = '';
+                        }, 500);
+                    }
+                    
+                    // 데이터 업데이트
+                    row.dataset.rank = newRank;
+                    
+                    if (type === 'message') {
+                        row.innerHTML = `
+                            <td><span class="rank-number">#${newRank}</span></td>
+                            <td style="font-size:17px;">${item.name}</td>
+                            <td><span class="team-badge ${this.getTeamClass(item.team)}">${item.team}</span></td>
+                            <td style="font-size:22px;color:#1E6FFF;font-weight:600;">
+                                <span class="count-animation">${item.messageCount}</span>
+                            </td>
+                            <td style="font-size:17px;">${item.totalChars.toLocaleString()}</td>
+                        `;
+                    } else {
+                        row.innerHTML = `
+                            <td><span class="rank-number">#${newRank}</span></td>
+                            <td style="font-size:17px;">${item.name}</td>
+                            <td><span class="team-badge ${this.getTeamClass(item.team)}">${item.team}</span></td>
+                            <td style="font-size:22px;color:#1E6FFF;font-weight:600;">
+                                <span class="count-animation">${item.totalChars.toLocaleString()}</span>
+                            </td>
+                            <td style="font-size:17px;">${item.messageCount}</td>
+                        `;
+                    }
+                    
+                    // 숫자 증가 애니메이션
+                    const countElement = row.querySelector('.count-animation');
+                    if (countElement) {
+                        countElement.style.transform = 'scale(1.2)';
+                        countElement.style.transition = 'transform 0.3s ease';
+                        setTimeout(() => {
+                            countElement.style.transform = 'scale(1)';
+                        }, 300);
+                    }
+                });
+                
+                // 불필요한 행 제거
+                const allRows = tbody.querySelectorAll('tr');
+                allRows.forEach(row => {
+                    const rowId = row.id;
+                    if (rowId && !ranking.find(item => `${type}-row-${item.id}` === rowId)) {
+                        row.style.opacity = '0';
+                        setTimeout(() => row.remove(), 300);
+                    }
+                });
             },
             
             // 탭 전환
@@ -471,6 +731,11 @@
                 // 테이블 표시/숨김
                 document.getElementById('ranking-messages').style.display = tab === 'messages' ? 'block' : 'none';
                 document.getElementById('ranking-chars').style.display = tab === 'chars' ? 'block' : 'none';
+                
+                // 탭 전환 시 해당 랭킹 부드럽게 업데이트
+                if (tab === 'messages' || tab === 'chars') {
+                    this.updateRankingSmoothly();
+                }
             },
             
             // 자동 새로고침 토글
