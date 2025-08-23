@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SNS센터 도움 카운팅 프로그램</title>
+    <script src="https://unpkg.com/@supabase/supabase-js@2.39.0/dist/umd/supabase.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #000; color: #fff; min-height: 100vh; }
+        .container { max-width: 1400px; margin: 0 auto; padding: 40px 20px; }
+        
+        .header { text-align: center; margin-bottom: 50px; }
+        .header h1 { font-size: 48px; font-weight: 200; margin-bottom: 10px; }
+        .header h1 span { color: #1E6FFF; font-weight: 400; }
+        .date-display { color: #666; font-size: 14px; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 5px; }
+        .today-info { color: #1E6FFF; font-size: 18px; margin-top: 10px; }
+        
+        .control-bar { display: flex; justify-content: space-between; align-items: center; padding: 20px 30px; background: #000; border: 1px solid #222; margin-bottom: 40px; flex-wrap: wrap; gap: 20px; }
+        .control-buttons { display: flex; gap: 15px; flex-wrap: wrap; }
+        
+        .btn { padding: 10px 25px; background: transparent; color: #666; border: 1px solid #333; font-size: 14px; font-weight: 500; letter-spacing: 1px; text-transform: uppercase; cursor: pointer; transition: all 0.3s; }
+        .btn:hover { color: #1E6FFF; border-color: #1E6FFF; }
+        .btn.primary { color: #1E6FFF; border-color: #1E6FFF; }
+        .btn.primary:hover { background: #1E6FFF; color: #000; }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        
+        .status-indicator { display: flex; align-items: center; gap: 10px; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; }
+        .status-dot { width: 8px; height: 8px; border-radius: 50%; background: #666; animation: pulse 2s infinite; }
+        .status-dot.active { background: #00FF00; }
+        .status-dot.loading { background: #1E6FFF; }
+        .status-dot.error { background: #FF0000; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+        
+        .tabs { display: flex; gap: 2px; margin-bottom: 40px; background: #111; padding: 2px; }
+        .tab { flex: 1; padding: 15px; background: #000; color: #666; border: none; cursor: pointer; font-size: 14px; text-transform: uppercase; letter-spacing: 1px; transition: all 0.3s; }
+        .tab:hover { color: #1E6FFF; }
+        .tab.active { color: #1E6FFF; background: #0a0a0a; }
+        
+        .ranking-table { background: #000; border: 1px solid #222; margin-bottom: 40px; }
+        .table-header { padding: 25px 30px; border-bottom: 1px solid #222; display: flex; justify-content: space-between; align-items: center; }
+        .table-title { font-size: 16px; font-weight: 300; letter-spacing: 1px; text-transform: uppercase; }
+        .table-subtitle { font-size: 12px; color: #666; }
+        
+        table { width: 100%; border-collapse: collapse; }
+        th { padding: 20px; text-align: left; font-size: 12px; color: #666; text-transform: uppercase; letter-spacing: 2px; border-bottom: 1px solid #222; }
+        td { padding: 20px; font-size: 15px; border-bottom: 1px solid #111; }
+        tr:hover { background: #050505; }
+        
+        .rank-number { font-size: 18px; font-weight: 200; color: #1E6FFF; }
+        .team-badge { display: inline-block; padding: 2px 8px; background: #1E6FFF; color: #000; font-size: 10px; font-weight: 600; margin-left: 10px; text-transform: uppercase; }
+        .team-1 { background: #FF6B6B; }
+        .team-2 { background: #4ECDC4; }
+        .team-3 { background: #45B7D1; }
+        .team-4 { background: #96CEB4; }
+        .team-5 { background: #FFEAA7; color: #000; }
+        
+        .messages-section { background: #000; border: 1px solid #222; margin-top: 50px; }
+        .messages-header { padding: 25px 30px; border-bottom: 1px solid #222; }
+        .messages-container { max-height: 400px; overflow-y: auto; }
+        .message-item { padding: 20px 30px; border-bottom: 1px solid #111; display: flex; gap: 20px; align-items: start; }
+        .message-time { color: #666; font-size: 12px; min-width: 60px; }
+        .message-content { flex: 1; }
+        .message-manager { color: #1E6FFF; font-weight: 600; margin-bottom: 5px; }
+        .message-text { color: #ccc; font-size: 14px; line-height: 1.5; }
+        .message-meta { color: #666; font-size: 12px; margin-top: 5px; }
+        
+        .notification { position: fixed; top: 20px; right: 20px; padding: 15px 20px; background: #111; border: 1px solid #1E6FFF; color: #fff; font-size: 14px; z-index: 1000; animation: slideIn 0.3s; display: none; }
+        .notification.show { display: block; }
+        @keyframes slideIn { from { transform: translateX(100%); } to { transform: translateX(0); } }
+        
+        @media (max-width: 768px) {
+            .control-bar { flex-direction: column; }
+            .tabs { flex-direction: column; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>SNS센터 <span>도움 카운팅 프로그램</span></h1>
+            <div class="date-display" id="dateDisplay"></div>
+            <div class="today-info">오늘 하루 실시간 집계</div>
+        </div>
+        
+        <div class="control-bar">
+            <div class="control-buttons">
+                <button class="btn primary" onclick="loadData()" id="refreshBtn">새로고침</button>
+                <button class="btn" onclick="toggleAutoRefresh()" id="autoRefreshBtn">자동 새로고침 OFF</button>
+            </div>
+            <div class="status-indicator">
+                <span class="status-dot" id="statusDot"></span>
+                <span id="statusText">대기 중</span>
+                <span id="lastUpdate" style="margin-left: 20px; color: #666;"></span>
+            </div>
+        </div>
+        
+        <div class="tabs">
+            <button class="tab active" onclick="switchTab('messages')" id="tab-messages">메시지 수 랭킹</button>
+            <button class="tab" onclick="switchTab('chars')" id="tab-chars">글자수 랭킹</button>
+            <button class="tab" onclick="switchTab('team')" id="tab-team">팀별 통계</button>
+        </div>
+        
+        <div class="ranking-table" id="ranking-messages">
+            <div class="table-header">
+                <div>
+                    <div class="table-title">메시지 수 랭킹</div>
+                    <div class="table-subtitle">오늘 가장 많이 도움을 준 상담사</div>
+                </div>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th style="width:80px">순위</th>
+                        <th>상담사</th>
+                        <th>팀</th>
+                        <th style="width:150px">도움 메시지</th>
+                        <th style="width:150px">총 글자수</th>
+                    </tr>
+                </thead>
+                <tbody id="messageRankingBody">
+                    <tr><td colspan="5" style="text-align:center;padding:50px;color:#666;">데이터를 불러오는 중...</td></tr>
+                </tbody>
+            </table>
+        </div>
+        
+        <div class="ranking-table" id="ranking-chars" style="display:none;">
+            <div class="table-header">
+                <div>
+                    <div class="table-title">글자수 랭킹</div>
+                    <div class="table-subtitle">오늘 가장 많은 내용을 작성한 상담사</div>
+                </div>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th style="width:80px">순위</th>
+                        <th>상담사</th>
+                        <th>팀</th>
+                        <th style="width:150px">총 글자수</th>
+                        <th style="width:150px">도움 메시지</th>
+                    </tr>
+                </thead>
+                <tbody id="charRankingBody">
+                    <tr><td colspan="5" style="text-align:center;padding:50px;color:#666;">데이터를 불러오는 중...</td></tr>
+                </tbody>
+            </table>
+        </div>
+        
+        <div class="ranking-table" id="ranking-team" style="display:none;">
+            <div class="table-header">
+                <div>
+                    <div class="table-title">팀별 통계</div>
+                    <div class="table-subtitle">오늘 팀별 협업 현황</div>
+                </div>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>팀</th>
+                        <th>활동 상담사</th>
+                        <th>총 메시지</th>
+                        <th>총 글자수</th>
+                        <th>평균 글자수</th>
+                    </tr>
+                </thead>
+                <tbody id="teamRankingBody">
+                    <tr><td colspan="5" style="text-align:center;padding:50px;color:#666;">데이터를 불러오는 중...</td></tr>
+                </tbody>
+            </table>
+        </div>
+        
+        <div class="messages-section">
+            <div class="messages-header">
+                <div class="table-title">실시간 도움 메시지</div>
+            </div>
+            <div class="messages-container" id="messagesContainer">
+                <div style="padding:50px;text-align:center;color:#666;">최근 메시지가 없습니다</div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="notification" id="notification"></div>
+    
+    <script>
+        // Supabase 설정
+        const SUPABASE_URL = 'https://bhtqjipygkawoyieidgp.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJodHFqaXB5Z2thd295aWVpZGdwIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDQ4ODk2OCwiZXhwIjoyMDcwMDY0OTY4fQ.HRngdvqtWBmGgd4VgcFsE7iYhQuTnxUuVyq7fiQHNng';
+        
+        const { createClient } = window.supabase;
+        const supabaseClient = createClient(SUPABASE_URL, SUPABASE_KEY);
+        
+        let currentMessages = [];
+        let currentStats = [];
+        let currentTab = 'messages';
+        let autoRefreshInterval = null;
+        let isAutoRefresh = false;
+        
+        // 팀 정보
+        const teamInfo = {
+            'SNS 1팀': ['이종민', '정주연', '이혜영', '김국현', '정다혜', '조시현', '김시윤'],
+            'SNS 2팀': ['윤도우리', '신혜서', '김상아', '박은진', '오민환', '서정국'],
+            'SNS 3팀': ['김진후', '김시진', '권재현', '김지원', '최호익', '김진협', '박해영'],
+            'SNS 4팀': ['이민주', '전지윤', '전미란', '김채영', '김영진', '공현준'],
+            '의정부 SNS': ['차정환', '최수능', '구본영', '서민국', '오민경', '김범주', '동수진', '성일훈']
+        };
+        
+        // 팀 찾기 함수
+        function getTeam(name) {
+            for (const [team, members] of Object.entries(teamInfo)) {
+                if (members.includes(name)) {
+                    return team;
+                }
+            }
+            return '미지정';
+        }
+        
+        // 팀 색상 클래스
+        function getTeamClass(team) {
+            const classes = {
+                'SNS 1팀': 'team-1',
+                'SNS 2팀': 'team-2',
+                'SNS 3팀': 'team-3',
+                'SNS 4팀': 'team-4',
+                '의정부 SNS': 'team-5'
+            };
+            return classes[team] || '';
+        }
+        
+        // 오늘 날짜 범위
+        function getTodayRange() {
+            const today = new Date();
+            const start = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 0, 0, 0);
+            const end = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59);
+            return {
+                start: start.toISOString(),
+                end: end.toISOString()
+            };
+        }
+        
+        // 초기화
+        async function init() {
+            // 날짜 표시
+            const now = new Date();
+            const days = ['일', '월', '화', '수', '목', '금', '토'];
+            document.getElementById('dateDisplay').textContent = 
+                `${now.getFullYear()}년 ${now.getMonth()+1}월 ${now.getDate()}일 ${days[now.getDay()]}요일`;
+            
+            // 데이터 로드
+            await loadData();
+            
+            // 실시간 구독
+            subscribeToChanges();
+        }
+        
+        // 데이터 로드
+        async function loadData() {
+            const btn = document.getElementById('refreshBtn');
+            btn.disabled = true;
+            setStatus('loading', '데이터 로드 중...');
+            
+            try {
+                const { start, end } = getTodayRange();
+                
+                // 메시지 데이터 로드
+                const { data: messages, error: msgError } = await supabaseClient
+                    .from('manager_messages')
+                    .select('*')
+                    .gte('created_at', start)
+                    .lte('created_at', end)
+                    .order('created_at', { ascending: false })
+                    .limit(50);
+                
+                if (msgError) throw msgError;
+                
+                currentMessages = messages || [];
+                
+                // 통계 계산
+                calculateStats();
+                
+                // UI 업데이트
+                updateAllRankings();
+                updateRecentMessages();
+                
+                setStatus('active', '업데이트 완료');
+                updateLastTime();
+                
+            } catch (error) {
+                console.error('데이터 로드 실패:', error);
+                setStatus('error', '로드 실패');
+                showNotification('데이터 로드 실패', 'error');
+            } finally {
+                btn.disabled = false;
+            }
+        }
+        
+        // 통계 계산
+        function calculateStats() {
+            const stats = {};
+            
+            currentMessages.forEach(msg => {
+                const managerId = msg.writer_manager_id;
+                const managerName = msg.writer_manager_name;
+                
+                if (!stats[managerId]) {
+                    stats[managerId] = {
+                        id: managerId,
+                        name: managerName,
+                        team: getTeam(managerName),
+                        messageCount: 0,
+                        totalChars: 0,
+                        uniqueChats: new Set()
+                    };
+                }
+                
+                stats[managerId].messageCount++;
+                stats[managerId].totalChars += msg.message_length;
+                stats[managerId].uniqueChats.add(msg.user_chat_id);
+            });
+            
+            currentStats = Object.values(stats).map(s => ({
+                ...s,
+                uniqueChats: s.uniqueChats.size,
+                avgChars: Math.round(s.totalChars / s.messageCount)
+            }));
+        }
+        
+        // 랭킹 업데이트
+        function updateAllRankings() {
+            // 메시지 수 랭킹
+            const messageRanking = [...currentStats].sort((a, b) => b.messageCount - a.messageCount);
+            const messageBody = document.getElementById('messageRankingBody');
+            
+            if (messageRanking.length === 0) {
+                messageBody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:50px;color:#666;">오늘 데이터가 없습니다</td></tr>';
+            } else {
+                messageBody.innerHTML = messageRanking.map((item, index) => `
+                    <tr>
+                        <td><span class="rank-number">#${index + 1}</span></td>
+                        <td>${item.name}</td>
+                        <td><span class="team-badge ${getTeamClass(item.team)}">${item.team}</span></td>
+                        <td style="font-size:20px;color:#1E6FFF;font-weight:600;">${item.messageCount}</td>
+                        <td>${item.totalChars.toLocaleString()}</td>
+                    </tr>
+                `).join('');
+            }
+            
+            // 글자수 랭킹
+            const charRanking = [...currentStats].sort((a, b) => b.totalChars - a.totalChars);
+            const charBody = document.getElementById('charRankingBody');
+            
+            if (charRanking.length === 0) {
+                charBody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:50px;color:#666;">오늘 데이터가 없습니다</td></tr>';
+            } else {
+                charBody.innerHTML = charRanking.map((item, index) => `
+                    <tr>
+                        <td><span class="rank-number">#${index + 1}</span></td>
+                        <td>${item.name}</td>
+                        <td><span class="team-badge ${getTeamClass(item.team)}">${item.team}</span></td>
+                        <td style="font-size:20px;color:#1E6FFF;font-weight:600;">${item.totalChars.toLocaleString()}</td>
+                        <td>${item.messageCount}</td>
+                    </tr>
+                `).join('');
+            }
+            
+            // 팀별 통계
+            updateTeamStats();
+        }
+        
+        // 팀별 통계 업데이트
+        function updateTeamStats() {
+            const teamStats = {};
+            
+            Object.keys(teamInfo).forEach(team => {
+                teamStats[team] = {
+                    team: team,
+                    activeMembers: 0,
+                    totalMessages: 0,
+                    totalChars: 0
+                };
+            });
+            
+            currentStats.forEach(manager => {
+                const team = manager.team;
+                if (teamStats[team]) {
+                    teamStats[team].activeMembers++;
+                    teamStats[team].totalMessages += manager.messageCount;
+                    teamStats[team].totalChars += manager.totalChars;
+                }
+            });
+            
+            const teamBody = document.getElementById('teamRankingBody');
+            const teamArray = Object.values(teamStats).sort((a, b) => b.totalMessages - a.totalMessages);
+            
+            teamBody.innerHTML = teamArray.map(team => `
+                <tr>
+                    <td><span class="team-badge ${getTeamClass(team.team)}">${team.team}</span></td>
+                    <td>${team.activeMembers}명</td>
+                    <td>${team.totalMessages}</td>
+                    <td>${team.totalChars.toLocaleString()}</td>
+                    <td>${team.totalMessages > 0 ? Math.round(team.totalChars / team.totalMessages) : 0}</td>
+                </tr>
+            `).join('');
+        }
+        
+        // 최근 메시지 업데이트
+        function updateRecentMessages() {
+            const container = document.getElementById('messagesContainer');
+            const recentMessages = currentMessages.slice(0, 20);
+            
+            if (recentMessages.length === 0) {
+                container.innerHTML = '<div style="padding:50px;text-align:center;color:#666;">최근 메시지가 없습니다</div>';
+            } else {
+                container.innerHTML = recentMessages.map(msg => {
+                    const time = new Date(msg.created_at);
+                    const timeStr = `${time.getHours().toString().padStart(2,'0')}:${time.getMinutes().toString().padStart(2,'0')}`;
+                    const team = getTeam(msg.writer_manager_name);
+                    
+                    return `
+                        <div class="message-item">
+                            <div class="message-time">${timeStr}</div>
+                            <div class="message-content">
+                                <div class="message-manager">
+                                    ${msg.writer_manager_name}
+                                    <span class="team-badge ${getTeamClass(team)}">${team}</span>
+                                </div>
+                                <div class="message-text">${msg.message_text}</div>
+                                <div class="message-meta">
+                                    ${msg.message_length}자 | ${msg.assigned_manager_name} 상담사 도움
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
+        }
+        
+        // 실시간 구독
+        function subscribeToChanges() {
+            supabaseClient
+                .channel('manager_messages_changes')
+                .on('postgres_changes', 
+                    { event: 'INSERT', schema: 'public', table: 'manager_messages' },
+                    (payload) => {
+                        console.log('새 메시지:', payload.new);
+                        showNotification('새로운 도움 메시지가 도착했습니다');
+                        loadData();
+                    }
+                )
+                .subscribe();
+        }
+        
+        // 탭 전환
+        function switchTab(tab) {
+            currentTab = tab;
+            
+            // 탭 버튼 스타일
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.getElementById(`tab-${tab}`).classList.add('active');
+            
+            // 테이블 표시/숨김
+            document.getElementById('ranking-messages').style.display = tab === 'messages' ? 'block' : 'none';
+            document.getElementById('ranking-chars').style.display = tab === 'chars' ? 'block' : 'none';
+            document.getElementById('ranking-team').style.display = tab === 'team' ? 'block' : 'none';
+        }
+        
+        // 자동 새로고침 토글
+        function toggleAutoRefresh() {
+            isAutoRefresh = !isAutoRefresh;
+            const btn = document.getElementById('autoRefreshBtn');
+            
+            if (isAutoRefresh) {
+                btn.textContent = '자동 새로고침 ON';
+                btn.classList.add('primary');
+                autoRefreshInterval = setInterval(loadData, 30000); // 30초마다
+                showNotification('자동 새로고침 활성화 (30초)');
+            } else {
+                btn.textContent = '자동 새로고침 OFF';
+                btn.classList.remove('primary');
+                if (autoRefreshInterval) {
+                    clearInterval(autoRefreshInterval);
+                }
+                showNotification('자동 새로고침 비활성화');
+            }
+        }
+        
+        // 상태 표시
+        function setStatus(type, text) {
+            document.getElementById('statusDot').className = 'status-dot ' + type;
+            document.getElementById('statusText').textContent = text;
+        }
+        
+        // 마지막 업데이트 시간
+        function updateLastTime() {
+            const now = new Date();
+            document.getElementById('lastUpdate').textContent = 
+                `마지막 업데이트: ${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}`;
+        }
+        
+        // 알림 표시
+        function showNotification(message, type = 'success') {
+            const notification = document.getElementById('notification');
+            notification.textContent = message;
+            notification.style.borderColor = type === 'error' ? '#FF0000' : '#1E6FFF';
+            notification.classList.add('show');
+            
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, 3000);
+        }
+        
+        // 시작
+        init();
+    </script>
+</body>
+</html>
