@@ -166,13 +166,80 @@ const parseBlocks = (blocks) => {
   return texts.filter(Boolean).join(' ');
 };
 
+// 시스템 메시지나 ID 패턴 감지
+const isSystemMessage = (text) => {
+  if (!text) return false;
+  
+  // ID 패턴들 (UUID, 채팅방 ID 등)
+  const idPatterns = [
+    /^userChat-[a-f0-9]{20,}$/i,  // userChat-ID 형식
+    /^chat-[a-f0-9]{20,}$/i,       // chat-ID 형식
+    /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i,  // UUID
+    /^[a-f0-9]{24,}$/,              // MongoDB ObjectId 스타일
+    /^msg_[a-zA-Z0-9]{20,}$/,      // 메시지 ID 형식
+    /^manager-[a-f0-9]{20,}$/i,    // 매니저 ID 형식
+  ];
+  
+  // 시스템 메시지 패턴들
+  const systemPatterns = [
+    /^(상담사?가?\s*)?(배정|할당|변경|전환|종료)(되었습니다|됐습니다|했습니다)?$/,
+    /^(대화|상담|채팅)을?\s*(시작|종료|완료)(합니다|했습니다)?$/,
+    /^\[시스템\]/,
+    /^\[자동\s*응답\]/,
+    /^Bot:/i,
+    /^System:/i,
+    /채팅방이?\s*(생성|열림|닫힘)/,
+    /상담\s*대기/,
+    /자동\s*배정/,
+  ];
+  
+  const trimmedText = text.trim();
+  
+  // ID 패턴 체크
+  for (const pattern of idPatterns) {
+    if (pattern.test(trimmedText)) {
+      console.log('ID 패턴 감지:', trimmedText);
+      return true;
+    }
+  }
+  
+  // 시스템 메시지 패턴 체크
+  for (const pattern of systemPatterns) {
+    if (pattern.test(trimmedText)) {
+      console.log('시스템 메시지 패턴 감지:', trimmedText);
+      return true;
+    }
+  }
+  
+  // 너무 짧은 메시지 중 특정 키워드만 있는 경우
+  if (trimmedText.length < 10) {
+    const systemKeywords = ['open', 'close', 'assign', 'transfer', 'start', 'end', 'system'];
+    const lowerText = trimmedText.toLowerCase();
+    for (const keyword of systemKeywords) {
+      if (lowerText === keyword) {
+        console.log('시스템 키워드 감지:', trimmedText);
+        return true;
+      }
+    }
+  }
+  
+  return false;
+};
+
 // 메시지 텍스트 추출 함수 - 모든 가능한 필드 체크
 const extractMessageText = (message) => {
   let text = '';
   
   try {
+    // 시스템 메시지 타입 체크
+    if (message.type && ['system', 'bot', 'automated', 'assignment'].includes(message.type)) {
+      console.log('시스템 메시지 타입 감지, 스킵:', message.type);
+      return '[시스템 메시지]';
+    }
+    
     // 디버깅: 메시지 전체 구조 확인
     console.log('메시지 필드 확인:', {
+      type: message.type,
       hasPlainText: !!message.plainText,
       hasMessage: !!message.message,
       hasText: !!message.text,
@@ -339,6 +406,12 @@ const extractMessageText = (message) => {
   // 최종 텍스트 정리
   if (text) {
     text = text.trim().replace(/\s+/g, ' ');
+    
+    // 시스템 메시지인지 확인
+    if (isSystemMessage(text)) {
+      console.log('⚠️ 시스템 메시지 감지되어 필터링:', text);
+      return '[시스템 메시지]';
+    }
   }
   
   return text || '';
@@ -465,6 +538,12 @@ export default async function handler(req, res) {
       // 메시지 텍스트 추출
       let messageText = extractMessageText(message);
       
+      // 시스템 메시지는 무시
+      if (messageText === '[시스템 메시지]') {
+        console.log('시스템 메시지 감지되어 무시함');
+        return res.json({ ignored: true, reason: 'System message' });
+      }
+      
       // 텍스트가 없으면 추가 시도
       if (!messageText || messageText === '') {
         console.warn('⚠️ 첫 시도에서 빈 메시지 감지! 추가 탐색 시작...');
@@ -474,9 +553,21 @@ export default async function handler(req, res) {
           messageText = extractMessageText(payload.refers.message);
         }
         
+        // 시스템 메시지 재확인
+        if (messageText === '[시스템 메시지]') {
+          console.log('추가 탐색에서 시스템 메시지 감지되어 무시함');
+          return res.json({ ignored: true, reason: 'System message' });
+        }
+        
         // 그래도 없으면 payload 전체에서 찾기
         if (!messageText) {
           messageText = findTextRecursive(payload);
+          
+          // 찾은 텍스트가 시스템 메시지인지 확인
+          if (messageText && isSystemMessage(messageText)) {
+            console.log('재귀 탐색에서 시스템 메시지 감지되어 무시함:', messageText);
+            return res.json({ ignored: true, reason: 'System message' });
+          }
         }
         
         if (!messageText) {
@@ -495,6 +586,18 @@ export default async function handler(req, res) {
         }
       } catch (e) {
         console.log('담당자 이름 조회 실패, ID 사용');
+      }
+      
+      // 최종 시스템 메시지 체크
+      if (isSystemMessage(messageText)) {
+        console.log('최종 체크에서 시스템 메시지 감지되어 무시함:', messageText);
+        return res.json({ ignored: true, reason: 'System message detected' });
+      }
+      
+      // 너무 짧은 메시지 필터링 (선택적)
+      if (messageText.length < 2 && !['?', '!', '.', '네', '예', 'ㅋ', 'ㅎ'].includes(messageText)) {
+        console.log('너무 짧은 메시지 무시:', messageText);
+        return res.json({ ignored: true, reason: 'Message too short' });
       }
       
       // 데이터 저장
