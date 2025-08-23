@@ -1,0 +1,8 @@
+{
+  "name": "manager-tracker",
+  "version": "1.0.0",
+  "main": "api/track.js",
+  "scripts": {
+    "start": "node api/track.js"
+  }
+}
