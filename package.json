@@ -1,8 +1,14 @@
 {
-  "name": "manager-tracker",
+  "name": "channeltalk-webhook-handler",
   "version": "1.0.0",
+  "description": "Channel Talk Webhook Handler for Manager Messages",
   "main": "api/track.js",
   "scripts": {
-    "start": "node api/track.js"
+    "dev": "vercel dev",
+    "deploy": "vercel --prod"
+  },
+  "dependencies": {},
+  "engines": {
+    "node": "18.x"
   }
 }
