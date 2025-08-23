@@ -8,20 +8,53 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #000; color: #fff; min-height: 100vh; }
-        .container { max-width: 1400px; margin: 0 auto; padding: 40px 20px; }
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; 
+            background: #000; 
+            color: #fff; 
+            min-height: 100vh;
+            line-height: 1.6;
+        }
+        .container { 
+            max-width: 1400px; 
+            margin: 0 auto; 
+            padding: 40px 20px; 
+        }
         
-        .header { text-align: center; margin-bottom: 50px; }
-        .header h1 { font-size: 52px; font-weight: 200; margin-bottom: 10px; }
-        .header h1 span { color: #1E6FFF; font-weight: 400; }
-        .date-display { color: #999; font-size: 15px; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 5px; }
-        .today-info { color: #1E6FFF; font-size: 20px; margin-top: 10px; }
+        .header { 
+            text-align: center; 
+            margin-bottom: 50px;
+            padding: 30px 0;
+        }
+        .header h1 { 
+            font-size: 54px; 
+            font-weight: 200; 
+            margin-bottom: 15px;
+            letter-spacing: -1px;
+        }
+        .header h1 span { 
+            color: #1E6FFF; 
+            font-weight: 400; 
+        }
+        .date-display { 
+            color: #aaa; 
+            font-size: 16px; 
+            text-transform: uppercase; 
+            letter-spacing: 1.5px; 
+            margin-bottom: 8px; 
+        }
+        .today-info { 
+            color: #1E6FFF; 
+            font-size: 20px; 
+            margin-top: 12px;
+            font-weight: 300;
+        }
         
         .control-bar { 
             display: flex; 
             flex-direction: column;
-            gap: 15px;
-            padding: 20px 30px; 
+            gap: 20px;
+            padding: 25px 30px; 
             background: #000; 
             border: 1px solid #222; 
             margin-bottom: 40px; 
@@ -31,86 +64,246 @@
             justify-content: space-between; 
             align-items: center; 
             flex-wrap: wrap; 
-            gap: 15px;
+            gap: 20px;
         }
-        .control-buttons { display: flex; gap: 15px; flex-wrap: wrap; }
+        .control-buttons { 
+            display: flex; 
+            gap: 15px; 
+            flex-wrap: wrap; 
+        }
         
-        .btn { padding: 12px 28px; background: transparent; color: #888; border: 1px solid #333; font-size: 15px; font-weight: 500; letter-spacing: 1px; text-transform: uppercase; cursor: pointer; transition: all 0.3s; }
-        .btn:hover { color: #1E6FFF; border-color: #1E6FFF; }
-        .btn.primary { color: #1E6FFF; border-color: #1E6FFF; }
-        .btn.primary:hover { background: #1E6FFF; color: #000; }
-        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .btn { 
+            padding: 12px 28px; 
+            background: transparent; 
+            color: #999; 
+            border: 1px solid #333; 
+            font-size: 15px; 
+            font-weight: 500; 
+            letter-spacing: 0.5px; 
+            text-transform: uppercase; 
+            cursor: pointer; 
+            transition: all 0.3s;
+        }
+        .btn:hover { 
+            color: #1E6FFF; 
+            border-color: #1E6FFF;
+        }
+        .btn.primary { 
+            color: #1E6FFF; 
+            border-color: #1E6FFF; 
+        }
+        .btn.primary:hover { 
+            background: #1E6FFF; 
+            color: #000;
+        }
+        .btn:disabled { 
+            opacity: 0.5; 
+            cursor: not-allowed;
+        }
         
-        .status-indicator { display: flex; align-items: center; gap: 10px; font-size: 13px; text-transform: uppercase; letter-spacing: 1px; }
-        .status-dot { width: 8px; height: 8px; border-radius: 50%; background: #888; animation: pulse 2s infinite; }
+        .status-indicator { 
+            display: flex; 
+            align-items: center; 
+            gap: 12px; 
+            font-size: 13px; 
+            text-transform: uppercase; 
+            letter-spacing: 0.5px;
+            color: #999;
+        }
+        .status-dot { 
+            width: 8px; 
+            height: 8px; 
+            border-radius: 50%; 
+            background: #888; 
+            animation: pulse 2s infinite;
+        }
         .status-dot.active { background: #00FF00; }
         .status-dot.loading { background: #1E6FFF; }
         .status-dot.error { background: #FF0000; }
-        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+        @keyframes pulse { 
+            0%, 100% { opacity: 1; } 
+            50% { opacity: 0.5; } 
+        }
         
-        .tabs { display: flex; gap: 2px; margin-bottom: 40px; background: #111; padding: 2px; }
-        .tab { flex: 1; padding: 18px; background: #000; color: #888; border: none; cursor: pointer; font-size: 15px; text-transform: uppercase; letter-spacing: 1px; transition: all 0.3s; }
-        .tab:hover { color: #1E6FFF; }
-        .tab.active { color: #1E6FFF; background: #0a0a0a; }
+        .tabs { 
+            display: flex; 
+            gap: 2px; 
+            margin-bottom: 40px; 
+            background: #111; 
+            padding: 2px;
+        }
+        .tab { 
+            flex: 1; 
+            padding: 18px; 
+            background: #000; 
+            color: #888; 
+            border: none; 
+            cursor: pointer; 
+            font-size: 15px; 
+            text-transform: uppercase; 
+            letter-spacing: 1px; 
+            transition: all 0.3s;
+        }
+        .tab:hover { 
+            color: #1E6FFF;
+        }
+        .tab.active { 
+            color: #1E6FFF; 
+            background: #0a0a0a;
+        }
         
-        .ranking-table { background: #000; border: 1px solid #222; margin-bottom: 40px; }
-        .table-header { padding: 25px 30px; border-bottom: 1px solid #222; display: flex; justify-content: space-between; align-items: center; }
-        .table-title { font-size: 18px; font-weight: 300; letter-spacing: 1px; text-transform: uppercase; }
-        .table-subtitle { font-size: 13px; color: #999; }
+        .ranking-table { 
+            background: #000; 
+            border: 1px solid #222; 
+            margin-bottom: 40px;
+        }
+        .table-header { 
+            padding: 28px 32px; 
+            border-bottom: 1px solid #222; 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+        }
+        .table-title { 
+            font-size: 19px; 
+            font-weight: 300; 
+            letter-spacing: 0.5px; 
+            text-transform: uppercase;
+        }
+        .table-subtitle { 
+            font-size: 13px; 
+            color: #999;
+            margin-top: 4px;
+        }
         
-        table { width: 100%; border-collapse: collapse; }
-        th { padding: 20px; text-align: left; font-size: 13px; color: #999; text-transform: uppercase; letter-spacing: 2px; border-bottom: 1px solid #222; }
-        td { padding: 20px; font-size: 16px; border-bottom: 1px solid #111; }
-        tr:hover { background: #050505; }
+        table { 
+            width: 100%; 
+            border-collapse: collapse; 
+        }
+        th { 
+            padding: 20px 24px; 
+            text-align: left; 
+            font-size: 13px; 
+            color: #999; 
+            text-transform: uppercase; 
+            letter-spacing: 1.5px; 
+            border-bottom: 1px solid #222;
+            font-weight: 400;
+        }
+        td { 
+            padding: 22px 24px; 
+            font-size: 16px; 
+            border-bottom: 1px solid #111;
+        }
+        tr { 
+            transition: all 0.3s ease;
+        }
+        tr:hover { 
+            background: #050505;
+        }
         
-        .rank-number { font-size: 20px; font-weight: 200; color: #1E6FFF; }
-        .manager-name { cursor: pointer; transition: color 0.3s; }
-        .manager-name:hover { color: #1E6FFF; text-decoration: underline; }
-        .team-badge { display: inline-block; padding: 4px 12px; background: #1E6FFF; color: #000; font-size: 13px; font-weight: 600; margin-left: 10px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .rank-number { 
+            font-size: 22px; 
+            font-weight: 200; 
+            color: #1E6FFF;
+        }
+        .manager-name { 
+            cursor: pointer; 
+            transition: color 0.3s;
+            font-size: 17px;
+        }
+        .manager-name:hover { 
+            color: #1E6FFF; 
+            text-decoration: underline;
+        }
+        .team-badge { 
+            display: inline-block; 
+            padding: 5px 12px; 
+            color: #000; 
+            font-size: 12px; 
+            font-weight: 600; 
+            margin-left: 10px; 
+            text-transform: uppercase; 
+            letter-spacing: 0.5px;
+        }
         .team-1 { background: #FF6B6B; }
         .team-2 { background: #4ECDC4; }
         .team-3 { background: #45B7D1; }
         .team-4 { background: #96CEB4; }
         .team-5 { background: #FFEAA7; color: #000; }
         
-        .score-badge { display: inline-block; padding: 2px 8px; font-size: 12px; border-radius: 3px; margin-left: 10px; }
-        .score-high { background: rgba(255, 215, 0, 0.2); color: #FFD700; }
-        .score-medium { background: rgba(30, 111, 255, 0.2); color: #1E6FFF; }
-        .score-low { background: rgba(255, 255, 255, 0.1); color: #999; }
-        
-        .messages-section { background: #000; border: 1px solid #222; margin-top: 50px; }
-        .messages-header { padding: 25px 30px; border-bottom: 1px solid #222; }
-        .messages-container { max-height: 400px; overflow-y: auto; }
-        .message-item { padding: 20px 30px; border-bottom: 1px solid #111; display: flex; gap: 20px; align-items: start; }
-        .message-item.has-form { background: rgba(255, 215, 0, 0.03); }
-        .message-time { color: #999; font-size: 13px; min-width: 60px; }
-        .message-content { flex: 1; }
-        .message-manager { color: #1E6FFF; font-weight: 600; margin-bottom: 5px; font-size: 16px; }
-        .message-text { color: #ddd; font-size: 15px; line-height: 1.5; }
-        .message-meta { color: #999; font-size: 13px; margin-top: 5px; }
+        .messages-section { 
+            background: #000; 
+            border: 1px solid #222; 
+            margin-top: 50px;
+        }
+        .messages-header { 
+            padding: 28px 32px; 
+            border-bottom: 1px solid #222;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .messages-container { 
+            max-height: 700px; 
+            overflow-y: auto;
+        }
+        .message-item { 
+            padding: 24px 32px; 
+            border-bottom: 1px solid #111; 
+            display: flex; 
+            gap: 24px; 
+            align-items: start;
+            transition: all 0.3s;
+        }
+        .message-item:hover {
+            background: #050505;
+        }
+        .message-item.has-form { 
+            background: rgba(255, 215, 0, 0.03);
+        }
+        .message-time { 
+            color: #999; 
+            font-size: 14px; 
+            min-width: 60px;
+            font-weight: 500;
+        }
+        .message-content { 
+            flex: 1; 
+        }
+        .message-manager { 
+            color: #1E6FFF; 
+            font-weight: 600; 
+            margin-bottom: 8px; 
+            font-size: 17px; 
+        }
+        .message-text { 
+            color: #ddd; 
+            font-size: 15px; 
+            line-height: 1.7;
+            margin-bottom: 8px;
+        }
+        .message-meta { 
+            color: #999; 
+            font-size: 13px;
+        }
         
         .form-link { 
             color: #FFD700; 
             font-weight: 600; 
-            text-decoration: underline; 
-            animation: glow 1.5s ease-in-out infinite alternate;
+            text-decoration: underline;
             padding: 0 2px;
-        }
-        @keyframes glow {
-            from { text-shadow: 0 0 5px #FFD700, 0 0 10px #FFD700; }
-            to { text-shadow: 0 0 10px #FFD700, 0 0 20px #FFD700, 0 0 30px #FFD700; }
         }
         
         .form-indicator {
             display: inline-block;
             margin-left: 10px;
-            padding: 2px 8px;
+            padding: 3px 8px;
             background: rgba(255, 215, 0, 0.2);
             color: #FFD700;
             font-size: 12px;
             font-weight: 600;
             border-radius: 3px;
-            animation: pulse 2s infinite;
         }
         .form-indicator.multiple {
             background: rgba(255, 100, 0, 0.3);
@@ -118,18 +311,161 @@
             font-weight: 700;
         }
         
-        /* 모달 스타일 */
-        .modal { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.9); z-index: 1000; overflow-y: auto; }
-        .modal.show { display: block; }
-        .modal-content { max-width: 900px; margin: 50px auto; background: #000; border: 1px solid #222; }
-        .modal-header { padding: 25px 30px; border-bottom: 1px solid #222; display: flex; justify-content: space-between; align-items: center; }
-        .modal-title { font-size: 20px; }
-        .modal-close { color: #999; font-size: 28px; cursor: pointer; transition: color 0.3s; }
-        .modal-close:hover { color: #fff; }
-        .modal-body { padding: 30px; max-height: 70vh; overflow-y: auto; }
+        .date-selector { 
+            display: flex; 
+            align-items: center; 
+            gap: 15px; 
+            padding: 18px 24px; 
+            background: #111; 
+            border: 1px solid #222; 
+            border-radius: 0;
+        }
+        .date-input { 
+            background: #000; 
+            color: #1E6FFF; 
+            border: 1px solid #333; 
+            padding: 10px 14px; 
+            font-size: 14px; 
+            cursor: pointer;
+        }
+        .date-input:hover { 
+            border-color: #1E6FFF;
+        }
+        .date-nav-btn { 
+            padding: 10px 14px; 
+            background: transparent; 
+            color: #888; 
+            border: 1px solid #333; 
+            cursor: pointer; 
+            font-size: 13px;
+            transition: all 0.3s;
+        }
+        .date-nav-btn:hover { 
+            color: #1E6FFF; 
+            border-color: #1E6FFF;
+        }
+        .date-nav-btn:disabled { 
+            opacity: 0.3; 
+            cursor: not-allowed;
+        }
+        .date-info { 
+            color: #999; 
+            font-size: 13px; 
+            margin-left: 10px;
+            font-weight: 500;
+        }
+        .date-info.today { 
+            color: #00FF00; 
+            font-weight: 600;
+        }
+        .date-info.past { 
+            color: #FF6B6B;
+        }
         
-        .notification { position: fixed; top: 20px; right: 20px; padding: 15px 20px; background: #111; border: 1px solid #1E6FFF; color: #fff; font-size: 15px; z-index: 1000; animation: slideIn 0.3s; display: none; }
-        .notification.show { display: block; }
+        /* 더보기 버튼 스타일 */
+        .load-more-btn {
+            width: 100%;
+            padding: 20px;
+            background: #111;
+            border: 1px solid #333;
+            color: #1E6FFF;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-align: center;
+            font-weight: 500;
+        }
+        .load-more-btn:hover {
+            background: #1E6FFF;
+            color: #000;
+        }
+        .load-more-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        /* 메시지 필터 스타일 */
+        .message-filters {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+        .filter-select {
+            background: #000;
+            color: #1E6FFF;
+            border: 1px solid #333;
+            padding: 8px 12px;
+            font-size: 14px;
+            cursor: pointer;
+        }
+        .filter-select:hover {
+            border-color: #1E6FFF;
+        }
+        
+        /* 모달 스타일 */
+        .modal { 
+            display: none; 
+            position: fixed; 
+            top: 0; 
+            left: 0; 
+            right: 0; 
+            bottom: 0; 
+            background: rgba(0, 0, 0, 0.9); 
+            z-index: 1000; 
+            overflow-y: auto;
+        }
+        .modal.show { 
+            display: block;
+        }
+        .modal-content { 
+            max-width: 900px; 
+            margin: 50px auto; 
+            background: #000; 
+            border: 1px solid #222;
+        }
+        .modal-header { 
+            padding: 28px 32px; 
+            border-bottom: 1px solid #222; 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+        }
+        .modal-title { 
+            font-size: 22px;
+            font-weight: 300;
+        }
+        .modal-close { 
+            color: #999; 
+            font-size: 28px; 
+            cursor: pointer; 
+            transition: color 0.3s;
+        }
+        .modal-close:hover { 
+            color: #fff;
+        }
+        .modal-body { 
+            padding: 32px; 
+            max-height: 70vh; 
+            overflow-y: auto;
+        }
+        
+        .notification { 
+            position: fixed; 
+            top: 20px; 
+            right: 20px; 
+            padding: 16px 24px; 
+            background: #111; 
+            border: 1px solid #1E6FFF; 
+            color: #fff; 
+            font-size: 15px; 
+            z-index: 1000; 
+            animation: slideIn 0.3s; 
+            display: none;
+        }
+        .notification.show { 
+            display: block;
+        }
+        
         .new-message {
             animation: slideIn 0.5s ease;
             background: linear-gradient(90deg, rgba(30, 111, 255, 0.1) 0%, transparent 100%);
@@ -147,90 +483,90 @@
         
         .count-animation {
             display: inline-block;
+            font-variant-numeric: tabular-nums;
         }
         
-        tr {
-            transition: all 0.3s ease;
-        }
-        
-        .loading-screen { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: #000; display: flex; justify-content: center; align-items: center; z-index: 9999; }
-        .loading-text { color: #1E6FFF; font-size: 20px; animation: pulse 1s infinite; }
-        
-        
-        .date-selector { 
-            display: flex; 
-            align-items: center; 
-            gap: 15px; 
-            padding: 15px 20px; 
-            background: #111; 
-            border: 1px solid #222; 
-            border-radius: 5px;
-            margin-bottom: 15px;
-        }
-        .date-input { 
+        .loading-screen { 
+            position: fixed; 
+            top: 0; 
+            left: 0; 
+            right: 0; 
+            bottom: 0; 
             background: #000; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            z-index: 9999; 
+        }
+        .loading-text { 
             color: #1E6FFF; 
-            border: 1px solid #333; 
-            padding: 8px 12px; 
-            font-size: 14px; 
-            cursor: pointer;
+            font-size: 22px; 
+            animation: pulse 1s infinite;
         }
-        .date-input:hover { border-color: #1E6FFF; }
-        .date-nav-btn { 
-            padding: 8px 12px; 
-            background: transparent; 
-            color: #888; 
-            border: 1px solid #333; 
-            cursor: pointer; 
-            font-size: 13px;
-            transition: all 0.3s;
+        
+        /* 숫자 강조 - 심플하게 */
+        .score-number {
+            font-size: 24px;
+            font-weight: 600;
+            color: #FFD700;
         }
-        .date-nav-btn:hover { 
-            color: #1E6FFF; 
-            border-color: #1E6FFF; 
+        .message-number {
+            font-size: 24px;
+            font-weight: 600;
+            color: #1E6FFF;
         }
-        .date-nav-btn:disabled { 
-            opacity: 0.3; 
-            cursor: not-allowed; 
+        .char-number {
+            font-size: 20px;
+            font-weight: 500;
+            color: #ddd;
         }
-        .date-info { 
-            color: #999; 
-            font-size: 13px; 
-            margin-left: 10px;
-        }
-        .date-info.today { 
-            color: #00FF00; 
-            font-weight: 600; 
-        }
-        .date-info.past { 
-            color: #FF6B6B; 
+        .rate-number {
+            font-size: 18px;
+            font-weight: 500;
+            color: #96CEB4;
         }
         
         @media (max-width: 768px) {
+            .header h1 { font-size: 36px; }
             .control-bar { padding: 15px; }
             .date-selector { 
                 flex-wrap: wrap;
                 gap: 10px;
             }
             .date-input { flex: 1; min-width: 150px; }
-            .date-nav-btn { padding: 8px 10px; font-size: 12px; }
+            .date-nav-btn { padding: 8px 12px; font-size: 12px; }
             .control-row { flex-direction: column; align-items: stretch; }
             .control-buttons { width: 100%; justify-content: center; }
             .status-indicator { justify-content: center; }
             .tabs { flex-direction: column; }
             .date-info { display: block; width: 100%; text-align: center; margin-top: 10px; margin-left: 0; }
+            .modal-content { margin: 20px; }
+            table { font-size: 14px; }
+            th, td { padding: 14px; }
+        }
+        
+        .form-link { 
+            color: #FFD700; 
+            font-weight: 600; 
+            text-decoration: underline; 
+            animation: glow 1.5s ease-in-out infinite alternate;
+            padding: 0 2px;
+        }
+        @keyframes glow {
+            from { text-shadow: 0 0 5px #FFD700, 0 0 10px #FFD700; }
+            to { text-shadow: 0 0 10px #FFD700, 0 0 20px #FFD700, 0 0 30px #FFD700; }
         }
     </style>
 </head>
 <body>
     <div class="loading-screen" id="loadingScreen">
-        <div class="loading-text">시스템 초기화 중...</div>
+        <div class="loading-text">🚀 시스템 초기화 중...</div>
     </div>
     
     <div class="container">
         <div class="header">
             <h1>SNS센터 <span>도움 카운팅 프로그램</span></h1>
-            <div class="date-display" id="dateDisplay"></div>
+            <div class="date-display" id="dateDisplay">📅 날짜 로딩중...</div>
             <div class="today-info" id="todayInfo">오늘 하루 실시간 집계</div>
         </div>
         
@@ -239,18 +575,18 @@
                 <button class="date-nav-btn" onclick="app.changeDate(-1)">◀ 이전날</button>
                 <input type="date" class="date-input" id="dateSelector" onchange="app.selectDate(this.value)">
                 <button class="date-nav-btn" onclick="app.changeDate(1)" id="nextDayBtn">다음날 ▶</button>
-                <button class="date-nav-btn" onclick="app.goToToday()">오늘</button>
                 <span class="date-info" id="dateInfo"></span>
             </div>
             <div class="control-row">
                 <div class="control-buttons">
-                    <button class="btn primary" onclick="app.loadData()" id="refreshBtn">전체 새로고침</button>
-                    <button class="btn primary" onclick="app.toggleAutoRefresh()" id="autoRefreshBtn">자동 업데이트 ON</button>
+                    <button class="btn primary" onclick="app.loadData()" id="refreshBtn">🔄 전체 새로고침</button>
+                    <button class="btn primary" onclick="app.toggleAutoRefresh()" id="autoRefreshBtn">⚡ 자동 업데이트 ON</button>
+                    <button class="btn" onclick="app.exportData()">📊 데이터 내보내기</button>
                 </div>
                 <div class="status-indicator">
                     <span class="status-dot" id="statusDot"></span>
                     <span id="statusText">대기 중</span>
-                    <span id="lastUpdate" style="margin-left: 20px; color: #999;"></span>
+                    <span id="lastUpdate" style="margin-left: 20px; color: #8BA5FF;">⏰ 업데이트 시간</span>
                 </div>
             </div>
         </div>
@@ -334,7 +670,18 @@
         
         <div class="messages-section">
             <div class="messages-header">
-                <div class="table-title" id="messagesTitle">실시간 도움 메시지</div>
+                <div>
+                    <div class="table-title" id="messagesTitle">최근 1시간 도움 메시지</div>
+                    <div class="table-subtitle" id="messageCount" style="color: #8BA5FF; margin-top: 5px;">전체 0개 메시지</div>
+                </div>
+                <div class="message-filters">
+                    <select class="filter-select" id="messageFilter" onchange="app.filterMessages(this.value)">
+                        <option value="all">전체 보기</option>
+                        <option value="form">신청서 포함만</option>
+                        <option value="team">팀별 보기</option>
+                    </select>
+                    <button class="btn" onclick="app.toggleAllMessages()" id="toggleAllBtn">1시간 내 전체 보기</button>
+                </div>
             </div>
             <div class="messages-container" id="messagesContainer">
                 <div style="padding:50px;text-align:center;color:#999;">최근 메시지가 없습니다</div>
@@ -362,13 +709,17 @@
         window.app = {
             supabaseClient: null,
             currentMessages: [],
+            displayedMessages: [],
             currentStats: [],
             currentTab: 'score',
             autoRefreshInterval: null,
-            isAutoRefresh: true, // 기본값을 true로 변경
-            selectedDate: new Date(), // 선택된 날짜
-            isToday: true, // 오늘 날짜인지 여부
-            realtimeSubscription: null, // 실시간 구독 객체
+            isAutoRefresh: true,
+            selectedDate: new Date(),
+            isToday: true,
+            realtimeSubscription: null,
+            messagesPerPage: 50,
+            currentPage: 1,
+            showAllMessages: false,
             
             // 팀 정보
             teamInfo: {
@@ -408,14 +759,14 @@
                     // 실시간 구독
                     this.subscribeToChanges();
                     
-                    // 자동 새로고침 시작 (30초마다)
+                    // 자동 새로고침 시작
                     this.startAutoRefresh();
-                    document.getElementById('autoRefreshBtn').textContent = '자동 업데이트 ON';
+                    document.getElementById('autoRefreshBtn').innerHTML = '⚡ 자동 업데이트 ON';
                     document.getElementById('autoRefreshBtn').classList.add('primary');
                     
                 } catch (error) {
                     console.error('초기화 실패:', error);
-                    this.showNotification('시스템 초기화 실패', 'error');
+                    this.showNotification('⚠️ 시스템 초기화 실패', 'error');
                     document.getElementById('loadingScreen').style.display = 'none';
                 }
             },
@@ -446,7 +797,7 @@
             updateDateDisplay: function() {
                 const days = ['일', '월', '화', '수', '목', '금', '토'];
                 const dateStr = `${this.selectedDate.getFullYear()}년 ${this.selectedDate.getMonth()+1}월 ${this.selectedDate.getDate()}일 ${days[this.selectedDate.getDay()]}요일`;
-                document.getElementById('dateDisplay').textContent = dateStr;
+                document.getElementById('dateDisplay').innerHTML = `📅 ${dateStr}`;
                 
                 // 날짜 선택기 값 설정
                 const year = this.selectedDate.getFullYear();
@@ -462,9 +813,9 @@
                 const dateInfo = document.getElementById('dateInfo');
                 const todayInfo = document.getElementById('todayInfo');
                 if (this.isToday) {
-                    dateInfo.textContent = '오늘';
+                    dateInfo.innerHTML = '✨ 오늘';
                     dateInfo.className = 'date-info today';
-                    todayInfo.textContent = '오늘 하루 실시간 집계';
+                    todayInfo.innerHTML = '⚡ 오늘 하루 실시간 집계';
                     // 실시간 업데이트 활성화
                     if (!this.autoRefreshInterval && this.isAutoRefresh) {
                         this.startAutoRefresh();
@@ -472,13 +823,13 @@
                 } else {
                     const daysDiff = Math.floor((today - this.selectedDate) / (1000 * 60 * 60 * 24));
                     if (daysDiff > 0) {
-                        dateInfo.textContent = `${daysDiff}일 전`;
+                        dateInfo.innerHTML = `📆 ${daysDiff}일 전`;
                         dateInfo.className = 'date-info past';
                     } else {
-                        dateInfo.textContent = `${Math.abs(daysDiff)}일 후`;
+                        dateInfo.innerHTML = `📅 ${Math.abs(daysDiff)}일 후`;
                         dateInfo.className = 'date-info';
                     }
-                    todayInfo.textContent = `${dateStr} 집계`;
+                    todayInfo.innerHTML = `📊 ${dateStr} 집계`;
                     // 과거 데이터는 자동 업데이트 비활성화
                     if (this.autoRefreshInterval) {
                         clearInterval(this.autoRefreshInterval);
@@ -489,7 +840,7 @@
                 // 메시지 섹션 타이틀 업데이트
                 const messagesTitle = document.getElementById('messagesTitle');
                 if (this.isToday) {
-                    messagesTitle.textContent = '실시간 도움 메시지';
+                    messagesTitle.textContent = '최근 1시간 도움 메시지';
                 } else {
                     messagesTitle.textContent = `${dateStr} 도움 메시지`;
                 }
@@ -501,10 +852,10 @@
                 const autoBtn = document.getElementById('autoRefreshBtn');
                 if (!this.isToday) {
                     autoBtn.disabled = true;
-                    autoBtn.textContent = '자동 업데이트 (오늘만 가능)';
+                    autoBtn.innerHTML = '⚡ 자동 업데이트 (오늘만 가능)';
                 } else {
                     autoBtn.disabled = false;
-                    autoBtn.textContent = this.isAutoRefresh ? '자동 업데이트 ON' : '자동 업데이트 OFF';
+                    autoBtn.innerHTML = this.isAutoRefresh ? '⚡ 자동 업데이트 ON' : '⚡ 자동 업데이트 OFF';
                 }
             },
             
@@ -515,6 +866,8 @@
                 
                 this.selectedDate = new Date(dateString + 'T00:00:00');
                 this.updateDateDisplay();
+                this.currentPage = 1;
+                this.showAllMessages = false;
                 this.loadData();
                 
                 // 오늘이면 실시간 구독 재시작
@@ -539,6 +892,8 @@
                 
                 this.selectedDate = newDate;
                 this.updateDateDisplay();
+                this.currentPage = 1;
+                this.showAllMessages = false;
                 this.loadData();
                 
                 // 오늘이면 실시간 구독 재시작
@@ -554,6 +909,8 @@
                 
                 this.selectedDate = new Date();
                 this.updateDateDisplay();
+                this.currentPage = 1;
+                this.showAllMessages = false;
                 this.loadData();
                 
                 // 실시간 구독 재시작
@@ -572,7 +929,7 @@
                 };
             },
             
-            // 오늘 날짜 범위 (기존 함수 유지)
+            // 오늘 날짜 범위
             getTodayRange: function() {
                 const today = new Date();
                 const start = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 0, 0, 0);
@@ -597,7 +954,7 @@
                 return validLinks.length;
             },
             
-            // 신청서 링크 체크 함수 (기존 함수 유지 - UI용)
+            // 신청서 링크 체크 함수
             isValidFormLink: function(text) {
                 return this.countValidFormLinks(text) > 0;
             },
@@ -606,7 +963,7 @@
             highlightFormLinks: function(text) {
                 if (!text) return text;
                 
-                // form.ajd.co.kr/r?h= 패턴 모두 하이라이트 (g 플래그로 전역 매치)
+                // form.ajd.co.kr/r?h= 패턴 모두 하이라이트
                 return text.replace(
                     /((?:https?:\/\/)?form\.ajd\.co\.kr\/r\?h=[^\s]*)/gi,
                     '<span class="form-link">$1</span>'
@@ -618,16 +975,15 @@
                 let score = 1; // 기본 점수
                 
                 // 1. 신청서 가중치 (개당 +5점)
-                // 한 메시지에 여러 신청서가 있으면 각각 카운트
                 const formCount = this.countValidFormLinks(message.message_text);
                 score += (formCount * 5);
                 
                 // 2. 길이 가중치
                 const length = message.message_length;
                 if (length < 10) {
-                    score *= 0.5; // 10글자 미만: 50% 감소
+                    score *= 0.5;
                 } else if (length >= 30) {
-                    score *= 1.5; // 30글자 이상: 50% 증가
+                    score *= 1.5;
                 }
                 
                 // 3. 중복 메시지 페널티
@@ -639,24 +995,24 @@
                 
                 const duplicateCount = sameMessages.length;
                 if (duplicateCount === 2) {
-                    score *= 0.7; // 두 번째 중복: 30% 감소
+                    score *= 0.7;
                 } else if (duplicateCount > 2) {
-                    score *= 0.5; // 세 번째 이상: 50% 감소
+                    score *= 0.5;
                 }
                 
-                return Math.round(score * 100) / 100; // 소수점 둘째자리까지
+                return Math.round(score * 100) / 100;
             },
             
-            // 데이터 로드
+            // 데이터 로드 - 전체 데이터 가져오기
             loadData: async function() {
                 const btn = document.getElementById('refreshBtn');
                 btn.disabled = true;
-                this.setStatus('loading', '데이터 로드 중...');
+                this.setStatus('loading', '📊 전체 데이터 로드 중...');
                 
                 try {
                     const { start, end } = this.getSelectedDateRange();
                     
-                    // Supabase에서 직접 조회
+                    // Supabase에서 당일 전체 데이터 조회
                     const { data: messages, error } = await this.supabaseClient
                         .from('manager_messages')
                         .select('*')
@@ -671,6 +1027,8 @@
                         !this.excludedManagers.includes(msg.writer_manager_name)
                     );
                     
+                    console.log(`총 ${this.currentMessages.length}개 메시지 로드됨`);
+                    
                     // 통계 계산
                     this.calculateStats();
                     
@@ -678,13 +1036,13 @@
                     this.updateAllRankings();
                     this.updateRecentMessages();
                     
-                    this.setStatus('active', this.isToday && this.isAutoRefresh ? '업데이트 완료 | 자동 업데이트 ON' : this.isToday ? '업데이트 완료' : '과거 데이터 표시중');
+                    this.setStatus('active', this.isToday && this.isAutoRefresh ? '✅ 전체 데이터 로드 완료 | 자동 업데이트 ON' : this.isToday ? '✅ 전체 데이터 로드 완료' : '📆 과거 데이터 표시중');
                     this.updateLastTime();
                     
                 } catch (error) {
                     console.error('데이터 로드 실패:', error);
-                    this.setStatus('error', '로드 실패');
-                    this.showNotification('데이터 로드 실패: ' + error.message, 'error');
+                    this.setStatus('error', '❌ 로드 실패');
+                    this.showNotification('⚠️ 데이터 로드 실패: ' + error.message, 'error');
                 } finally {
                     btn.disabled = false;
                 }
@@ -708,7 +1066,7 @@
                             uniqueChats: new Set(),
                             helpScore: 0,
                             formCount: 0,
-                            messages: [] // 메시지 시간 추적용
+                            messages: []
                         };
                     }
                     
@@ -721,7 +1079,7 @@
                     const score = this.calculateHelpScore(msg, this.currentMessages);
                     stats[managerId].helpScore += score;
                     
-                    // 신청서 개수 카운트 (메시지당 여러 개 가능)
+                    // 신청서 개수 카운트
                     const formLinksCount = this.countValidFormLinks(msg.message_text);
                     stats[managerId].formCount += formLinksCount;
                 });
@@ -735,7 +1093,6 @@
                         const lastMessage = sortedTimes[sortedTimes.length - 1];
                         const timeDiffMinutes = (lastMessage - firstMessage) / (1000 * 60);
                         
-                        // 최소 1분으로 설정 (0으로 나누기 방지)
                         const activeMinutes = Math.max(timeDiffMinutes, 1);
                         messagesPerMinute = s.messageCount / activeMinutes;
                     }
@@ -750,7 +1107,7 @@
                 });
             },
             
-            // 랭킹 업데이트 (초기 로드용 - 기존 방식 유지)
+            // 랭킹 업데이트
             updateAllRankings: function() {
                 const noDataMessage = this.isToday ? '오늘 데이터가 없습니다' : '선택한 날짜에 데이터가 없습니다';
                 
@@ -766,11 +1123,9 @@
                             <td><span class="rank-number">#${index + 1}</span></td>
                             <td><span class="manager-name" onclick="app.showManagerMessages('${item.name}')" style="font-size:17px;">${item.name}</span></td>
                             <td><span class="team-badge ${this.getTeamClass(item.team)}">${item.team}</span></td>
-                            <td style="font-size:22px;color:#FFD700;font-weight:600;">
-                                <span class="count-animation">${item.helpScore}</span>
-                            </td>
-                            <td style="font-size:17px;">${item.messageCount}</td>
-                            <td style="font-size:17px;color:#FFD700;">${item.formCount}</td>
+                            <td><span class="score-number">${item.helpScore}</span></td>
+                            <td><span class="message-number">${item.messageCount}</span></td>
+                            <td><span class="score-number" style="font-size:20px;">${item.formCount}</span></td>
                         </tr>
                     `).join('');
                 }
@@ -787,11 +1142,9 @@
                             <td><span class="rank-number">#${index + 1}</span></td>
                             <td><span class="manager-name" onclick="app.showManagerMessages('${item.name}')" style="font-size:17px;">${item.name}</span></td>
                             <td><span class="team-badge ${this.getTeamClass(item.team)}">${item.team}</span></td>
-                            <td style="font-size:22px;color:#1E6FFF;font-weight:600;">
-                                <span class="count-animation">${item.messageCount}</span>
-                            </td>
-                            <td style="font-size:17px;color:#96CEB4;">${item.messagesPerMinute.toFixed(1)}/분</td>
-                            <td style="font-size:17px;">${item.totalChars.toLocaleString()}</td>
+                            <td><span class="message-number count-animation">${item.messageCount}</span></td>
+                            <td><span class="rate-number">${item.messagesPerMinute.toFixed(1)}/분</span></td>
+                            <td><span class="char-number">${item.totalChars.toLocaleString()}</span></td>
                         </tr>
                     `).join('');
                 }
@@ -808,13 +1161,151 @@
                             <td><span class="rank-number">#${index + 1}</span></td>
                             <td><span class="manager-name" onclick="app.showManagerMessages('${item.name}')" style="font-size:17px;">${item.name}</span></td>
                             <td><span class="team-badge ${this.getTeamClass(item.team)}">${item.team}</span></td>
-                            <td style="font-size:22px;color:#1E6FFF;font-weight:600;">
-                                <span class="count-animation">${item.totalChars.toLocaleString()}</span>
-                            </td>
-                            <td style="font-size:17px;">${item.messageCount}</td>
+                            <td><span class="char-number">${item.totalChars.toLocaleString()}</span></td>
+                            <td><span class="message-number">${item.messageCount}</span></td>
                         </tr>
                     `).join('');
                 }
+            },
+            
+            // 최근 메시지 업데이트 - 1시간 이내 메시지만 표시
+            updateRecentMessages: function() {
+                const container = document.getElementById('messagesContainer');
+                
+                // 1시간 이내 메시지 필터링
+                const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+                let recentMessages = this.currentMessages.filter(msg => {
+                    // 오늘 데이터가 아닌 경우 전체 표시
+                    if (!this.isToday) return true;
+                    // 오늘이면 1시간 이내만
+                    return new Date(msg.created_at) > oneHourAgo;
+                });
+                
+                // 표시할 메시지 결정
+                let messagesToShow = recentMessages;
+                if (!this.showAllMessages) {
+                    messagesToShow = recentMessages.slice(0, this.messagesPerPage * this.currentPage);
+                }
+                
+                // 메시지 개수 표시
+                const messageCount = document.getElementById('messageCount');
+                if (messageCount) {
+                    const totalCount = this.currentMessages.length;
+                    const recentCount = recentMessages.length;
+                    const displayCount = messagesToShow.length;
+                    
+                    if (this.isToday) {
+                        if (this.showAllMessages) {
+                            messageCount.innerHTML = `<strong style="color:#FFD700;">최근 1시간: ${recentCount}개 메시지</strong> | 오늘 전체: ${totalCount}개`;
+                        } else {
+                            messageCount.innerHTML = `최근 1시간: ${displayCount}/${recentCount}개 표시 | 오늘 전체: ${totalCount}개`;
+                        }
+                    } else {
+                        if (this.showAllMessages) {
+                            messageCount.innerHTML = `<strong style="color:#FFD700;">전체 ${totalCount}개 메시지 표시중</strong>`;
+                        } else {
+                            messageCount.innerHTML = `전체 ${totalCount}개 메시지 중 ${displayCount}개 표시`;
+                        }
+                    }
+                }
+                
+                // 토글 버튼 텍스트 업데이트
+                const toggleBtn = document.getElementById('toggleAllBtn');
+                if (toggleBtn) {
+                    if (this.isToday) {
+                        if (this.showAllMessages) {
+                            toggleBtn.textContent = '최근 메시지만 보기';
+                        } else {
+                            toggleBtn.textContent = `1시간 내 전체 보기 (${recentMessages.length}개)`;
+                        }
+                    } else {
+                        if (this.showAllMessages) {
+                            toggleBtn.textContent = '최근 메시지만 보기';
+                        } else {
+                            toggleBtn.textContent = `전체 메시지 보기 (${this.currentMessages.length}개)`;
+                        }
+                    }
+                }
+                
+                if (messagesToShow.length === 0) {
+                    const noDataMessage = this.isToday ? '최근 1시간 내 메시지가 없습니다' : '선택한 날짜에 메시지가 없습니다';
+                    container.innerHTML = `<div style="padding:50px;text-align:center;color:#999;">${noDataMessage}</div>`;
+                } else {
+                    const messagesHTML = messagesToShow.map(msg => {
+                        const time = new Date(msg.created_at);
+                        const timeStr = `${time.getHours().toString().padStart(2,'0')}:${time.getMinutes().toString().padStart(2,'0')}`;
+                        const team = this.getTeam(msg.writer_manager_name);
+                        
+                        let messageText = msg.message_text;
+                        if (!messageText || messageText.trim() === '') {
+                            messageText = '(메시지 내용 없음)';
+                        } else {
+                            messageText = this.highlightFormLinks(messageText);
+                            if (messageText.length > 500) {
+                                messageText = messageText.substring(0, 500) + '...';
+                            }
+                        }
+                        
+                        const formCount = this.countValidFormLinks(msg.message_text);
+                        const hasForm = formCount > 0;
+                        
+                        return `
+                            <div class="message-item ${hasForm ? 'has-form' : ''}" data-message-id="${msg.id}">
+                                <div class="message-time">${timeStr}</div>
+                                <div class="message-content">
+                                    <div class="message-manager">
+                                        <span class="manager-name" onclick="app.showManagerMessages('${msg.writer_manager_name}')">${msg.writer_manager_name}</span>
+                                        <span class="team-badge ${this.getTeamClass(team)}">${team}</span>
+                                        ${hasForm ? `<span class="form-indicator${formCount > 1 ? ' multiple' : ''}">📋 신청서${formCount > 1 ? ` ×${formCount}` : ''}</span>` : ''}
+                                    </div>
+                                    <div class="message-text">${messageText}</div>
+                                    <div class="message-meta">
+                                        ${msg.message_length}자 | ${msg.assigned_manager_name} 상담사 도움
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    }).join('');
+                    
+                    // 더보기 버튼 추가
+                    let loadMoreButton = '';
+                    if (!this.showAllMessages && messagesToShow.length < recentMessages.length) {
+                        const remaining = recentMessages.length - messagesToShow.length;
+                        loadMoreButton = `
+                            <button class="load-more-btn" onclick="app.loadMoreMessages()">
+                                더 보기 (${remaining}개 남음)
+                            </button>
+                        `;
+                    }
+                    
+                    container.innerHTML = messagesHTML + loadMoreButton;
+                }
+            },
+            
+            // 더 많은 메시지 로드
+            loadMoreMessages: function() {
+                this.currentPage++;
+                this.updateRecentMessages();
+            },
+            
+            // 전체 메시지 토글
+            toggleAllMessages: function() {
+                this.showAllMessages = !this.showAllMessages;
+                this.currentPage = 1;
+                this.updateRecentMessages();
+                
+                if (this.showAllMessages) {
+                    this.showNotification(`📊 전체 ${this.currentMessages.length}개 메시지 표시`);
+                } else {
+                    this.showNotification('📋 최근 메시지만 표시');
+                }
+            },
+            
+            // 메시지 필터링
+            filterMessages: function(filterType) {
+                // 필터 기능 구현 (추후 확장 가능)
+                console.log('Filter:', filterType);
+                this.showNotification('🔍 필터 기능 준비중');
             },
             
             // 상담사 메시지 보기
@@ -836,28 +1327,29 @@
                 modalTitle.innerHTML = `${managerName} <span class="team-badge ${this.getTeamClass(stats.team)}">${stats.team}</span>`;
                 
                 let html = `
-                    <div style="margin-bottom: 30px; padding: 20px; background: #111; border: 1px solid #222;">
-                        <h3 style="margin-bottom: 15px; color: #1E6FFF;">${dateStr} 통계</h3>
-                        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px;">
-                            <div>
-                                <div style="color: #999; font-size: 13px; margin-bottom: 5px;">도움 점수</div>
-                                <div style="font-size: 24px; color: #FFD700; font-weight: 600;">${stats.helpScore}</div>
+                    <div style="margin-bottom: 35px; padding: 25px; background: rgba(255, 255, 255, 0.05); border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.1);">
+                        <h3 style="margin-bottom: 20px; color: #4A9EFF; font-size: 20px; font-weight: 700;">${dateStr} 통계</h3>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 20px;">
+                            <div style="text-align: center; padding: 15px; background: rgba(0, 0, 0, 0.3); border-radius: 8px;">
+                                <div style="color: #8BA5FF; font-size: 13px; margin-bottom: 8px; font-weight: 600;">도움 점수</div>
+                                <div class="score-number" style="font-size: 32px;">${stats.helpScore}</div>
                             </div>
-                            <div>
-                                <div style="color: #999; font-size: 13px; margin-bottom: 5px;">메시지 수</div>
-                                <div style="font-size: 24px; color: #1E6FFF;">${stats.messageCount}</div>
+                            <div style="text-align: center; padding: 15px; background: rgba(0, 0, 0, 0.3); border-radius: 8px;">
+                                <div style="color: #8BA5FF; font-size: 13px; margin-bottom: 8px; font-weight: 600;">메시지 수</div>
+                                <div class="message-number" style="font-size: 32px;">${stats.messageCount}</div>
                             </div>
-                            <div>
-                                <div style="color: #999; font-size: 13px; margin-bottom: 5px;">분당 메시지</div>
-                                <div style="font-size: 24px; color: #96CEB4;">${stats.messagesPerMinute.toFixed(1)}/분</div>
+                            <div style="text-align: center; padding: 15px; background: rgba(0, 0, 0, 0.3); border-radius: 8px;">
+                                <div style="color: #8BA5FF; font-size: 13px; margin-bottom: 8px; font-weight: 600;">분당 메시지</div>
+                                <div class="rate-number" style="font-size: 28px;">${stats.messagesPerMinute.toFixed(1)}/분</div>
                             </div>
-                            <div>
-                                <div style="color: #999; font-size: 13px; margin-bottom: 5px;">신청서 발송</div>
-                                <div style="font-size: 24px; color: #FFD700;">${stats.formCount} <span style="font-size: 14px; color: #999;">(평균 ${(stats.formCount / stats.messageCount).toFixed(1)}개)</span></div>
+                            <div style="text-align: center; padding: 15px; background: rgba(0, 0, 0, 0.3); border-radius: 8px;">
+                                <div style="color: #8BA5FF; font-size: 13px; margin-bottom: 8px; font-weight: 600;">신청서 발송</div>
+                                <div class="score-number" style="font-size: 32px;">${stats.formCount}</div>
+                                <div style="font-size: 12px; color: #8BA5FF; margin-top: 4px;">(평균 ${(stats.formCount / stats.messageCount).toFixed(1)}개)</div>
                             </div>
                         </div>
                     </div>
-                    <h3 style="margin-bottom: 20px;">${dateStr} 작성한 메시지 (${managerMessages.length}개)</h3>
+                    <h3 style="margin-bottom: 25px; color: #fff; font-size: 18px; font-weight: 700;">${dateStr} 작성한 메시지 (${managerMessages.length}개)</h3>
                 `;
                 
                 managerMessages.forEach(msg => {
@@ -872,15 +1364,15 @@
                     }
                     
                     html += `
-                        <div class="message-item ${hasForm ? 'has-form' : ''}" style="margin-bottom: 10px;">
-                            <div class="message-time">${timeStr}</div>
+                        <div class="message-item ${hasForm ? 'has-form' : ''}" style="margin-bottom: 12px; border-radius: 8px; padding: 20px;">
+                            <div class="message-time" style="color: #4A9EFF; font-weight: 600;">${timeStr}</div>
                             <div class="message-content">
-                                <div class="message-meta">
-                                    ${msg.assigned_manager_name} 상담사 도움 | 
-                                    ${msg.message_length}자
+                                <div class="message-meta" style="margin-bottom: 10px;">
+                                    <span style="color: #8BA5FF;">${msg.assigned_manager_name} 상담사 도움</span> | 
+                                    <span style="color: #8BA5FF;">${msg.message_length}자</span>
                                     ${hasForm ? `<span class="form-indicator${formCount > 1 ? ' multiple' : ''}">📋 신청서${formCount > 1 ? ` ×${formCount}` : ''}</span>` : ''}
                                 </div>
-                                <div class="message-text" style="margin-top: 10px;">${messageText}</div>
+                                <div class="message-text" style="background: rgba(0, 0, 0, 0.3); padding: 12px; border-radius: 6px; line-height: 1.8;">${messageText}</div>
                             </div>
                         </div>
                     `;
@@ -895,63 +1387,6 @@
                 document.getElementById('managerModal').classList.remove('show');
             },
             
-            // 최근 메시지 업데이트
-            updateRecentMessages: function() {
-                const container = document.getElementById('messagesContainer');
-                const recentMessages = this.currentMessages.slice(0, 20);
-                
-                if (recentMessages.length === 0) {
-                    const noDataMessage = this.isToday ? '최근 메시지가 없습니다' : '선택한 날짜에 메시지가 없습니다';
-                    container.innerHTML = `<div style="padding:50px;text-align:center;color:#999;">${noDataMessage}</div>`;
-                } else {
-                    container.innerHTML = recentMessages.map(msg => {
-                        const time = new Date(msg.created_at);
-                        const timeStr = `${time.getHours().toString().padStart(2,'0')}:${time.getMinutes().toString().padStart(2,'0')}`;
-                        const team = this.getTeam(msg.writer_manager_name);
-                        
-                        // 메시지 텍스트 안전하게 처리
-                        let messageText = msg.message_text;
-                        if (!messageText || messageText.trim() === '') {
-                            messageText = '(메시지 내용 없음)';
-                        } else {
-                            // 유효한 form 링크만 하이라이트
-                            messageText = this.highlightFormLinks(messageText);
-                            
-                            if (messageText.length > 200) {
-                                // 긴 메시지 자르기 (HTML 태그 고려)
-                                const tempDiv = document.createElement('div');
-                                tempDiv.innerHTML = messageText;
-                                const textContent = tempDiv.textContent || tempDiv.innerText;
-                                if (textContent.length > 200) {
-                                    messageText = messageText.substring(0, 200) + '...';
-                                }
-                            }
-                        }
-                        
-                        // 유효한 신청서 링크 개수 체크
-                        const formCount = this.countValidFormLinks(msg.message_text);
-                        const hasForm = formCount > 0;
-                        
-                        return `
-                            <div class="message-item ${hasForm ? 'has-form' : ''}" data-message-id="${msg.id}">
-                                <div class="message-time">${timeStr}</div>
-                                <div class="message-content">
-                                    <div class="message-manager">
-                                        <span class="manager-name" onclick="app.showManagerMessages('${msg.writer_manager_name}')">${msg.writer_manager_name}</span>
-                                        <span class="team-badge ${this.getTeamClass(team)}">${team}</span>
-                                        ${hasForm ? `<span class="form-indicator${formCount > 1 ? ' multiple' : ''}">📋 신청서${formCount > 1 ? ` ×${formCount}` : ''}</span>` : ''}
-                                    </div>
-                                    <div class="message-text">${messageText}</div>
-                                    <div class="message-meta">
-                                        ${msg.message_length}자 | ${msg.assigned_manager_name} 상담사 도움
-                                    </div>
-                                </div>
-                            </div>
-                        `;
-                    }).join('');
-                }
-            },
-            
             // 실시간 구독 해제
             unsubscribeFromChanges: function() {
                 if (this.realtimeSubscription) {
@@ -961,7 +1396,7 @@
                 }
             },
             
-            // 실시간 구독 (개선된 버전)
+            // 실시간 구독
             subscribeToChanges: function() {
                 // 기존 구독 해제
                 this.unsubscribeFromChanges();
@@ -972,12 +1407,11 @@
                     return;
                 }
                 
-                // Supabase Pro는 더 많은 실시간 연결 지원
                 this.realtimeSubscription = this.supabaseClient
                     .channel('manager_messages_changes')
                     .on('postgres_changes', 
                         { 
-                            event: '*',  // INSERT, UPDATE, DELETE 모두 구독
+                            event: '*',
                             schema: 'public', 
                             table: 'manager_messages',
                             filter: `created_at=gte.${this.getTodayRange().start}`
@@ -1002,58 +1436,37 @@
                                 
                                 // 중복 체크
                                 if (!this.currentMessages.find(m => m.id === newMessage.id)) {
-                                    // 1. 메모리 데이터 업데이트
+                                    // 메모리 데이터 업데이트
                                     this.currentMessages.unshift(newMessage);
                                     
-                                    // 2. 통계 실시간 업데이트
+                                    // 통계 실시간 업데이트
                                     this.updateStatsRealtime(newMessage);
                                     
-                                    // 3. UI 부분 업데이트 (깜빡임 없이)
+                                    // UI 부분 업데이트
                                     this.smoothUpdateUI(newMessage);
                                     
-                                    // 4. 알림
-                                    this.showNotification(`${newMessage.writer_manager_name}님이 도움 메시지 전송`);
+                                    // 알림
+                                    this.showNotification(`💬 ${newMessage.writer_manager_name}님이 도움 메시지 전송`);
                                 }
-                            } else if (payload.eventType === 'UPDATE') {
-                                // 메시지 업데이트 처리
-                                const updatedMessage = payload.new;
-                                const index = this.currentMessages.findIndex(m => m.id === updatedMessage.id);
-                                if (index !== -1) {
-                                    this.currentMessages[index] = updatedMessage;
-                                    // 통계 재계산
-                                    this.calculateStats();
-                                    // UI 업데이트
-                                    this.updateRankingSmoothly();
-                                }
-                            } else if (payload.eventType === 'DELETE') {
-                                // 메시지 삭제 처리
-                                const deletedId = payload.old.id;
-                                this.currentMessages = this.currentMessages.filter(m => m.id !== deletedId);
-                                // 통계 재계산
-                                this.calculateStats();
-                                // UI 업데이트
-                                this.smoothUpdateAllUI();
                             }
                         }
                     )
                     .subscribe((status) => {
                         if (status === 'SUBSCRIBED') {
                             console.log('실시간 구독 성공');
-                            this.setStatus('active', this.isAutoRefresh ? '실시간 모니터링 중 | 자동 업데이트 ON' : '실시간 모니터링 중');
+                            this.setStatus('active', this.isAutoRefresh ? '🔴 실시간 모니터링 중 | 자동 업데이트 ON' : '🔴 실시간 모니터링 중');
                         }
                     });
             },
             
-            // 통계 실시간 업데이트 (메모리에서만)
+            // 통계 실시간 업데이트
             updateStatsRealtime: function(newMessage) {
                 const managerId = newMessage.writer_manager_id;
                 const managerName = newMessage.writer_manager_name;
                 
-                // 기존 통계 찾기 또는 새로 생성
                 let managerStat = this.currentStats.find(s => s.id === managerId);
                 
                 if (!managerStat) {
-                    // 새로운 상담사
                     managerStat = {
                         id: managerId,
                         name: managerName,
@@ -1069,20 +1482,16 @@
                     this.currentStats.push(managerStat);
                 }
                 
-                // 통계 업데이트
                 managerStat.messageCount++;
                 managerStat.totalChars += newMessage.message_length;
                 
-                // 도움 점수 계산
                 const score = this.calculateHelpScore(newMessage, this.currentMessages);
                 managerStat.helpScore += score;
                 managerStat.helpScore = Math.round(managerStat.helpScore * 100) / 100;
                 
-                // 신청서 개수 카운트 (메시지당 여러 개 가능)
                 const formLinksCount = this.countValidFormLinks(newMessage.message_text);
                 managerStat.formCount += formLinksCount;
                 
-                // uniqueChats 계산 (전체 메시지에서 다시 계산)
                 const uniqueChatsSet = new Set();
                 this.currentMessages
                     .filter(msg => msg.writer_manager_id === managerId)
@@ -1091,7 +1500,6 @@
                 
                 managerStat.avgChars = Math.round(managerStat.totalChars / managerStat.messageCount);
                 
-                // 분당 메시지수 재계산
                 const managerMessages = this.currentMessages
                     .filter(msg => msg.writer_manager_id === managerId)
                     .map(msg => new Date(msg.created_at))
@@ -1106,27 +1514,36 @@
                 }
             },
             
-            // 부드러운 UI 업데이트 (깜빡임 없음)
+            // 부드러운 UI 업데이트
             smoothUpdateUI: function(newMessage) {
-                // 상태 표시
                 this.setStatus('active', '실시간 업데이트');
                 
-                // 1. 실시간 메시지 추가 (맨 위에)
                 this.addNewMessageToList(newMessage);
-                
-                // 2. 랭킹 테이블 부분 업데이트
                 this.updateRankingSmoothly();
-                
-                // 3. 마지막 업데이트 시간
                 this.updateLastTime();
                 
-                // 상태 원복
+                // 메시지 카운트 업데이트
+                const messageCount = document.getElementById('messageCount');
+                if (messageCount) {
+                    const totalCount = this.currentMessages.length;
+                    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+                    const recentCount = this.currentMessages.filter(msg => 
+                        new Date(msg.created_at) > oneHourAgo
+                    ).length;
+                    
+                    if (this.isToday) {
+                        messageCount.innerHTML = `최근 1시간: ${recentCount}개 | 오늘 전체: ${totalCount}개`;
+                    } else {
+                        messageCount.innerHTML = `전체 ${totalCount}개 메시지`;
+                    }
+                }
+                
                 setTimeout(() => {
                     this.setStatus('active', this.isAutoRefresh ? '실시간 모니터링 중 | 자동 업데이트 ON' : '실시간 모니터링 중');
                 }, 1000);
             },
             
-            // 새 메시지를 리스트에 부드럽게 추가
+            // 새 메시지를 리스트에 추가
             addNewMessageToList: function(msg) {
                 const container = document.getElementById('messagesContainer');
                 const time = new Date(msg.created_at);
@@ -1137,16 +1554,14 @@
                 const formCount = this.countValidFormLinks(messageText);
                 const hasForm = formCount > 0;
                 
-                // 유효한 form 링크만 하이라이트
                 if (hasForm) {
                     messageText = this.highlightFormLinks(messageText);
                 }
                 
-                if (messageText.length > 200) {
-                    messageText = messageText.substring(0, 200) + '...';
+                if (messageText.length > 500) {
+                    messageText = messageText.substring(0, 500) + '...';
                 }
                 
-                // 새 메시지 HTML 생성
                 const newMessageHTML = document.createElement('div');
                 newMessageHTML.className = `message-item ${hasForm ? 'has-form' : ''} new-message`;
                 newMessageHTML.dataset.messageId = msg.id;
@@ -1156,7 +1571,7 @@
                         <div class="message-manager">
                             <span class="manager-name" onclick="app.showManagerMessages('${msg.writer_manager_name}')">${msg.writer_manager_name}</span>
                             <span class="team-badge ${this.getTeamClass(team)}">${team}</span>
-                                                                ${hasForm ? `<span class="form-indicator${formCount > 1 ? ' multiple' : ''}">📋 신청서${formCount > 1 ? ` ×${formCount}` : ''}</span>` : ''}
+                            ${hasForm ? `<span class="form-indicator${formCount > 1 ? ' multiple' : ''}">📋 신청서${formCount > 1 ? ` ×${formCount}` : ''}</span>` : ''}
                         </div>
                         <div class="message-text">${messageText}</div>
                         <div class="message-meta">
@@ -1165,18 +1580,15 @@
                     </div>
                 `;
                 
-                // 애니메이션과 함께 추가
                 newMessageHTML.style.opacity = '0';
                 newMessageHTML.style.transform = 'translateY(-20px)';
                 
-                // 첫 번째 자식으로 추가
                 const firstChild = container.firstElementChild;
                 if (firstChild && firstChild.textContent.includes('최근 메시지가 없습니다')) {
                     container.innerHTML = '';
                 }
                 container.insertBefore(newMessageHTML, container.firstChild);
                 
-                // 부드러운 등장 애니메이션
                 requestAnimationFrame(() => {
                     newMessageHTML.style.transition = 'all 0.3s ease';
                     newMessageHTML.style.opacity = '1';
@@ -1186,28 +1598,19 @@
                         newMessageHTML.classList.remove('new-message');
                     }, 3000);
                 });
-                
-                // 20개 초과 메시지 제거
-                while (container.children.length > 20) {
-                    container.removeChild(container.lastChild);
-                }
             },
             
             // 랭킹 테이블 부드럽게 업데이트
             updateRankingSmoothly: function() {
-                // 도움 점수 기준 정렬
                 const scoreRanking = [...this.currentStats].sort((a, b) => b.helpScore - a.helpScore);
                 const scoreBody = document.getElementById('scoreRankingBody');
                 
-                // 메시지 수 기준 정렬
                 const messageRanking = [...this.currentStats].sort((a, b) => b.messageCount - a.messageCount);
                 const messageBody = document.getElementById('messageRankingBody');
                 
-                // 글자수 기준 정렬
                 const charRanking = [...this.currentStats].sort((a, b) => b.totalChars - a.totalChars);
                 const charBody = document.getElementById('charRankingBody');
                 
-                // 현재 활성 탭에 따라 업데이트
                 if (this.currentTab === 'score') {
                     this.updateTableRows(scoreBody, scoreRanking, 'score');
                 } else if (this.currentTab === 'messages') {
@@ -1217,9 +1620,8 @@
                 }
             },
             
-            // 테이블 행 부분 업데이트 (깜빡임 방지 - 개선된 버전)
+            // 테이블 행 부분 업데이트
             updateTableRows: function(tbody, ranking, type) {
-                // 현재 존재하는 모든 행을 Map으로 저장
                 const existingRows = new Map();
                 tbody.querySelectorAll('tr').forEach(row => {
                     if (row.id) {
@@ -1233,12 +1635,10 @@
                     const newRank = index + 1;
                     
                     if (!row) {
-                        // 새 행 생성
                         row = document.createElement('tr');
                         row.id = rowId;
                         row.dataset.rank = newRank;
                         
-                        // 적절한 위치에 삽입
                         if (index === 0) {
                             tbody.insertBefore(row, tbody.firstChild);
                         } else {
@@ -1250,18 +1650,15 @@
                             }
                         }
                         
-                        // 새 행 애니메이션
                         row.style.opacity = '0';
                         requestAnimationFrame(() => {
                             row.style.transition = 'opacity 0.3s ease';
                             row.style.opacity = '1';
                         });
                     } else {
-                        // 순위 변경 처리
                         const prevRank = parseInt(row.dataset.rank || '999');
                         
                         if (prevRank !== newRank) {
-                            // 위치 이동이 필요한 경우
                             const targetPosition = index;
                             const allRows = tbody.querySelectorAll('tr');
                             
@@ -1271,10 +1668,9 @@
                                 tbody.insertBefore(row, allRows[targetPosition]);
                             }
                             
-                            // 순위 변동 애니메이션
                             row.style.transition = 'transform 0.3s ease, background-color 0.5s ease';
                             row.style.backgroundColor = prevRank > newRank ? 
-                                'rgba(30, 255, 111, 0.1)' : 'rgba(255, 111, 30, 0.1)';
+                                'rgba(0, 255, 136, 0.1)' : 'rgba(255, 71, 87, 0.1)';
                             
                             setTimeout(() => {
                                 row.style.backgroundColor = '';
@@ -1282,71 +1678,44 @@
                         }
                     }
                     
-                    // 데이터 업데이트 (필요한 경우에만)
-                    const needsUpdate = !row.dataset.lastUpdate || 
-                                      row.dataset.lastUpdate !== JSON.stringify(item);
+                    row.dataset.rank = newRank;
                     
-                    if (needsUpdate) {
-                        row.dataset.rank = newRank;
-                        row.dataset.lastUpdate = JSON.stringify(item);
-                        
-                        // 내용 업데이트
-                        let newHTML = '';
-                        if (type === 'score') {
-                            newHTML = `
-                                <td><span class="rank-number">#${newRank}</span></td>
-                                <td><span class="manager-name" onclick="app.showManagerMessages('${item.name}')" style="font-size:17px;">${item.name}</span></td>
-                                <td><span class="team-badge ${this.getTeamClass(item.team)}">${item.team}</span></td>
-                                <td style="font-size:22px;color:#FFD700;font-weight:600;">
-                                    <span class="count-animation">${item.helpScore}</span>
-                                </td>
-                                <td style="font-size:17px;">${item.messageCount}</td>
-                                <td style="font-size:17px;color:#FFD700;">${item.formCount}</td>
-                            `;
-                        } else if (type === 'message') {
-                            newHTML = `
-                                <td><span class="rank-number">#${newRank}</span></td>
-                                <td><span class="manager-name" onclick="app.showManagerMessages('${item.name}')" style="font-size:17px;">${item.name}</span></td>
-                                <td><span class="team-badge ${this.getTeamClass(item.team)}">${item.team}</span></td>
-                                <td style="font-size:22px;color:#1E6FFF;font-weight:600;">
-                                    <span class="count-animation">${item.messageCount}</span>
-                                </td>
-                                <td style="font-size:17px;color:#96CEB4;">${item.messagesPerMinute.toFixed(1)}/분</td>
-                                <td style="font-size:17px;">${item.totalChars.toLocaleString()}</td>
-                            `;
-                        } else {
-                            newHTML = `
-                                <td><span class="rank-number">#${newRank}</span></td>
-                                <td><span class="manager-name" onclick="app.showManagerMessages('${item.name}')" style="font-size:17px;">${item.name}</span></td>
-                                <td><span class="team-badge ${this.getTeamClass(item.team)}">${item.team}</span></td>
-                                <td style="font-size:22px;color:#1E6FFF;font-weight:600;">
-                                    <span class="count-animation">${item.totalChars.toLocaleString()}</span>
-                                </td>
-                                <td style="font-size:17px;">${item.messageCount}</td>
-                            `;
-                        }
-                        
-                        // 내용만 업데이트 (행 전체를 재생성하지 않음)
-                        if (row.innerHTML !== newHTML) {
-                            row.innerHTML = newHTML;
-                            
-                            // 숫자 변경 애니메이션
-                            const countElement = row.querySelector('.count-animation');
-                            if (countElement) {
-                                countElement.style.transform = 'scale(1.2)';
-                                countElement.style.transition = 'transform 0.3s ease';
-                                setTimeout(() => {
-                                    countElement.style.transform = 'scale(1)';
-                                }, 300);
-                            }
-                        }
+                    let newHTML = '';
+                    if (type === 'score') {
+                        newHTML = `
+                            <td><span class="rank-number">#${newRank}</span></td>
+                            <td><span class="manager-name" onclick="app.showManagerMessages('${item.name}')" style="font-size:17px;">${item.name}</span></td>
+                            <td><span class="team-badge ${this.getTeamClass(item.team)}">${item.team}</span></td>
+                            <td><span class="score-number">${item.helpScore}</span></td>
+                            <td><span class="message-number">${item.messageCount}</span></td>
+                            <td><span class="score-number" style="font-size:20px;">${item.formCount}</span></td>
+                        `;
+                    } else if (type === 'message') {
+                        newHTML = `
+                            <td><span class="rank-number">#${newRank}</span></td>
+                            <td><span class="manager-name" onclick="app.showManagerMessages('${item.name}')" style="font-size:17px;">${item.name}</span></td>
+                            <td><span class="team-badge ${this.getTeamClass(item.team)}">${item.team}</span></td>
+                            <td><span class="message-number">${item.messageCount}</span></td>
+                            <td><span class="rate-number">${item.messagesPerMinute.toFixed(1)}/분</span></td>
+                            <td><span class="char-number">${item.totalChars.toLocaleString()}</span></td>
+                        `;
+                    } else {
+                        newHTML = `
+                            <td><span class="rank-number">#${newRank}</span></td>
+                            <td><span class="manager-name" onclick="app.showManagerMessages('${item.name}')" style="font-size:17px;">${item.name}</span></td>
+                            <td><span class="team-badge ${this.getTeamClass(item.team)}">${item.team}</span></td>
+                            <td><span class="char-number">${item.totalChars.toLocaleString()}</span></td>
+                            <td><span class="message-number">${item.messageCount}</span></td>
+                        `;
                     }
                     
-                    // 처리된 행 표시
+                    if (row.innerHTML !== newHTML) {
+                        row.innerHTML = newHTML;
+                    }
+                    
                     existingRows.delete(rowId);
                 });
                 
-                // 남은 행들은 부드럽게 제거
                 existingRows.forEach(row => {
                     row.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
                     row.style.opacity = '0';
@@ -1359,40 +1728,35 @@
             switchTab: function(tab) {
                 this.currentTab = tab;
                 
-                // 탭 버튼 스타일
                 document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
                 document.getElementById(`tab-${tab}`).classList.add('active');
                 
-                // 테이블 표시/숨김
                 document.getElementById('ranking-score').style.display = tab === 'score' ? 'block' : 'none';
                 document.getElementById('ranking-messages').style.display = tab === 'messages' ? 'block' : 'none';
                 document.getElementById('ranking-chars').style.display = tab === 'chars' ? 'block' : 'none';
                 
-                // 탭 전환 시 해당 랭킹 부드럽게 업데이트
                 if (tab === 'score' || tab === 'messages' || tab === 'chars') {
                     this.updateRankingSmoothly();
                 }
             },
             
-            // 자동 새로고침 시작 (부분 업데이트)
+            // 자동 새로고침 시작 - 전체 데이터 동기화
             startAutoRefresh: function() {
                 if (this.isAutoRefresh && this.isToday) {
-                    // 기존 인터벌이 있으면 정리
                     if (this.autoRefreshInterval) {
                         clearInterval(this.autoRefreshInterval);
                     }
-                    // 30초마다 부분 업데이트
+                    // 30초마다 전체 데이터 동기화
                     this.autoRefreshInterval = setInterval(() => {
-                        console.log('부분 업데이트 실행:', new Date().toLocaleTimeString());
-                        this.partialUpdate();
+                        console.log('전체 데이터 동기화:', new Date().toLocaleTimeString());
+                        this.syncAllData();
                     }, 30000);
-                    console.log('자동 부분 업데이트 시작 (30초마다)');
+                    console.log('자동 업데이트 시작 (30초마다 전체 동기화)');
                 }
             },
             
-            // 부분 업데이트 (깜빡임 없음)
-            partialUpdate: async function() {
-                // 오늘이 아니면 실행하지 않음
+            // 전체 데이터 동기화
+            syncAllData: async function() {
                 if (!this.isToday) {
                     return;
                 }
@@ -1400,152 +1764,64 @@
                 try {
                     const { start, end } = this.getTodayRange();
                     
-                    // 최근 5분간의 데이터만 가져오기
-                    const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
-                    
-                    const { data: recentMessages, error } = await this.supabaseClient
+                    // 당일 전체 데이터 가져오기
+                    const { data: allMessages, error } = await this.supabaseClient
                         .from('manager_messages')
                         .select('*')
-                        .gte('created_at', fiveMinutesAgo)
+                        .gte('created_at', start)
                         .lte('created_at', end)
                         .order('created_at', { ascending: false });
                     
                     if (error) throw error;
                     
-                    // 새 메시지만 추가
-                    const existingIds = new Set(this.currentMessages.map(m => m.id));
-                    const newMessages = (recentMessages || [])
-                        .filter(msg => !existingIds.has(msg.id) && !this.excludedManagers.includes(msg.writer_manager_name));
+                    // 제외할 상담사 필터링
+                    const filteredMessages = (allMessages || []).filter(msg => 
+                        !this.excludedManagers.includes(msg.writer_manager_name)
+                    );
                     
-                    if (newMessages.length > 0) {
-                        // 메모리에 새 메시지 추가
-                        this.currentMessages.unshift(...newMessages);
-                        
-                        // 오늘 날짜가 아닌 메시지 제거
-                        const today = new Date();
-                        this.currentMessages = this.currentMessages.filter(msg => {
-                            const msgDate = new Date(msg.created_at);
-                            return msgDate.toDateString() === today.toDateString();
-                        });
+                    // 변경사항이 있는 경우만 업데이트
+                    if (filteredMessages.length !== this.currentMessages.length) {
+                        console.log(`메시지 수 변경: ${this.currentMessages.length} → ${filteredMessages.length}`);
+                        this.currentMessages = filteredMessages;
                         
                         // 통계 재계산
                         this.calculateStats();
                         
                         // UI 부드럽게 업데이트
                         this.smoothUpdateAllUI();
-                        
-                        console.log(`${newMessages.length}개의 새 메시지 추가됨`);
                     }
                     
                     this.updateLastTime();
                 } catch (error) {
-                    console.error('부분 업데이트 실패:', error);
+                    console.error('전체 동기화 실패:', error);
                 }
             },
             
             // 전체 UI 부드럽게 업데이트
             smoothUpdateAllUI: function() {
-                // 랭킹 테이블 업데이트
                 this.updateRankingSmoothly();
+                this.updateRecentMessages();
                 
-                // 최근 메시지 부드럽게 업데이트
-                this.smoothUpdateRecentMessages();
-            },
-            
-            // 최근 메시지 부드럽게 업데이트
-            smoothUpdateRecentMessages: function() {
-                const container = document.getElementById('messagesContainer');
-                const recentMessages = this.currentMessages.slice(0, 20);
-                
-                if (recentMessages.length === 0) {
-                    if (container.innerHTML !== '<div style="padding:50px;text-align:center;color:#999;">최근 메시지가 없습니다</div>') {
-                        container.innerHTML = '<div style="padding:50px;text-align:center;color:#999;">최근 메시지가 없습니다</div>';
+                const messageCount = document.getElementById('messageCount');
+                if (messageCount) {
+                    const totalCount = this.currentMessages.length;
+                    
+                    if (this.isToday) {
+                        const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+                        const recentCount = this.currentMessages.filter(msg => 
+                            new Date(msg.created_at) > oneHourAgo
+                        ).length;
+                        messageCount.innerHTML = `최근 1시간: ${recentCount}개 | 오늘 전체: ${totalCount}개`;
+                    } else {
+                        messageCount.innerHTML = `전체 ${totalCount}개 메시지`;
                     }
-                    return;
-                }
-                
-                // 기존 메시지 ID 수집
-                const existingMessageElements = container.querySelectorAll('.message-item');
-                const existingIds = new Set();
-                existingMessageElements.forEach(el => {
-                    const msgId = el.dataset.messageId;
-                    if (msgId) existingIds.add(msgId);
-                });
-                
-                // 새 메시지만 추가
-                recentMessages.forEach((msg, index) => {
-                    if (!existingIds.has(msg.id)) {
-                        const time = new Date(msg.created_at);
-                        const timeStr = `${time.getHours().toString().padStart(2,'0')}:${time.getMinutes().toString().padStart(2,'0')}`;
-                        const team = this.getTeam(msg.writer_manager_name);
-                        
-                        let messageText = msg.message_text || '(메시지 내용 없음)';
-                        const formCount = this.countValidFormLinks(msg.message_text);
-                        const hasForm = formCount > 0;
-                        
-                        if (hasForm) {
-                            messageText = this.highlightFormLinks(messageText);
-                        }
-                        
-                        if (messageText.length > 200) {
-                            messageText = messageText.substring(0, 200) + '...';
-                        }
-                        
-                        const newMessageHTML = document.createElement('div');
-                        newMessageHTML.className = `message-item ${hasForm ? 'has-form' : ''}`;
-                        newMessageHTML.dataset.messageId = msg.id;
-                        newMessageHTML.innerHTML = `
-                            <div class="message-time">${timeStr}</div>
-                            <div class="message-content">
-                                <div class="message-manager">
-                                    <span class="manager-name" onclick="app.showManagerMessages('${msg.writer_manager_name}')">${msg.writer_manager_name}</span>
-                                    <span class="team-badge ${this.getTeamClass(team)}">${team}</span>
-                                    ${hasForm ? `<span class="form-indicator${formCount > 1 ? ' multiple' : ''}">📋 신청서${formCount > 1 ? ` ×${formCount}` : ''}</span>` : ''}
-                                </div>
-                                <div class="message-text">${messageText}</div>
-                                <div class="message-meta">
-                                    ${msg.message_length}자 | ${msg.assigned_manager_name} 상담사 도움
-                                </div>
-                            </div>
-                        `;
-                        
-                        // 적절한 위치에 삽입
-                        if (index === 0 && container.firstChild) {
-                            container.insertBefore(newMessageHTML, container.firstChild);
-                        } else {
-                            const allItems = container.querySelectorAll('.message-item');
-                            if (index < allItems.length) {
-                                container.insertBefore(newMessageHTML, allItems[index]);
-                            } else {
-                                container.appendChild(newMessageHTML);
-                            }
-                        }
-                        
-                        // 부드러운 등장 애니메이션
-                        newMessageHTML.style.opacity = '0';
-                        newMessageHTML.style.transform = 'translateY(-10px)';
-                        requestAnimationFrame(() => {
-                            newMessageHTML.style.transition = 'all 0.3s ease';
-                            newMessageHTML.style.opacity = '1';
-                            newMessageHTML.style.transform = 'translateY(0)';
-                        });
-                    }
-                });
-                
-                // 20개 초과 메시지 부드럽게 제거
-                while (container.children.length > 20) {
-                    const lastChild = container.lastChild;
-                    lastChild.style.transition = 'opacity 0.3s ease';
-                    lastChild.style.opacity = '0';
-                    setTimeout(() => lastChild.remove(), 300);
                 }
             },
             
             // 자동 새로고침 토글
             toggleAutoRefresh: function() {
-                // 오늘이 아니면 작동하지 않음
                 if (!this.isToday) {
-                    this.showNotification('과거 데이터는 자동 업데이트를 사용할 수 없습니다', 'error');
+                    this.showNotification('⚠️ 과거 데이터는 자동 업데이트를 사용할 수 없습니다', 'error');
                     return;
                 }
                 
@@ -1553,28 +1829,58 @@
                 const btn = document.getElementById('autoRefreshBtn');
                 
                 if (this.isAutoRefresh) {
-                    btn.textContent = '자동 업데이트 ON';
+                    btn.innerHTML = '⚡ 자동 업데이트 ON';
                     btn.classList.add('primary');
-                    // 기존 인터벌 정리
                     if (this.autoRefreshInterval) {
                         clearInterval(this.autoRefreshInterval);
                     }
-                    // 새로 시작 (부분 업데이트)
                     this.autoRefreshInterval = setInterval(() => {
-                        console.log('부분 업데이트 실행:', new Date().toLocaleTimeString());
-                        this.partialUpdate();
+                        console.log('전체 데이터 동기화:', new Date().toLocaleTimeString());
+                        this.syncAllData();
                     }, 30000);
-                    this.showNotification('자동 업데이트 활성화 (30초마다 부분 업데이트)');
-                    this.setStatus('active', '실시간 모니터링 중 | 자동 업데이트 ON');
+                    this.showNotification('✅ 자동 업데이트 활성화 (30초마다 전체 동기화)');
+                    this.setStatus('active', '🔴 실시간 모니터링 중 | 자동 업데이트 ON');
                 } else {
-                    btn.textContent = '자동 업데이트 OFF';
+                    btn.innerHTML = '⚡ 자동 업데이트 OFF';
                     btn.classList.remove('primary');
                     if (this.autoRefreshInterval) {
                         clearInterval(this.autoRefreshInterval);
                         this.autoRefreshInterval = null;
                     }
-                    this.showNotification('자동 업데이트 비활성화');
-                    this.setStatus('active', '실시간 모니터링 중');
+                    this.showNotification('⏸️ 자동 업데이트 비활성화');
+                    this.setStatus('active', '🔴 실시간 모니터링 중');
+                }
+            },
+            
+            // 데이터 내보내기
+            exportData: function() {
+                try {
+                    const dateStr = `${this.selectedDate.getFullYear()}-${String(this.selectedDate.getMonth()+1).padStart(2,'0')}-${String(this.selectedDate.getDate()).padStart(2,'0')}`;
+                    
+                    // CSV 형식으로 데이터 생성
+                    let csv = '시간,작성자,팀,도움받은상담사,메시지길이,신청서수,메시지내용\n';
+                    
+                    this.currentMessages.forEach(msg => {
+                        const time = new Date(msg.created_at);
+                        const timeStr = `${time.getHours().toString().padStart(2,'0')}:${time.getMinutes().toString().padStart(2,'0')}`;
+                        const team = this.getTeam(msg.writer_manager_name);
+                        const formCount = this.countValidFormLinks(msg.message_text);
+                        const messageText = (msg.message_text || '').replace(/"/g, '""');
+                        
+                        csv += `"${timeStr}","${msg.writer_manager_name}","${team}","${msg.assigned_manager_name}",${msg.message_length},${formCount},"${messageText}"\n`;
+                    });
+                    
+                    // 다운로드
+                    const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
+                    const link = document.createElement('a');
+                    link.href = URL.createObjectURL(blob);
+                    link.download = `SNS_도움메시지_${dateStr}.csv`;
+                    link.click();
+                    
+                    this.showNotification(`✅ ${this.currentMessages.length}개 메시지 내보내기 완료`);
+                } catch (error) {
+                    console.error('내보내기 실패:', error);
+                    this.showNotification('❌ 내보내기 실패', 'error');
                 }
             },
             
@@ -1587,8 +1893,8 @@
             // 마지막 업데이트 시간
             updateLastTime: function() {
                 const now = new Date();
-                document.getElementById('lastUpdate').textContent = 
-                    `마지막 업데이트: ${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}`;
+                document.getElementById('lastUpdate').innerHTML = 
+                    `⏰ ${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}:${now.getSeconds().toString().padStart(2,'0')}`;
             },
             
             // 알림 표시
@@ -1617,7 +1923,7 @@
             // Supabase 라이브러리 로드 확인
             if (typeof supabase === 'undefined') {
                 console.error('Supabase 라이브러리 로드 실패');
-                alert('시스템 초기화 실패. 페이지를 새로고침해주세요.');
+                alert('⚠️ 시스템 초기화 실패. 페이지를 새로고침해주세요.');
                 return;
             }
             
