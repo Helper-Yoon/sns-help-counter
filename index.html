@@ -621,12 +621,12 @@
         <div class="messages-section">
             <div class="messages-header">
                 <div>
-                    <div class="table-title" id="messagesTitle">오늘 도움 메시지</div>
+                    <div class="table-title" id="messagesTitle">최근 1시간 도움 메시지</div>
                     <div class="table-subtitle" id="messageCount" style="color: #8BA5FF; margin-top: 5px;">전체 0개 메시지</div>
                 </div>
             </div>
             <div class="messages-container" id="messagesContainer">
-                <div style="padding:50px;text-align:center;color:#999;">최근 메시지가 없습니다</div>
+                <div style="padding:50px;text-align:center;color:#999;">최근 1시간 메시지가 없습니다</div>
             </div>
         </div>
     </div>
@@ -790,7 +790,7 @@
                 // 메시지 섹션 타이틀 업데이트
                 const messagesTitle = document.getElementById('messagesTitle');
                 if (this.isToday) {
-                    messagesTitle.textContent = '오늘 도움 메시지';
+                    messagesTitle.textContent = '최근 1시간 도움 메시지';
                 } else {
                     messagesTitle.textContent = `${dateStr} 도움 메시지`;
                 }
@@ -845,30 +845,6 @@
                 // 오늘이면 실시간 구독 재시작
                 if (this.isToday) {
                     this.subscribeToChanges();
-                }
-            },
-            
-            // 전체 UI 부드럽게 업데이트
-            smoothUpdateAllUI: function() {
-                this.updateRankingSmoothly();
-                this.updateRecentMessages();
-                
-                const messageCount = document.getElementById('messageCount');
-                if (messageCount) {
-                    const totalCount = this.currentMessages.length;
-                    
-                    if (this.isToday) {
-                        // 1시간 이내 메시지 수도 계산 (참고용)
-                        const now = new Date();
-                        const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000);
-                        const recentCount = this.currentMessages.filter(msg => 
-                            new Date(msg.created_at) > oneHourAgo
-                        ).length;
-                        
-                        messageCount.innerHTML = `오늘 전체: ${totalCount}개 | 최근 1시간: ${recentCount}개`;
-                    } else {
-                        messageCount.innerHTML = `전체 ${totalCount}개 메시지`;
-                    }
                 }
             },
             
@@ -1199,14 +1175,30 @@
                 }
             },
             
-            // 최근 메시지 업데이트 - 당일 전체 표시 (최신순)
+            // 최근 메시지 업데이트 - 오늘은 최근 1시간만, 과거는 전체 표시
             updateRecentMessages: function() {
                 const container = document.getElementById('messagesContainer');
                 
-                // 당일 전체 메시지 표시 (이미 최신순으로 정렬됨)
-                let messagesToShow = this.currentMessages;
+                let messagesToShow = [];
                 
-                console.log('메시지 표시: 전체', messagesToShow.length, '개 (최신순)');
+                if (this.isToday) {
+                    // 오늘인 경우 최근 1시간 메시지만 필터링
+                    const now = new Date();
+                    const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000);
+                    messagesToShow = this.currentMessages.filter(msg => 
+                        new Date(msg.created_at) > oneHourAgo
+                    );
+                    // 최신순으로 정렬 (최신 메시지가 위에)
+                    messagesToShow.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+                    console.log('메시지 표시: 최근 1시간', messagesToShow.length, '개 (최신순)');
+                } else {
+                    // 과거 날짜는 전체 표시 (최신순)
+                    messagesToShow = [...this.currentMessages].sort((a, b) => 
+                        new Date(b.created_at) - new Date(a.created_at)
+                    );
+                    console.log('메시지 표시: 전체', messagesToShow.length, '개 (최신순)');
+                }
+                
                 if (messagesToShow.length > 0) {
                     console.log('첫 번째 메시지 (최신):', new Date(messagesToShow[0].created_at).toLocaleString('ko-KR'));
                     console.log('마지막 메시지 (오래된):', new Date(messagesToShow[messagesToShow.length - 1].created_at).toLocaleString('ko-KR'));
@@ -1218,14 +1210,13 @@
                     const totalCount = this.currentMessages.length;
                     
                     if (this.isToday) {
-                        // 1시간 이내 메시지 수도 계산 (참고용)
                         const now = new Date();
                         const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000);
                         const recentCount = this.currentMessages.filter(msg => 
                             new Date(msg.created_at) > oneHourAgo
                         ).length;
                         
-                        messageCount.innerHTML = `오늘 전체: ${totalCount}개 | 최근 1시간: ${recentCount}개`;
+                        messageCount.innerHTML = `최근 1시간: ${recentCount}개 | 오늘 전체: ${totalCount}개`;
                     } else {
                         messageCount.innerHTML = `전체: ${totalCount}개 메시지`;
                     }
@@ -1233,7 +1224,7 @@
                 
                 if (messagesToShow.length === 0) {
                     const noDataMessage = this.isToday ? 
-                        '오늘 메시지가 없습니다' : 
+                        '최근 1시간 메시지가 없습니다' : 
                         '선택한 날짜에 메시지가 없습니다';
                     container.innerHTML = `<div style="padding:50px;text-align:center;color:#999;">${noDataMessage}</div>`;
                 } else {
@@ -1281,48 +1272,6 @@
                     
                     container.innerHTML = messagesHTML;
                 }
-            },
-            
-            // 더 많은 메시지 로드
-            loadMoreMessages: function() {
-                this.currentPage++;
-                this.updateRecentMessages();
-            },
-            
-            // 전체 메시지 토글
-            toggleAllMessages: function() {
-                this.showAllMessages = !this.showAllMessages;
-                this.currentPage = 1;
-                this.updateRecentMessages();
-                
-                // 메시지 섹션 타이틀 업데이트
-                const messagesTitle = document.getElementById('messagesTitle');
-                if (this.isToday) {
-                    messagesTitle.textContent = this.showAllMessages ? 
-                        '오늘 전체 도움 메시지' : '최근 1시간 도움 메시지';
-                }
-                
-                if (this.showAllMessages) {
-                    const totalCount = this.currentMessages.length;
-                    this.showNotification(`📊 오늘 전체 ${totalCount}개 메시지 표시`);
-                } else {
-                    if (this.isToday) {
-                        const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
-                        const recentCount = this.currentMessages.filter(msg => 
-                            new Date(msg.created_at) > oneHourAgo
-                        ).length;
-                        this.showNotification(`📋 최근 1시간 메시지만 표시 (${recentCount}개)`);
-                    } else {
-                        this.showNotification('📋 최근 메시지만 표시');
-                    }
-                }
-            },
-            
-            // 메시지 필터링
-            filterMessages: function(filterType) {
-                // 필터 기능 구현 (추후 확장 가능)
-                console.log('Filter:', filterType);
-                this.showNotification('🔍 필터 기능 준비중');
             },
             
             // 상담사 메시지 보기 - 당일 전체 메시지 표시
@@ -1582,14 +1531,14 @@
                     const totalCount = this.currentMessages.length;
                     
                     if (this.isToday) {
-                        // 1시간 이내 메시지 수도 계산 (참고용)
+                        // 1시간 이내 메시지 수 계산
                         const now = new Date();
                         const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000);
                         const recentCount = this.currentMessages.filter(msg => 
                             new Date(msg.created_at) > oneHourAgo
                         ).length;
                         
-                        messageCount.innerHTML = `오늘 전체: ${totalCount}개 | 최근 1시간: ${recentCount}개`;
+                        messageCount.innerHTML = `최근 1시간: ${recentCount}개 | 오늘 전체: ${totalCount}개`;
                     } else {
                         messageCount.innerHTML = `전체 ${totalCount}개 메시지`;
                     }
@@ -1600,7 +1549,7 @@
                 }, 1000);
             },
             
-            // 새 메시지를 리스트에 추가 (당일 메시지만)
+            // 새 메시지를 리스트에 추가 (최근 1시간 메시지만)
             addNewMessageToList: function(msg) {
                 // 오늘 메시지인지 확인
                 const msgDate = new Date(msg.created_at);
@@ -1612,6 +1561,13 @@
                 
                 if (msgDateStr !== todayDateStr) {
                     return; // 오늘이 아닌 메시지는 추가하지 않음
+                }
+                
+                // 최근 1시간 이내 메시지인지 확인
+                const now = new Date();
+                const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000);
+                if (msgDate <= oneHourAgo) {
+                    return; // 1시간 이전 메시지는 추가하지 않음
                 }
                 
                 const container = document.getElementById('messagesContainer');
@@ -1654,12 +1610,12 @@
                 newMessageHTML.style.transform = 'translateY(-20px)';
                 
                 const firstChild = container.firstElementChild;
-                if (firstChild && firstChild.textContent.includes('오늘 메시지가 없습니다')) {
+                if (firstChild && firstChild.textContent.includes('메시지가 없습니다')) {
                     container.innerHTML = '';
                 }
                 
-                // 시간순으로 정렬되어 있으므로 맨 마지막에 추가
-                container.appendChild(newMessageHTML);
+                // 시간순으로 정렬되어 있으므로 맨 앞에 추가 (최신 메시지를 위에)
+                container.insertBefore(newMessageHTML, container.firstChild);
                 
                 requestAnimationFrame(() => {
                     newMessageHTML.style.transition = 'all 0.3s ease';
@@ -1670,9 +1626,6 @@
                         newMessageHTML.classList.remove('new-message');
                     }, 3000);
                 });
-                
-                // 스크롤을 맨 아래로
-                container.scrollTop = container.scrollHeight;
             },
             
             // 랭킹 테이블 부드럽게 업데이트
@@ -1909,31 +1862,13 @@
                     const totalCount = this.currentMessages.length;
                     
                     if (this.isToday) {
-                        const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+                        // 1시간 이내 메시지 수 계산
+                        const now = new Date();
+                        const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000);
                         const recentCount = this.currentMessages.filter(msg => 
                             new Date(msg.created_at) > oneHourAgo
                         ).length;
-                        messageCount.innerHTML = `최근 1시간: ${recentCount}개 | 오늘 전체: ${totalCount}개`;
-                    } else {
-                        messageCount.innerHTML = `전체 ${totalCount}개 메시지`;
-                    }
-                }
-            },
-            
-            // 전체 UI 부드럽게 업데이트
-            smoothUpdateAllUI: function() {
-                this.updateRankingSmoothly();
-                this.updateRecentMessages();
-                
-                const messageCount = document.getElementById('messageCount');
-                if (messageCount) {
-                    const totalCount = this.currentMessages.length;
-                    
-                    if (this.isToday) {
-                        const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
-                        const recentCount = this.currentMessages.filter(msg => 
-                            new Date(msg.created_at) > oneHourAgo
-                        ).length;
+                        
                         messageCount.innerHTML = `최근 1시간: ${recentCount}개 | 오늘 전체: ${totalCount}개`;
                     } else {
                         messageCount.innerHTML = `전체 ${totalCount}개 메시지`;
