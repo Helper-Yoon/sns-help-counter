@@ -532,7 +532,6 @@
                 <div class="control-buttons">
                     <button class="btn primary" onclick="app.loadData()" id="refreshBtn">🔄 전체 새로고침</button>
                     <button class="btn primary" onclick="app.toggleAutoRefresh()" id="autoRefreshBtn">⚡ 자동 업데이트 ON</button>
-                    <button class="btn" onclick="app.exportData()">📊 데이터 내보내기</button>
                 </div>
                 <div class="status-indicator">
                     <span class="status-dot" id="statusDot"></span>
@@ -882,26 +881,43 @@
                 this.subscribeToChanges();
             },
             
-            // 선택된 날짜 범위
+            // 선택된 날짜 범위 (KST 기준으로 UTC 변환)
             getSelectedDateRange: function() {
+                // KST 기준 시작 시간 (00:00:00)
                 const start = new Date(this.selectedDate);
                 start.setHours(0, 0, 0, 0);
+                
+                // KST 기준 종료 시간 (23:59:59)
                 const end = new Date(this.selectedDate);
                 end.setHours(23, 59, 59, 999);
+                
+                // UTC로 변환 (KST는 UTC+9이므로 9시간 빼기)
+                const startUTC = new Date(start.getTime() - 9 * 60 * 60 * 1000);
+                const endUTC = new Date(end.getTime() - 9 * 60 * 60 * 1000);
+                
                 return {
-                    start: start.toISOString(),
-                    end: end.toISOString()
+                    start: startUTC.toISOString(),
+                    end: endUTC.toISOString()
                 };
             },
             
-            // 오늘 날짜 범위
+            // 오늘 날짜 범위 (KST 기준으로 UTC 변환)
             getTodayRange: function() {
                 const today = new Date();
+                
+                // KST 기준 오늘 시작 (00:00:00)
                 const start = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 0, 0, 0);
+                
+                // KST 기준 오늘 끝 (23:59:59)
                 const end = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59);
+                
+                // UTC로 변환 (KST는 UTC+9이므로 9시간 빼기)
+                const startUTC = new Date(start.getTime() - 9 * 60 * 60 * 1000);
+                const endUTC = new Date(end.getTime() - 9 * 60 * 60 * 1000);
+                
                 return {
-                    start: start.toISOString(),
-                    end: end.toISOString()
+                    start: startUTC.toISOString(),
+                    end: endUTC.toISOString()
                 };
             },
             
@@ -977,6 +993,9 @@
                 try {
                     const { start, end } = this.getSelectedDateRange();
                     
+                    console.log('데이터 조회 범위 (UTC):', start, '~', end);
+                    console.log('데이터 조회 범위 (KST):', new Date(new Date(start).getTime() + 9*60*60*1000).toLocaleString('ko-KR'), '~', new Date(new Date(end).getTime() + 9*60*60*1000).toLocaleString('ko-KR'));
+                    
                     // Supabase에서 당일 전체 데이터 조회
                     const { data: messages, error } = await this.supabaseClient
                         .from('manager_messages')
@@ -993,6 +1012,12 @@
                     );
                     
                     console.log(`총 ${this.currentMessages.length}개 메시지 로드됨`);
+                    if (this.currentMessages.length > 0) {
+                        const firstMsg = this.currentMessages[this.currentMessages.length - 1];
+                        const lastMsg = this.currentMessages[0];
+                        console.log('첫 메시지 시간(KST):', new Date(new Date(firstMsg.created_at).getTime() + 9*60*60*1000).toLocaleString('ko-KR'));
+                        console.log('마지막 메시지 시간(KST):', new Date(new Date(lastMsg.created_at).getTime() + 9*60*60*1000).toLocaleString('ko-KR'));
+                    }
                     
                     // 통계 계산
                     this.calculateStats();
@@ -1172,8 +1197,10 @@
                     container.innerHTML = `<div style="padding:50px;text-align:center;color:#999;">${noDataMessage}</div>`;
                 } else {
                     const messagesHTML = messagesToShow.map(msg => {
-                        const time = new Date(msg.created_at);
-                        const timeStr = `${time.getHours().toString().padStart(2,'0')}:${time.getMinutes().toString().padStart(2,'0')}`;
+                        // UTC를 KST로 변환
+                        const timeUTC = new Date(msg.created_at);
+                        const timeKST = new Date(timeUTC.getTime() + 9 * 60 * 60 * 1000);
+                        const timeStr = `${timeKST.getHours().toString().padStart(2,'0')}:${timeKST.getMinutes().toString().padStart(2,'0')}`;
                         const team = this.getTeam(msg.writer_manager_name);
                         
                         let messageText = msg.message_text;
@@ -1321,8 +1348,10 @@
                 );
                 
                 sortedMessages.forEach(msg => {
-                    const time = new Date(msg.created_at);
-                    const timeStr = `${time.getHours().toString().padStart(2,'0')}:${time.getMinutes().toString().padStart(2,'0')}`;
+                    // UTC를 KST로 변환
+                    const timeUTC = new Date(msg.created_at);
+                    const timeKST = new Date(timeUTC.getTime() + 9 * 60 * 60 * 1000);
+                    const timeStr = `${timeKST.getHours().toString().padStart(2,'0')}:${timeKST.getMinutes().toString().padStart(2,'0')}`;
                     const formCount = this.countValidFormLinks(msg.message_text);
                     const hasForm = formCount > 0;
                     
@@ -1379,6 +1408,9 @@
                     return;
                 }
                 
+                // KST 오늘의 UTC 시작 시간
+                const todayRange = this.getTodayRange();
+                
                 this.realtimeSubscription = this.supabaseClient
                     .channel('manager_messages_changes')
                     .on('postgres_changes', 
@@ -1386,7 +1418,7 @@
                             event: '*',
                             schema: 'public', 
                             table: 'manager_messages',
-                            filter: `created_at=gte.${this.getTodayRange().start}`
+                            filter: `created_at=gte.${todayRange.start}`
                         },
                         (payload) => {
                             console.log('실시간 이벤트:', payload.eventType, payload);
@@ -1399,10 +1431,12 @@
                                     return;
                                 }
                                 
-                                // 오늘 메시지인지 확인
+                                // KST 기준 오늘 메시지인지 확인
                                 const messageDate = new Date(newMessage.created_at);
-                                const today = new Date();
-                                if (messageDate.toDateString() !== today.toDateString()) {
+                                const messageDateKST = new Date(messageDate.getTime() + 9 * 60 * 60 * 1000);
+                                const todayKST = new Date();
+                                
+                                if (messageDateKST.toDateString() !== todayKST.toDateString()) {
                                     return;
                                 }
                                 
@@ -1524,8 +1558,10 @@
                 }
                 
                 const container = document.getElementById('messagesContainer');
-                const time = new Date(msg.created_at);
-                const timeStr = `${time.getHours().toString().padStart(2,'0')}:${time.getMinutes().toString().padStart(2,'0')}`;
+                // UTC를 KST로 변환
+                const timeUTC = new Date(msg.created_at);
+                const timeKST = new Date(timeUTC.getTime() + 9 * 60 * 60 * 1000);
+                const timeStr = `${timeKST.getHours().toString().padStart(2,'0')}:${timeKST.getMinutes().toString().padStart(2,'0')}`;
                 const team = this.getTeam(msg.writer_manager_name);
                 
                 let messageText = msg.message_text || '(메시지 내용 없음)';
@@ -1754,7 +1790,7 @@
                 try {
                     const { start, end } = this.getTodayRange();
                     
-                    // 당일 전체 데이터 가져오기
+                    // 당일 전체 데이터 가져오기 (UTC 기준)
                     const { data: allMessages, error } = await this.supabaseClient
                         .from('manager_messages')
                         .select('*')
@@ -1860,38 +1896,6 @@
                     }
                     this.showNotification('⏸️ 자동 업데이트 비활성화');
                     this.setStatus('active', '🔴 실시간 모니터링 중');
-                }
-            },
-            
-            // 데이터 내보내기
-            exportData: function() {
-                try {
-                    const dateStr = `${this.selectedDate.getFullYear()}-${String(this.selectedDate.getMonth()+1).padStart(2,'0')}-${String(this.selectedDate.getDate()).padStart(2,'0')}`;
-                    
-                    // CSV 형식으로 데이터 생성
-                    let csv = '시간,작성자,팀,도움받은상담사,메시지길이,신청서수,메시지내용\n';
-                    
-                    this.currentMessages.forEach(msg => {
-                        const time = new Date(msg.created_at);
-                        const timeStr = `${time.getHours().toString().padStart(2,'0')}:${time.getMinutes().toString().padStart(2,'0')}`;
-                        const team = this.getTeam(msg.writer_manager_name);
-                        const formCount = this.countValidFormLinks(msg.message_text);
-                        const messageText = (msg.message_text || '').replace(/"/g, '""');
-                        
-                        csv += `"${timeStr}","${msg.writer_manager_name}","${team}","${msg.assigned_manager_name}",${msg.message_length},${formCount},"${messageText}"\n`;
-                    });
-                    
-                    // 다운로드
-                    const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
-                    const link = document.createElement('a');
-                    link.href = URL.createObjectURL(blob);
-                    link.download = `SNS_도움메시지_${dateStr}.csv`;
-                    link.click();
-                    
-                    this.showNotification(`✅ ${this.currentMessages.length}개 메시지 내보내기 완료`);
-                } catch (error) {
-                    console.error('내보내기 실패:', error);
-                    this.showNotification('❌ 내보내기 실패', 'error');
                 }
             },
             
