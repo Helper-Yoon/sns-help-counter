@@ -295,6 +295,35 @@
                 };
             },
             
+            // 신청서 링크 체크 함수
+            isValidFormLink: function(text) {
+                if (!text) return false;
+                
+                // form.ajd.co.kr/r?h= 로 시작하는지 체크
+                const validPattern = /(?:https?:\/\/)?form\.ajd\.co\.kr\/r\?h=/i;
+                // form.ajd.co.kr/attachments 로 시작하는지 체크
+                const invalidPattern = /(?:https?:\/\/)?form\.ajd\.co\.kr\/attachments/i;
+                
+                // attachments로 시작하면 false
+                if (invalidPattern.test(text)) {
+                    return false;
+                }
+                
+                // r?h= 로 시작하면 true
+                return validPattern.test(text);
+            },
+            
+            // 신청서 링크 하이라이트 함수
+            highlightFormLinks: function(text) {
+                if (!text) return text;
+                
+                // form.ajd.co.kr/r?h= 패턴만 하이라이트
+                return text.replace(
+                    /((?:https?:\/\/)?form\.ajd\.co\.kr\/r\?h=[^\s]*)/gi,
+                    '<span class="form-link">$1</span>'
+                );
+            },
+            
             // 데이터 로드
             loadData: async function() {
                 const btn = document.getElementById('refreshBtn');
@@ -427,11 +456,8 @@
                         if (!messageText || messageText.trim() === '') {
                             messageText = '(메시지 내용 없음)';
                         } else {
-                            // form.ajd.co.kr 링크를 노란색으로 하이라이트
-                            messageText = messageText.replace(
-                                /(https?:\/\/)?(form\.ajd\.co\.kr[^\s]*)/gi,
-                                '<span class="form-link">$1$2</span>'
-                            );
+                            // 유효한 form 링크만 하이라이트
+                            messageText = this.highlightFormLinks(messageText);
                             
                             if (messageText.length > 200) {
                                 // 긴 메시지 자르기 (HTML 태그 고려)
@@ -444,11 +470,8 @@
                             }
                         }
                         
-                        // form.ajd.co.kr 포함 여부 체크
-                        const hasForm = msg.message_text && (
-                            msg.message_text.includes('form.ajd.co.kr') || 
-                            msg.message_text.includes('https://form.ajd.co.kr')
-                        );
+                        // 유효한 신청서 링크 포함 여부 체크
+                        const hasForm = this.isValidFormLink(msg.message_text);
                         
                         return `
                             <div class="message-item ${hasForm ? 'has-form' : ''}">
@@ -567,14 +590,11 @@
                 const team = this.getTeam(msg.writer_manager_name);
                 
                 let messageText = msg.message_text || '(메시지 내용 없음)';
-                const hasForm = messageText.includes('form.ajd.co.kr');
+                const hasForm = this.isValidFormLink(messageText);
                 
-                // form.ajd.co.kr 하이라이트
+                // 유효한 form 링크만 하이라이트
                 if (hasForm) {
-                    messageText = messageText.replace(
-                        /(https?:\/\/)?(form\.ajd\.co\.kr[^\s]*)/gi,
-                        '<span class="form-link">$1$2</span>'
-                    );
+                    messageText = this.highlightFormLinks(messageText);
                 }
                 
                 if (messageText.length > 200) {
