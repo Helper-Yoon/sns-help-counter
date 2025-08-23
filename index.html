@@ -23,13 +23,13 @@
         
         .header { 
             text-align: center; 
-            margin-bottom: 50px;
-            padding: 30px 0;
+            margin-bottom: 40px;
+            padding: 25px 0;
         }
         .header h1 { 
             font-size: 54px; 
             font-weight: 200; 
-            margin-bottom: 15px;
+            margin-bottom: 20px;
             letter-spacing: -1px;
         }
         .header h1 span { 
@@ -37,17 +37,11 @@
             font-weight: 400; 
         }
         .date-display { 
-            color: #aaa; 
-            font-size: 16px; 
-            text-transform: uppercase; 
-            letter-spacing: 1.5px; 
-            margin-bottom: 8px; 
-        }
-        .today-info { 
             color: #1E6FFF; 
-            font-size: 20px; 
-            margin-top: 12px;
-            font-weight: 300;
+            font-size: 18px; 
+            text-transform: uppercase; 
+            letter-spacing: 1.5px;
+            font-weight: 400;
         }
         
         .control-bar { 
@@ -567,7 +561,6 @@
         <div class="header">
             <h1>SNS센터 <span>도움 카운팅 프로그램</span></h1>
             <div class="date-display" id="dateDisplay">📅 날짜 로딩중...</div>
-            <div class="today-info" id="todayInfo">오늘 하루 실시간 집계</div>
         </div>
         
         <div class="control-bar">
@@ -811,11 +804,9 @@
                 
                 // 날짜 정보 표시
                 const dateInfo = document.getElementById('dateInfo');
-                const todayInfo = document.getElementById('todayInfo');
                 if (this.isToday) {
                     dateInfo.innerHTML = '✨ 오늘';
                     dateInfo.className = 'date-info today';
-                    todayInfo.innerHTML = '⚡ 오늘 하루 실시간 집계';
                     // 실시간 업데이트 활성화
                     if (!this.autoRefreshInterval && this.isAutoRefresh) {
                         this.startAutoRefresh();
@@ -829,7 +820,6 @@
                         dateInfo.innerHTML = `📅 ${Math.abs(daysDiff)}일 후`;
                         dateInfo.className = 'date-info';
                     }
-                    todayInfo.innerHTML = `📊 ${dateStr} 집계`;
                     // 과거 데이터는 자동 업데이트 비활성화
                     if (this.autoRefreshInterval) {
                         clearInterval(this.autoRefreshInterval);
