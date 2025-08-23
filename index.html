@@ -49,12 +49,19 @@
         tr:hover { background: #050505; }
         
         .rank-number { font-size: 20px; font-weight: 200; color: #1E6FFF; }
+        .manager-name { cursor: pointer; transition: color 0.3s; }
+        .manager-name:hover { color: #1E6FFF; text-decoration: underline; }
         .team-badge { display: inline-block; padding: 4px 12px; background: #1E6FFF; color: #000; font-size: 13px; font-weight: 600; margin-left: 10px; text-transform: uppercase; letter-spacing: 0.5px; }
         .team-1 { background: #FF6B6B; }
         .team-2 { background: #4ECDC4; }
         .team-3 { background: #45B7D1; }
         .team-4 { background: #96CEB4; }
         .team-5 { background: #FFEAA7; color: #000; }
+        
+        .score-badge { display: inline-block; padding: 2px 8px; font-size: 12px; border-radius: 3px; margin-left: 10px; }
+        .score-high { background: rgba(255, 215, 0, 0.2); color: #FFD700; }
+        .score-medium { background: rgba(30, 111, 255, 0.2); color: #1E6FFF; }
+        .score-low { background: rgba(255, 255, 255, 0.1); color: #999; }
         
         .messages-section { background: #000; border: 1px solid #222; margin-top: 50px; }
         .messages-header { padding: 25px 30px; border-bottom: 1px solid #222; }
@@ -91,6 +98,16 @@
             animation: pulse 2s infinite;
         }
         
+        /* 모달 스타일 */
+        .modal { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.9); z-index: 1000; overflow-y: auto; }
+        .modal.show { display: block; }
+        .modal-content { max-width: 900px; margin: 50px auto; background: #000; border: 1px solid #222; }
+        .modal-header { padding: 25px 30px; border-bottom: 1px solid #222; display: flex; justify-content: space-between; align-items: center; }
+        .modal-title { font-size: 20px; }
+        .modal-close { color: #999; font-size: 28px; cursor: pointer; transition: color 0.3s; }
+        .modal-close:hover { color: #fff; }
+        .modal-body { padding: 30px; max-height: 70vh; overflow-y: auto; }
+        
         .notification { position: fixed; top: 20px; right: 20px; padding: 15px 20px; background: #111; border: 1px solid #1E6FFF; color: #fff; font-size: 15px; z-index: 1000; animation: slideIn 0.3s; display: none; }
         .notification.show { display: block; }
         .new-message {
@@ -118,6 +135,7 @@
         
         .loading-screen { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: #000; display: flex; justify-content: center; align-items: center; z-index: 9999; }
         .loading-text { color: #1E6FFF; font-size: 20px; animation: pulse 1s infinite; }
+        
         
         @media (max-width: 768px) {
             .control-bar { flex-direction: column; }
@@ -150,11 +168,36 @@
         </div>
         
         <div class="tabs">
-            <button class="tab active" onclick="app.switchTab('messages')" id="tab-messages">메시지 수 랭킹</button>
+            <button class="tab active" onclick="app.switchTab('score')" id="tab-score">도움 점수 랭킹</button>
+            <button class="tab" onclick="app.switchTab('messages')" id="tab-messages">메시지 수 랭킹</button>
             <button class="tab" onclick="app.switchTab('chars')" id="tab-chars">글자수 랭킹</button>
         </div>
         
-        <div class="ranking-table" id="ranking-messages">
+        <div class="ranking-table" id="ranking-score">
+            <div class="table-header">
+                <div>
+                    <div class="table-title">도움 점수 랭킹</div>
+                    <div class="table-subtitle">품질과 효율을 고려한 종합 평가</div>
+                </div>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th style="width:80px">순위</th>
+                        <th>상담사</th>
+                        <th>팀</th>
+                        <th style="width:150px">도움 점수</th>
+                        <th style="width:100px">메시지</th>
+                        <th style="width:100px">신청서</th>
+                    </tr>
+                </thead>
+                <tbody id="scoreRankingBody">
+                    <tr><td colspan="6" style="text-align:center;padding:50px;color:#999;">데이터를 불러오는 중...</td></tr>
+                </tbody>
+            </table>
+        </div>
+        
+        <div class="ranking-table" id="ranking-messages" style="display:none;">
             <div class="table-header">
                 <div>
                     <div class="table-title">메시지 수 랭킹</div>
@@ -210,6 +253,19 @@
         </div>
     </div>
     
+    <!-- 상담사 메시지 모달 -->
+    <div class="modal" id="managerModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title" id="modalTitle">상담사 메시지</div>
+                <span class="modal-close" onclick="app.closeModal()">&times;</span>
+            </div>
+            <div class="modal-body" id="modalBody">
+                <!-- 동적으로 내용 추가 -->
+            </div>
+        </div>
+    </div>
+    
     <div class="notification" id="notification"></div>
     
     <script>
@@ -218,7 +274,7 @@
             supabaseClient: null,
             currentMessages: [],
             currentStats: [],
-            currentTab: 'messages',
+            currentTab: 'score',
             autoRefreshInterval: null,
             isAutoRefresh: false,
             
@@ -230,6 +286,9 @@
                 'SNS 4팀': ['이민주', '전지윤', '전미란', '김채영', '김영진', '공현준'],
                 '의정부 SNS': ['차정환', '최수능', '구본영', '서민국', '오민경', '김범주', '동수진', '성일훈']
             },
+            
+            // 제외할 상담사
+            excludedManagers: ['채주은'],
             
             // 초기화
             init: async function() {
@@ -324,6 +383,40 @@
                 );
             },
             
+            // 도움 점수 계산
+            calculateHelpScore: function(message, allMessages) {
+                let score = 1; // 기본 점수
+                
+                // 1. 신청서 가중치 (+5점)
+                if (this.isValidFormLink(message.message_text)) {
+                    score += 5;
+                }
+                
+                // 2. 길이 가중치
+                const length = message.message_length;
+                if (length < 10) {
+                    score *= 0.5; // 10글자 미만: 50% 감소
+                } else if (length >= 30) {
+                    score *= 1.5; // 30글자 이상: 50% 증가
+                }
+                
+                // 3. 중복 메시지 페널티
+                const sameMessages = allMessages.filter(m => 
+                    m.writer_manager_id === message.writer_manager_id &&
+                    m.message_text === message.message_text &&
+                    new Date(m.created_at) <= new Date(message.created_at)
+                );
+                
+                const duplicateCount = sameMessages.length;
+                if (duplicateCount === 2) {
+                    score *= 0.7; // 두 번째 중복: 30% 감소
+                } else if (duplicateCount > 2) {
+                    score *= 0.5; // 세 번째 이상: 50% 감소
+                }
+                
+                return Math.round(score * 100) / 100; // 소수점 둘째자리까지
+            },
+            
             // 데이터 로드
             loadData: async function() {
                 const btn = document.getElementById('refreshBtn');
@@ -343,7 +436,10 @@
                     
                     if (error) throw error;
                     
-                    this.currentMessages = messages || [];
+                    // 제외할 상담사 필터링
+                    this.currentMessages = (messages || []).filter(msg => 
+                        !this.excludedManagers.includes(msg.writer_manager_name)
+                    );
                     
                     // 통계 계산
                     this.calculateStats();
@@ -379,24 +475,57 @@
                             team: this.getTeam(managerName),
                             messageCount: 0,
                             totalChars: 0,
-                            uniqueChats: new Set()
+                            uniqueChats: new Set(),
+                            helpScore: 0,
+                            formCount: 0
                         };
                     }
                     
                     stats[managerId].messageCount++;
                     stats[managerId].totalChars += msg.message_length;
                     stats[managerId].uniqueChats.add(msg.user_chat_id);
+                    
+                    // 도움 점수 계산
+                    const score = this.calculateHelpScore(msg, this.currentMessages);
+                    stats[managerId].helpScore += score;
+                    
+                    // 신청서 카운트
+                    if (this.isValidFormLink(msg.message_text)) {
+                        stats[managerId].formCount++;
+                    }
                 });
                 
                 this.currentStats = Object.values(stats).map(s => ({
                     ...s,
                     uniqueChats: s.uniqueChats.size,
-                    avgChars: Math.round(s.totalChars / s.messageCount)
+                    avgChars: Math.round(s.totalChars / s.messageCount),
+                    helpScore: Math.round(s.helpScore * 100) / 100
                 }));
             },
             
             // 랭킹 업데이트 (초기 로드용 - 기존 방식 유지)
             updateAllRankings: function() {
+                // 도움 점수 랭킹
+                const scoreRanking = [...this.currentStats].sort((a, b) => b.helpScore - a.helpScore);
+                const scoreBody = document.getElementById('scoreRankingBody');
+                
+                if (scoreRanking.length === 0) {
+                    scoreBody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:50px;color:#999;">오늘 데이터가 없습니다</td></tr>';
+                } else {
+                    scoreBody.innerHTML = scoreRanking.map((item, index) => `
+                        <tr id="score-row-${item.id}" data-rank="${index + 1}">
+                            <td><span class="rank-number">#${index + 1}</span></td>
+                            <td><span class="manager-name" onclick="app.showManagerMessages('${item.name}')" style="font-size:17px;">${item.name}</span></td>
+                            <td><span class="team-badge ${this.getTeamClass(item.team)}">${item.team}</span></td>
+                            <td style="font-size:22px;color:#FFD700;font-weight:600;">
+                                <span class="count-animation">${item.helpScore}</span>
+                            </td>
+                            <td style="font-size:17px;">${item.messageCount}</td>
+                            <td style="font-size:17px;color:#FFD700;">${item.formCount}</td>
+                        </tr>
+                    `).join('');
+                }
+                
                 // 메시지 수 랭킹
                 const messageRanking = [...this.currentStats].sort((a, b) => b.messageCount - a.messageCount);
                 const messageBody = document.getElementById('messageRankingBody');
@@ -407,7 +536,7 @@
                     messageBody.innerHTML = messageRanking.map((item, index) => `
                         <tr id="message-row-${item.id}" data-rank="${index + 1}">
                             <td><span class="rank-number">#${index + 1}</span></td>
-                            <td style="font-size:17px;">${item.name}</td>
+                            <td><span class="manager-name" onclick="app.showManagerMessages('${item.name}')" style="font-size:17px;">${item.name}</span></td>
                             <td><span class="team-badge ${this.getTeamClass(item.team)}">${item.team}</span></td>
                             <td style="font-size:22px;color:#1E6FFF;font-weight:600;">
                                 <span class="count-animation">${item.messageCount}</span>
@@ -427,7 +556,7 @@
                     charBody.innerHTML = charRanking.map((item, index) => `
                         <tr id="char-row-${item.id}" data-rank="${index + 1}">
                             <td><span class="rank-number">#${index + 1}</span></td>
-                            <td style="font-size:17px;">${item.name}</td>
+                            <td><span class="manager-name" onclick="app.showManagerMessages('${item.name}')" style="font-size:17px;">${item.name}</span></td>
                             <td><span class="team-badge ${this.getTeamClass(item.team)}">${item.team}</span></td>
                             <td style="font-size:22px;color:#1E6FFF;font-weight:600;">
                                 <span class="count-animation">${item.totalChars.toLocaleString()}</span>
@@ -436,6 +565,77 @@
                         </tr>
                     `).join('');
                 }
+            },
+            
+            // 상담사 메시지 보기
+            showManagerMessages: function(managerName) {
+                const modal = document.getElementById('managerModal');
+                const modalTitle = document.getElementById('modalTitle');
+                const modalBody = document.getElementById('modalBody');
+                
+                // 해당 상담사의 메시지 필터링
+                const managerMessages = this.currentMessages.filter(msg => 
+                    msg.writer_manager_name === managerName
+                );
+                
+                // 통계 계산
+                const stats = this.currentStats.find(s => s.name === managerName);
+                
+                modalTitle.innerHTML = `${managerName} <span class="team-badge ${this.getTeamClass(stats.team)}">${stats.team}</span>`;
+                
+                let html = `
+                    <div style="margin-bottom: 30px; padding: 20px; background: #111; border: 1px solid #222;">
+                        <h3 style="margin-bottom: 15px; color: #1E6FFF;">오늘 통계</h3>
+                        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px;">
+                            <div>
+                                <div style="color: #999; font-size: 13px; margin-bottom: 5px;">도움 점수</div>
+                                <div style="font-size: 24px; color: #FFD700; font-weight: 600;">${stats.helpScore}</div>
+                            </div>
+                            <div>
+                                <div style="color: #999; font-size: 13px; margin-bottom: 5px;">메시지 수</div>
+                                <div style="font-size: 24px; color: #1E6FFF;">${stats.messageCount}</div>
+                            </div>
+                            <div>
+                                <div style="color: #999; font-size: 13px; margin-bottom: 5px;">신청서 발송</div>
+                                <div style="font-size: 24px; color: #FFD700;">${stats.formCount}</div>
+                            </div>
+                        </div>
+                    </div>
+                    <h3 style="margin-bottom: 20px;">오늘 작성한 메시지 (${managerMessages.length}개)</h3>
+                `;
+                
+                managerMessages.forEach(msg => {
+                    const time = new Date(msg.created_at);
+                    const timeStr = `${time.getHours().toString().padStart(2,'0')}:${time.getMinutes().toString().padStart(2,'0')}`;
+                    const hasForm = this.isValidFormLink(msg.message_text);
+                    
+                    let messageText = msg.message_text || '(메시지 내용 없음)';
+                    if (hasForm) {
+                        messageText = this.highlightFormLinks(messageText);
+                    }
+                    
+                    html += `
+                        <div class="message-item ${hasForm ? 'has-form' : ''}" style="margin-bottom: 10px;">
+                            <div class="message-time">${timeStr}</div>
+                            <div class="message-content">
+                                <div class="message-meta">
+                                    ${msg.assigned_manager_name} 상담사 도움 | 
+                                    ${msg.message_length}자
+                                    ${hasForm ? '<span class="form-indicator">📋 신청서</span>' : ''}
+                                </div>
+                                <div class="message-text" style="margin-top: 10px;">${messageText}</div>
+                            </div>
+                        </div>
+                    `;
+                });
+                
+                modalBody.innerHTML = html;
+                modal.classList.add('show');
+            },
+            
+            // 모달 닫기
+            closeModal: function() {
+                document.getElementById('managerModal').classList.remove('show');
             },
             
             // 최근 메시지 업데이트
@@ -478,7 +678,7 @@
                                 <div class="message-time">${timeStr}</div>
                                 <div class="message-content">
                                     <div class="message-manager">
-                                        ${msg.writer_manager_name}
+                                        <span class="manager-name" onclick="app.showManagerMessages('${msg.writer_manager_name}')">${msg.writer_manager_name}</span>
                                         <span class="team-badge ${this.getTeamClass(team)}">${team}</span>
                                         ${hasForm ? '<span class="form-indicator">📋 신청서</span>' : ''}
                                     </div>
@@ -493,7 +693,7 @@
                 }
             },
             
-            // 실시간 구독 (개선된 버전)
+            // 실시간 구독
             subscribeToChanges: function() {
                 this.supabaseClient
                     .channel('manager_messages_changes')
@@ -501,6 +701,12 @@
                         { event: 'INSERT', schema: 'public', table: 'manager_messages' },
                         (payload) => {
                             const newMessage = payload.new;
+                            
+                            // 제외할 상담사 체크
+                            if (this.excludedManagers.includes(newMessage.writer_manager_name)) {
+                                return;
+                            }
+                            
                             console.log('새 메시지 수신:', newMessage);
                             
                             // 오늘 메시지인지 확인
@@ -543,7 +749,9 @@
                         messageCount: 0,
                         totalChars: 0,
                         uniqueChats: 0,
-                        avgChars: 0
+                        avgChars: 0,
+                        helpScore: 0,
+                        formCount: 0
                     };
                     this.currentStats.push(managerStat);
                 }
@@ -551,6 +759,16 @@
                 // 통계 업데이트
                 managerStat.messageCount++;
                 managerStat.totalChars += newMessage.message_length;
+                
+                // 도움 점수 계산
+                const score = this.calculateHelpScore(newMessage, this.currentMessages);
+                managerStat.helpScore += score;
+                managerStat.helpScore = Math.round(managerStat.helpScore * 100) / 100;
+                
+                // 신청서 카운트
+                if (this.isValidFormLink(newMessage.message_text)) {
+                    managerStat.formCount++;
+                }
                 
                 // uniqueChats 계산 (전체 메시지에서 다시 계산)
                 const uniqueChatsSet = new Set();
@@ -608,7 +826,7 @@
                     <div class="message-time">${timeStr}</div>
                     <div class="message-content">
                         <div class="message-manager">
-                            ${msg.writer_manager_name}
+                            <span class="manager-name" onclick="app.showManagerMessages('${msg.writer_manager_name}')">${msg.writer_manager_name}</span>
                             <span class="team-badge ${this.getTeamClass(team)}">${team}</span>
                             ${hasForm ? '<span class="form-indicator">📋 신청서</span>' : ''}
                         </div>
@@ -649,6 +867,10 @@
             
             // 랭킹 테이블 부드럽게 업데이트
             updateRankingSmoothly: function() {
+                // 도움 점수 기준 정렬
+                const scoreRanking = [...this.currentStats].sort((a, b) => b.helpScore - a.helpScore);
+                const scoreBody = document.getElementById('scoreRankingBody');
+                
                 // 메시지 수 기준 정렬
                 const messageRanking = [...this.currentStats].sort((a, b) => b.messageCount - a.messageCount);
                 const messageBody = document.getElementById('messageRankingBody');
@@ -658,7 +880,9 @@
                 const charBody = document.getElementById('charRankingBody');
                 
                 // 현재 활성 탭에 따라 업데이트
-                if (this.currentTab === 'messages') {
+                if (this.currentTab === 'score') {
+                    this.updateTableRows(scoreBody, scoreRanking, 'score');
+                } else if (this.currentTab === 'messages') {
                     this.updateTableRows(messageBody, messageRanking, 'message');
                 } else if (this.currentTab === 'chars') {
                     this.updateTableRows(charBody, charRanking, 'char');
@@ -696,10 +920,21 @@
                     // 데이터 업데이트
                     row.dataset.rank = newRank;
                     
-                    if (type === 'message') {
+                    if (type === 'score') {
                         row.innerHTML = `
                             <td><span class="rank-number">#${newRank}</span></td>
-                            <td style="font-size:17px;">${item.name}</td>
+                            <td><span class="manager-name" onclick="app.showManagerMessages('${item.name}')" style="font-size:17px;">${item.name}</span></td>
+                            <td><span class="team-badge ${this.getTeamClass(item.team)}">${item.team}</span></td>
+                            <td style="font-size:22px;color:#FFD700;font-weight:600;">
+                                <span class="count-animation">${item.helpScore}</span>
+                            </td>
+                            <td style="font-size:17px;">${item.messageCount}</td>
+                            <td style="font-size:17px;color:#FFD700;">${item.formCount}</td>
+                        `;
+                    } else if (type === 'message') {
+                        row.innerHTML = `
+                            <td><span class="rank-number">#${newRank}</span></td>
+                            <td><span class="manager-name" onclick="app.showManagerMessages('${item.name}')" style="font-size:17px;">${item.name}</span></td>
                             <td><span class="team-badge ${this.getTeamClass(item.team)}">${item.team}</span></td>
                             <td style="font-size:22px;color:#1E6FFF;font-weight:600;">
                                 <span class="count-animation">${item.messageCount}</span>
@@ -709,7 +944,7 @@
                     } else {
                         row.innerHTML = `
                             <td><span class="rank-number">#${newRank}</span></td>
-                            <td style="font-size:17px;">${item.name}</td>
+                            <td><span class="manager-name" onclick="app.showManagerMessages('${item.name}')" style="font-size:17px;">${item.name}</span></td>
                             <td><span class="team-badge ${this.getTeamClass(item.team)}">${item.team}</span></td>
                             <td style="font-size:22px;color:#1E6FFF;font-weight:600;">
                                 <span class="count-animation">${item.totalChars.toLocaleString()}</span>
@@ -749,11 +984,12 @@
                 document.getElementById(`tab-${tab}`).classList.add('active');
                 
                 // 테이블 표시/숨김
+                document.getElementById('ranking-score').style.display = tab === 'score' ? 'block' : 'none';
                 document.getElementById('ranking-messages').style.display = tab === 'messages' ? 'block' : 'none';
                 document.getElementById('ranking-chars').style.display = tab === 'chars' ? 'block' : 'none';
                 
                 // 탭 전환 시 해당 랭킹 부드럽게 업데이트
-                if (tab === 'messages' || tab === 'chars') {
+                if (tab === 'score' || tab === 'messages' || tab === 'chars') {
                     this.updateRankingSmoothly();
                 }
             },
@@ -801,6 +1037,14 @@
                 setTimeout(() => {
                     notification.classList.remove('show');
                 }, 3000);
+            }
+        };
+        
+        // 모달 외부 클릭 시 닫기
+        window.onclick = function(event) {
+            const modal = document.getElementById('managerModal');
+            if (event.target === modal) {
+                app.closeModal();
             }
         };
         
