@@ -881,27 +881,23 @@
                 this.subscribeToChanges();
             },
             
-            // 선택된 날짜 범위 (KST 기준으로 UTC 변환)
+            // 선택된 날짜 범위 (KST 기준 자동 UTC 변환)
             getSelectedDateRange: function() {
-                // KST 기준 시작 시간 (00:00:00)
+                // JavaScript Date는 로컬 시간대(KST) 사용
                 const start = new Date(this.selectedDate);
                 start.setHours(0, 0, 0, 0);
                 
-                // KST 기준 종료 시간 (23:59:59)
                 const end = new Date(this.selectedDate);
                 end.setHours(23, 59, 59, 999);
                 
-                // UTC로 변환 (KST는 UTC+9이므로 9시간 빼기)
-                const startUTC = new Date(start.getTime() - 9 * 60 * 60 * 1000);
-                const endUTC = new Date(end.getTime() - 9 * 60 * 60 * 1000);
-                
+                // toISOString()은 자동으로 UTC로 변환
                 return {
-                    start: startUTC.toISOString(),
-                    end: endUTC.toISOString()
+                    start: start.toISOString(),
+                    end: end.toISOString()
                 };
             },
             
-            // 오늘 날짜 범위 (KST 기준으로 UTC 변환)
+            // 오늘 날짜 범위 (KST 기준 자동 UTC 변환)
             getTodayRange: function() {
                 const today = new Date();
                 
@@ -911,13 +907,10 @@
                 // KST 기준 오늘 끝 (23:59:59)
                 const end = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59);
                 
-                // UTC로 변환 (KST는 UTC+9이므로 9시간 빼기)
-                const startUTC = new Date(start.getTime() - 9 * 60 * 60 * 1000);
-                const endUTC = new Date(end.getTime() - 9 * 60 * 60 * 1000);
-                
+                // toISOString()은 자동으로 UTC로 변환
                 return {
-                    start: startUTC.toISOString(),
-                    end: endUTC.toISOString()
+                    start: start.toISOString(),
+                    end: end.toISOString()
                 };
             },
             
@@ -993,8 +986,9 @@
                 try {
                     const { start, end } = this.getSelectedDateRange();
                     
+                    console.log('조회 날짜 (KST):', this.selectedDate.toLocaleDateString('ko-KR'));
                     console.log('데이터 조회 범위 (UTC):', start, '~', end);
-                    console.log('데이터 조회 범위 (KST):', new Date(new Date(start).getTime() + 9*60*60*1000).toLocaleString('ko-KR'), '~', new Date(new Date(end).getTime() + 9*60*60*1000).toLocaleString('ko-KR'));
+                    console.log('데이터 조회 범위 (KST):', new Date(start).toLocaleString('ko-KR'), '~', new Date(end).toLocaleString('ko-KR'));
                     
                     // Supabase에서 당일 전체 데이터 조회
                     const { data: messages, error } = await this.supabaseClient
@@ -1015,8 +1009,10 @@
                     if (this.currentMessages.length > 0) {
                         const firstMsg = this.currentMessages[this.currentMessages.length - 1];
                         const lastMsg = this.currentMessages[0];
-                        console.log('첫 메시지 시간(KST):', new Date(new Date(firstMsg.created_at).getTime() + 9*60*60*1000).toLocaleString('ko-KR'));
-                        console.log('마지막 메시지 시간(KST):', new Date(new Date(lastMsg.created_at).getTime() + 9*60*60*1000).toLocaleString('ko-KR'));
+                        console.log('첫 메시지 시간(UTC):', firstMsg.created_at);
+                        console.log('첫 메시지 시간(KST):', new Date(firstMsg.created_at).toLocaleString('ko-KR'));
+                        console.log('마지막 메시지 시간(UTC):', lastMsg.created_at);
+                        console.log('마지막 메시지 시간(KST):', new Date(lastMsg.created_at).toLocaleString('ko-KR'));
                     }
                     
                     // 통계 계산
@@ -1197,10 +1193,9 @@
                     container.innerHTML = `<div style="padding:50px;text-align:center;color:#999;">${noDataMessage}</div>`;
                 } else {
                     const messagesHTML = messagesToShow.map(msg => {
-                        // UTC를 KST로 변환
-                        const timeUTC = new Date(msg.created_at);
-                        const timeKST = new Date(timeUTC.getTime() + 9 * 60 * 60 * 1000);
-                        const timeStr = `${timeKST.getHours().toString().padStart(2,'0')}:${timeKST.getMinutes().toString().padStart(2,'0')}`;
+                        // JavaScript Date는 자동으로 KST로 표시
+                        const time = new Date(msg.created_at);
+                        const timeStr = `${time.getHours().toString().padStart(2,'0')}:${time.getMinutes().toString().padStart(2,'0')}`;
                         const team = this.getTeam(msg.writer_manager_name);
                         
                         let messageText = msg.message_text;
@@ -1348,10 +1343,9 @@
                 );
                 
                 sortedMessages.forEach(msg => {
-                    // UTC를 KST로 변환
-                    const timeUTC = new Date(msg.created_at);
-                    const timeKST = new Date(timeUTC.getTime() + 9 * 60 * 60 * 1000);
-                    const timeStr = `${timeKST.getHours().toString().padStart(2,'0')}:${timeKST.getMinutes().toString().padStart(2,'0')}`;
+                    // JavaScript Date는 자동으로 KST로 표시
+                    const time = new Date(msg.created_at);
+                    const timeStr = `${time.getHours().toString().padStart(2,'0')}:${time.getMinutes().toString().padStart(2,'0')}`;
                     const formCount = this.countValidFormLinks(msg.message_text);
                     const hasForm = formCount > 0;
                     
@@ -1433,10 +1427,11 @@
                                 
                                 // KST 기준 오늘 메시지인지 확인
                                 const messageDate = new Date(newMessage.created_at);
-                                const messageDateKST = new Date(messageDate.getTime() + 9 * 60 * 60 * 1000);
-                                const todayKST = new Date();
+                                const today = new Date();
+                                const messageDateStr = `${messageDate.getFullYear()}-${messageDate.getMonth()}-${messageDate.getDate()}`;
+                                const todayDateStr = `${today.getFullYear()}-${today.getMonth()}-${today.getDate()}`;
                                 
-                                if (messageDateKST.toDateString() !== todayKST.toDateString()) {
+                                if (messageDateStr !== todayDateStr) {
                                     return;
                                 }
                                 
@@ -1558,10 +1553,9 @@
                 }
                 
                 const container = document.getElementById('messagesContainer');
-                // UTC를 KST로 변환
-                const timeUTC = new Date(msg.created_at);
-                const timeKST = new Date(timeUTC.getTime() + 9 * 60 * 60 * 1000);
-                const timeStr = `${timeKST.getHours().toString().padStart(2,'0')}:${timeKST.getMinutes().toString().padStart(2,'0')}`;
+                // JavaScript Date는 자동으로 KST로 표시
+                const time = new Date(msg.created_at);
+                const timeStr = `${time.getHours().toString().padStart(2,'0')}:${time.getMinutes().toString().padStart(2,'0')}`;
                 const team = this.getTeam(msg.writer_manager_name);
                 
                 let messageText = msg.message_text || '(메시지 내용 없음)';
