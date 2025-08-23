@@ -1,13 +1,7 @@
 {
   "functions": {
     "api/track.js": {
-      "maxDuration": 60
+      "maxDuration": 30
     }
-  },
-  "rewrites": [
-    {
-      "source": "/",
-      "destination": "/index.html"
-    }
-  ]
+  }
 }
