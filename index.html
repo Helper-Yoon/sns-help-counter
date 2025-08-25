@@ -206,6 +206,7 @@
             cursor: pointer; 
             transition: color 0.3s;
             font-size: 17px;
+            display: inline;
         }
         .manager-name:hover { 
             color: #1E6FFF; 
@@ -227,6 +228,19 @@
         .team-4 { background: #96CEB4; }
         .team-5 { background: #FFEAA7; }
         .team-6 { background: #9B59B6; color: #fff; }
+        
+        .leader-badge {
+            display: inline-block;
+            padding: 5px 12px;
+            background: linear-gradient(135deg, #FFB347, #FF8C42);
+            color: #fff;
+            font-size: 12px;
+            font-weight: 700;
+            margin-left: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            box-shadow: 0 2px 4px rgba(255, 140, 66, 0.3);
+        }
         
         .messages-section { 
             background: #000; 
@@ -269,6 +283,10 @@
             font-weight: 600; 
             margin-bottom: 8px; 
             font-size: 17px; 
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 5px;
         }
         .message-text { 
             color: #ddd; 
@@ -497,6 +515,13 @@
             .modal-content { margin: 20px; }
             table { font-size: 14px; }
             th, td { padding: 14px; }
+            
+            /* 뱃지 크기 조정 */
+            .team-badge, .leader-badge { 
+                font-size: 11px; 
+                padding: 3px 8px;
+                margin-left: 5px;
+            }
             
             /* 관리자 패널 반응형 */
             .admin-panel {
@@ -771,7 +796,7 @@
                     <tr>
                         <th style="width:80px">순위</th>
                         <th>상담사</th>
-                        <th>팀</th>
+                        <th style="width:200px">팀</th>
                         <th style="width:150px">도움 점수</th>
                         <th style="width:100px">메시지</th>
                         <th style="width:100px">신청서</th>
@@ -795,7 +820,7 @@
                     <tr>
                         <th style="width:80px">순위</th>
                         <th>상담사</th>
-                        <th>팀</th>
+                        <th style="width:200px">팀</th>
                         <th style="width:150px">도움 메시지</th>
                         <th style="width:100px">분당</th>
                         <th style="width:150px">총 글자수</th>
@@ -819,7 +844,7 @@
                     <tr>
                         <th style="width:80px">순위</th>
                         <th>상담사</th>
-                        <th>팀</th>
+                        <th style="width:200px">팀</th>
                         <th style="width:150px">총 글자수</th>
                         <th style="width:150px">도움 메시지</th>
                     </tr>
@@ -917,6 +942,9 @@
             // 제외할 상담사
             excludedManagers: ['채주은'],
             
+            // 파트장 목록
+            partLeaders: ['이종민', '이민주', '윤도우리', '김진후', '차정환'],
+            
             // 제외할 템플릿 메시지 (이 텍스트가 포함된 메시지는 통계에서 제외)
             // 단순 안내나 사과 메시지 등 실제 도움이 아닌 메시지들
             excludedTemplates: [
@@ -938,6 +966,7 @@
                         console.log(`  - ${team}: ${members.length}명`);
                     });
                     console.log(`  총 상담사: ${totalMembers}명`);
+                    console.log(`  파트장: ${this.partLeaders.length}명 (${this.partLeaders.join(', ')})`);
                     
                     console.log('제외 설정:');
                     console.log('  - 제외 상담사:', this.excludedManagers.join(', '));
@@ -1010,6 +1039,11 @@
                     '야간팀': 'team-6'
                 };
                 return classes[team] || '';
+            },
+            
+            // 파트장 확인
+            isPartLeader: function(name) {
+                return this.partLeaders.includes(name);
             },
             
             // 날짜 표시 업데이트
@@ -1415,7 +1449,10 @@
                         <tr id="score-row-${item.id}" data-rank="${index + 1}">
                             <td><span class="rank-number">#${index + 1}</span></td>
                             <td><span class="manager-name" onclick="app.showManagerMessages('${item.name}')" style="font-size:17px;">${item.name}</span></td>
-                            <td><span class="team-badge ${this.getTeamClass(item.team)}">${item.team}</span></td>
+                            <td>
+                                <span class="team-badge ${this.getTeamClass(item.team)}">${item.team}</span>
+                                ${this.isPartLeader(item.name) ? '<span class="leader-badge">파트장</span>' : ''}
+                            </td>
                             <td><span class="score-number">${item.helpScore}</span></td>
                             <td><span class="message-number">${item.messageCount}</span></td>
                             <td><span class="score-number" style="font-size:20px;">${item.formCount}</span></td>
@@ -1434,7 +1471,10 @@
                         <tr id="message-row-${item.id}" data-rank="${index + 1}">
                             <td><span class="rank-number">#${index + 1}</span></td>
                             <td><span class="manager-name" onclick="app.showManagerMessages('${item.name}')" style="font-size:17px;">${item.name}</span></td>
-                            <td><span class="team-badge ${this.getTeamClass(item.team)}">${item.team}</span></td>
+                            <td>
+                                <span class="team-badge ${this.getTeamClass(item.team)}">${item.team}</span>
+                                ${this.isPartLeader(item.name) ? '<span class="leader-badge">파트장</span>' : ''}
+                            </td>
                             <td><span class="message-number count-animation">${item.messageCount}</span></td>
                             <td><span class="rate-number">${item.messagesPerMinute.toFixed(1)}/분</span></td>
                             <td><span class="char-number">${item.totalChars.toLocaleString()}</span></td>
@@ -1453,7 +1493,10 @@
                         <tr id="char-row-${item.id}" data-rank="${index + 1}">
                             <td><span class="rank-number">#${index + 1}</span></td>
                             <td><span class="manager-name" onclick="app.showManagerMessages('${item.name}')" style="font-size:17px;">${item.name}</span></td>
-                            <td><span class="team-badge ${this.getTeamClass(item.team)}">${item.team}</span></td>
+                            <td>
+                                <span class="team-badge ${this.getTeamClass(item.team)}">${item.team}</span>
+                                ${this.isPartLeader(item.name) ? '<span class="leader-badge">파트장</span>' : ''}
+                            </td>
                             <td><span class="char-number">${item.totalChars.toLocaleString()}</span></td>
                             <td><span class="message-number">${item.messageCount}</span></td>
                         </tr>
@@ -1545,6 +1588,7 @@
                                     <div class="message-manager">
                                         <span class="manager-name" onclick="app.showManagerMessages('${msg.writer_manager_name}')">${msg.writer_manager_name}</span>
                                         <span class="team-badge ${this.getTeamClass(team)}">${team}</span>
+                                        ${this.isPartLeader(msg.writer_manager_name) ? '<span class="leader-badge">파트장</span>' : ''}
                                         ${hasForm ? `<span class="form-indicator${formCount > 1 ? ' multiple' : ''}">📋 신청서${formCount > 1 ? ` ×${formCount}` : ''}</span>` : ''}
                                     </div>
                                     <div class="message-text">${messageText}</div>
@@ -1592,7 +1636,7 @@
                 
                 const dateStr = `${this.selectedDate.getFullYear()}년 ${this.selectedDate.getMonth()+1}월 ${this.selectedDate.getDate()}일`;
                 
-                modalTitle.innerHTML = `${managerName} <span class="team-badge ${this.getTeamClass(stats.team)}">${stats.team}</span>`;
+                modalTitle.innerHTML = `${managerName} <span class="team-badge ${this.getTeamClass(stats.team)}">${stats.team}</span>${this.isPartLeader(managerName) ? '<span class="leader-badge">파트장</span>' : ''}`;
                 
                 let html = `
                     <div style="margin-bottom: 35px; padding: 25px; background: rgba(255, 255, 255, 0.05); border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.1);">
@@ -1896,6 +1940,7 @@
                         <div class="message-manager">
                             <span class="manager-name" onclick="app.showManagerMessages('${msg.writer_manager_name}')">${msg.writer_manager_name}</span>
                             <span class="team-badge ${this.getTeamClass(team)}">${team}</span>
+                            ${this.isPartLeader(msg.writer_manager_name) ? '<span class="leader-badge">파트장</span>' : ''}
                             ${hasForm ? `<span class="form-indicator${formCount > 1 ? ' multiple' : ''}">📋 신청서${formCount > 1 ? ` ×${formCount}` : ''}</span>` : ''}
                         </div>
                         <div class="message-text">${messageText}</div>
@@ -2012,7 +2057,10 @@
                         newHTML = `
                             <td><span class="rank-number">#${newRank}</span></td>
                             <td><span class="manager-name" onclick="app.showManagerMessages('${item.name}')" style="font-size:17px;">${item.name}</span></td>
-                            <td><span class="team-badge ${this.getTeamClass(item.team)}">${item.team}</span></td>
+                            <td>
+                                <span class="team-badge ${this.getTeamClass(item.team)}">${item.team}</span>
+                                ${this.isPartLeader(item.name) ? '<span class="leader-badge">파트장</span>' : ''}
+                            </td>
                             <td><span class="score-number">${item.helpScore}</span></td>
                             <td><span class="message-number">${item.messageCount}</span></td>
                             <td><span class="score-number" style="font-size:20px;">${item.formCount}</span></td>
@@ -2021,7 +2069,10 @@
                         newHTML = `
                             <td><span class="rank-number">#${newRank}</span></td>
                             <td><span class="manager-name" onclick="app.showManagerMessages('${item.name}')" style="font-size:17px;">${item.name}</span></td>
-                            <td><span class="team-badge ${this.getTeamClass(item.team)}">${item.team}</span></td>
+                            <td>
+                                <span class="team-badge ${this.getTeamClass(item.team)}">${item.team}</span>
+                                ${this.isPartLeader(item.name) ? '<span class="leader-badge">파트장</span>' : ''}
+                            </td>
                             <td><span class="message-number">${item.messageCount}</span></td>
                             <td><span class="rate-number">${item.messagesPerMinute.toFixed(1)}/분</span></td>
                             <td><span class="char-number">${item.totalChars.toLocaleString()}</span></td>
@@ -2030,7 +2081,10 @@
                         newHTML = `
                             <td><span class="rank-number">#${newRank}</span></td>
                             <td><span class="manager-name" onclick="app.showManagerMessages('${item.name}')" style="font-size:17px;">${item.name}</span></td>
-                            <td><span class="team-badge ${this.getTeamClass(item.team)}">${item.team}</span></td>
+                            <td>
+                                <span class="team-badge ${this.getTeamClass(item.team)}">${item.team}</span>
+                                ${this.isPartLeader(item.name) ? '<span class="leader-badge">파트장</span>' : ''}
+                            </td>
                             <td><span class="char-number">${item.totalChars.toLocaleString()}</span></td>
                             <td><span class="message-number">${item.messageCount}</span></td>
                         `;
