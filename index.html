@@ -103,6 +103,7 @@
             text-transform: uppercase; 
             letter-spacing: 0.5px;
             color: #999;
+            flex-wrap: wrap;
         }
         .status-dot { 
             width: 8px; 
@@ -224,7 +225,8 @@
         .team-2 { background: #4ECDC4; }
         .team-3 { background: #45B7D1; }
         .team-4 { background: #96CEB4; }
-        .team-5 { background: #FFEAA7; color: #000; }
+        .team-5 { background: #FFEAA7; }
+        .team-6 { background: #9B59B6; color: #fff; }
         
         .messages-section { 
             background: #000; 
@@ -489,11 +491,29 @@
             .control-row { flex-direction: column; align-items: stretch; }
             .control-buttons { width: 100%; justify-content: center; }
             .status-indicator { justify-content: center; }
+            .status-indicator span { font-size: 11px; }
             .tabs { flex-direction: column; }
             .date-info { display: block; width: 100%; text-align: center; margin-top: 10px; margin-left: 0; }
             .modal-content { margin: 20px; }
             table { font-size: 14px; }
             th, td { padding: 14px; }
+            
+            /* 관리자 패널 반응형 */
+            .admin-panel {
+                width: calc(100% - 40px);
+                right: 20px;
+                left: 20px;
+                bottom: 80px;
+                max-width: 400px;
+                margin: 0 auto;
+            }
+            .admin-button {
+                bottom: 20px;
+                right: 20px;
+                width: 45px;
+                height: 45px;
+                font-size: 18px;
+            }
         }
         
         .form-link { 
@@ -506,6 +526,198 @@
         @keyframes glow {
             from { text-shadow: 0 0 5px #FFD700, 0 0 10px #FFD700; }
             to { text-shadow: 0 0 10px #FFD700, 0 0 20px #FFD700, 0 0 30px #FFD700; }
+        }
+        
+        /* 관리자 버튼 스타일 */
+        .admin-button {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            width: 50px;
+            height: 50px;
+            background: #1E6FFF;
+            border: none;
+            border-radius: 50%;
+            color: #fff;
+            font-size: 20px;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(30, 111, 255, 0.3);
+            transition: all 0.3s;
+            z-index: 999;
+        }
+        .admin-button:hover {
+            background: #0056E0;
+            transform: scale(1.1);
+            box-shadow: 0 6px 20px rgba(30, 111, 255, 0.5);
+        }
+        
+        /* 관리자 패널 스타일 */
+        .admin-panel {
+            position: fixed;
+            bottom: 90px;
+            right: 30px;
+            width: 400px;
+            max-height: 600px;
+            background: #000;
+            border: 1px solid #222;
+            border-radius: 8px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8);
+            display: none;
+            z-index: 998;
+            overflow: hidden;
+        }
+        .admin-panel.show {
+            display: block;
+            animation: slideUp 0.3s ease;
+        }
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .admin-header {
+            padding: 20px;
+            border-bottom: 1px solid #222;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .admin-title {
+            font-size: 18px;
+            color: #1E6FFF;
+            font-weight: 600;
+        }
+        .admin-close {
+            background: none;
+            border: none;
+            color: #999;
+            font-size: 24px;
+            cursor: pointer;
+            transition: color 0.3s;
+        }
+        .admin-close:hover {
+            color: #fff;
+        }
+        
+        .admin-content {
+            padding: 20px;
+            max-height: 500px;
+            overflow-y: auto;
+        }
+        
+        .admin-section {
+            margin-bottom: 30px;
+        }
+        .admin-section-title {
+            font-size: 14px;
+            color: #8BA5FF;
+            margin-bottom: 15px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .template-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        .template-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 15px;
+            background: #111;
+            border: 1px solid #222;
+            border-radius: 4px;
+            transition: all 0.3s;
+        }
+        .template-item:hover {
+            border-color: #333;
+            background: #1a1a1a;
+        }
+        .template-text {
+            flex: 1;
+            color: #ddd;
+            font-size: 13px;
+            margin-right: 10px;
+            word-break: break-word;
+        }
+        .template-remove {
+            background: none;
+            border: 1px solid #FF4444;
+            color: #FF4444;
+            padding: 4px 8px;
+            font-size: 12px;
+            cursor: pointer;
+            border-radius: 3px;
+            transition: all 0.3s;
+        }
+        .template-remove:hover {
+            background: #FF4444;
+            color: #000;
+        }
+        
+        .template-add-form {
+            display: flex;
+            gap: 10px;
+        }
+        .template-input {
+            flex: 1;
+            padding: 10px;
+            background: #000;
+            border: 1px solid #333;
+            color: #fff;
+            font-size: 14px;
+            border-radius: 4px;
+        }
+        .template-input:focus {
+            outline: none;
+            border-color: #1E6FFF;
+        }
+        .template-add-btn {
+            padding: 10px 20px;
+            background: #1E6FFF;
+            border: none;
+            color: #fff;
+            font-size: 14px;
+            cursor: pointer;
+            border-radius: 4px;
+            transition: all 0.3s;
+        }
+        .template-add-btn:hover {
+            background: #0056E0;
+        }
+        .template-add-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .admin-info {
+            padding: 15px;
+            background: rgba(30, 111, 255, 0.1);
+            border: 1px solid rgba(30, 111, 255, 0.3);
+            border-radius: 4px;
+            margin-top: 20px;
+        }
+        .admin-info-text {
+            color: #8BA5FF;
+            font-size: 12px;
+            line-height: 1.6;
+        }
+        
+        .loading-spinner {
+            display: inline-block;
+            width: 14px;
+            height: 14px;
+            border: 2px solid #333;
+            border-top-color: #1E6FFF;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin-left: 8px;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
         }
     </style>
 </head>
@@ -575,7 +787,7 @@
             <div class="table-header">
                 <div>
                     <div class="table-title">메시지 수 랭킹</div>
-                    <div class="table-subtitle">오늘 가장 많이 도움을 준 상담사</div>
+                    <div class="table-subtitle">가장 많이 도움을 준 상담사</div>
                 </div>
             </div>
             <table>
@@ -599,7 +811,7 @@
             <div class="table-header">
                 <div>
                     <div class="table-title">글자수 랭킹</div>
-                    <div class="table-subtitle">오늘 가장 많은 내용을 작성한 상담사</div>
+                    <div class="table-subtitle">가장 많은 내용을 작성한 상담사</div>
                 </div>
             </div>
             <table>
@@ -646,6 +858,39 @@
     
     <div class="notification" id="notification"></div>
     
+    <!-- 관리자 버튼 및 패널 -->
+    <button class="admin-button" onclick="app.toggleAdminPanel()" title="관리자 설정">
+        🔒
+    </button>
+    
+    <div class="admin-panel" id="adminPanel">
+        <div class="admin-header">
+            <div class="admin-title">🔧 관리자 설정</div>
+            <button class="admin-close" onclick="app.closeAdminPanel()">×</button>
+        </div>
+        <div class="admin-content">
+            <div class="admin-section">
+                <div class="admin-section-title">제외할 템플릿 메시지 관리</div>
+                <div class="template-list" id="templateList">
+                    <!-- 템플릿 목록이 여기에 동적으로 추가됨 -->
+                </div>
+                <div class="template-add-form">
+                    <input type="text" class="template-input" id="newTemplateInput" 
+                           placeholder="제외할 템플릿 텍스트 입력..." 
+                           onkeypress="if(event.key==='Enter') app.addTemplate()">
+                    <button class="template-add-btn" onclick="app.addTemplate()" id="addTemplateBtn">추가</button>
+                </div>
+            </div>
+            <div class="admin-info">
+                <div class="admin-info-text">
+                    💡 여기에 추가된 텍스트가 포함된 메시지는 통계에서 제외됩니다.<br>
+                    📌 변경사항은 모든 사용자에게 실시간으로 적용됩니다.<br>
+                    ⚠️ 템플릿 삭제 후 새로고침하면 해당 메시지가 다시 집계됩니다.
+                </div>
+            </div>
+        </div>
+    </div>
+    
     <script>
         // 전역 앱 객체
         window.app = {
@@ -663,13 +908,21 @@
             teamInfo: {
                 'SNS 1팀': ['이종민', '정주연', '이혜영', '김국현', '정다혜', '조시현', '김시윤'],
                 'SNS 2팀': ['윤도우리', '신혜서', '김상아', '박은진', '오민환', '서정국'],
-                'SNS 3팀': ['김진후', '김시진', '권재현', '김지원', '최호익', '김진협', '박해영'],
+                'SNS 3팀': ['김진후', '김시진', '권재현', '김지원', '최호익', '김진협', '박해영', '김종현'],
                 'SNS 4팀': ['이민주', '전지윤', '전미란', '김채영', '김영진', '공현준'],
-                '의정부 SNS': ['차정환', '최수능', '구본영', '서민국', '오민경', '김범주', '동수진', '성일훈']
+                '의정부 SNS': ['차정환', '최수능', '구본영', '서민국', '오민경', '김범주', '동수진', '성일훈'],
+                '야간팀': ['정용욱', '한승윤']
             },
             
             // 제외할 상담사
             excludedManagers: ['채주은'],
+            
+            // 제외할 템플릿 메시지 (이 텍스트가 포함된 메시지는 통계에서 제외)
+            // 단순 안내나 사과 메시지 등 실제 도움이 아닌 메시지들
+            excludedTemplates: [
+                '아직 아니시라면 이 채팅창으로 상담 도와드려도 괜찮으실까요',
+                '현재 소수의 상담원만 있어 안내가 늦은 점 죄송합니다'
+            ],
             
             // 초기화
             init: async function() {
@@ -678,11 +931,27 @@
                     console.log('현재 시간 (KST):', new Date().toLocaleString('ko-KR'));
                     console.log('브라우저 타임존:', Intl.DateTimeFormat().resolvedOptions().timeZone);
                     
+                    // 팀 구성 정보 로그
+                    const totalMembers = Object.values(this.teamInfo).reduce((sum, members) => sum + members.length, 0);
+                    console.log('팀 구성:');
+                    Object.entries(this.teamInfo).forEach(([team, members]) => {
+                        console.log(`  - ${team}: ${members.length}명`);
+                    });
+                    console.log(`  총 상담사: ${totalMembers}명`);
+                    
+                    console.log('제외 설정:');
+                    console.log('  - 제외 상담사:', this.excludedManagers.join(', '));
+                    console.log('  - 기본 제외 템플릿:', this.excludedTemplates.length + '개');
+                    
                     // Supabase 클라이언트 생성
                     const SUPABASE_URL = 'https://bhtqjipygkawoyieidgp.supabase.co';
                     const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJodHFqaXB5Z2thd295aWVpZGdwIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDQ4ODk2OCwiZXhwIjoyMDcwMDY0OTY4fQ.HRngdvqtWBmGgd4VgcFsE7iYhQuTnxUuVyq7fiQHNng';
                     
                     this.supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+                    
+                    // 설정 테이블 초기화 및 템플릿 로드
+                    await this.initializeSettingsTable();
+                    await this.loadExcludedTemplates();
                     
                     // 날짜 초기화
                     this.updateDateDisplay();
@@ -704,6 +973,7 @@
                     
                     // 실시간 구독
                     this.subscribeToChanges();
+                    this.subscribeToTemplateChanges();
                     
                     // 자동 새로고침 시작
                     this.startAutoRefresh();
@@ -736,7 +1006,8 @@
                     'SNS 2팀': 'team-2',
                     'SNS 3팀': 'team-3',
                     'SNS 4팀': 'team-4',
-                    '의정부 SNS': 'team-5'
+                    '의정부 SNS': 'team-5',
+                    '야간팀': 'team-6'
                 };
                 return classes[team] || '';
             },
@@ -1012,12 +1283,27 @@
                     
                     console.log('Supabase에서 가져온 총 메시지 수:', allMessages.length);
                     
-                    // 제외할 상담사 필터링
-                    this.currentMessages = allMessages.filter(msg => 
-                        !this.excludedManagers.includes(msg.writer_manager_name)
-                    );
+                    // 제외할 상담사 및 템플릿 메시지 필터링
+                    this.currentMessages = allMessages.filter(msg => {
+                        // 제외할 상담사 체크
+                        if (this.excludedManagers.includes(msg.writer_manager_name)) {
+                            return false;
+                        }
+                        
+                        // 제외할 템플릿 메시지 체크
+                        if (msg.message_text) {
+                            for (const template of this.excludedTemplates) {
+                                if (msg.message_text.includes(template)) {
+                                    return false;
+                                }
+                            }
+                        }
+                        
+                        return true;
+                    });
                     
                     console.log(`필터링 후 메시지 수: ${this.currentMessages.length}개`);
+                    console.log(`제외된 메시지 수: ${allMessages.length - this.currentMessages.length}개`);
                     
                     if (this.currentMessages.length > 0) {
                         // 이미 최신순으로 정렬되어 있음
@@ -1388,6 +1674,9 @@
                     this.realtimeSubscription = null;
                     console.log('실시간 구독 해제됨');
                 }
+                
+                // 템플릿 변경 구독도 해제
+                this.supabaseClient.removeChannel('template_changes');
             },
             
             // 실시간 구독
@@ -1422,6 +1711,16 @@
                                 // 제외할 상담사 체크
                                 if (this.excludedManagers.includes(newMessage.writer_manager_name)) {
                                     return;
+                                }
+                                
+                                // 제외할 템플릿 메시지 체크
+                                if (newMessage.message_text) {
+                                    for (const template of this.excludedTemplates) {
+                                        if (newMessage.message_text.includes(template)) {
+                                            console.log('템플릿 메시지 제외:', template.substring(0, 20) + '...');
+                                            return;
+                                        }
+                                    }
                                 }
                                 
                                 // KST 기준 오늘 메시지인지 확인
@@ -1824,10 +2123,24 @@
                         offset += pageSize;
                     }
                     
-                    // 제외할 상담사 필터링
-                    const filteredMessages = allMessages.filter(msg => 
-                        !this.excludedManagers.includes(msg.writer_manager_name)
-                    );
+                    // 제외할 상담사 및 템플릿 메시지 필터링
+                    const filteredMessages = allMessages.filter(msg => {
+                        // 제외할 상담사 체크
+                        if (this.excludedManagers.includes(msg.writer_manager_name)) {
+                            return false;
+                        }
+                        
+                        // 제외할 템플릿 메시지 체크
+                        if (msg.message_text) {
+                            for (const template of this.excludedTemplates) {
+                                if (msg.message_text.includes(template)) {
+                                    return false;
+                                }
+                            }
+                        }
+                        
+                        return true;
+                    });
                     
                     // 시간순 정렬 (오래된 것부터)
                     filteredMessages.sort((a, b) => 
@@ -1933,6 +2246,273 @@
                 setTimeout(() => {
                     notification.classList.remove('show');
                 }, 3000);
+            },
+            
+            // 설정 테이블 초기화
+            initializeSettingsTable: async function() {
+                try {
+                    // excluded_templates 테이블 확인
+                    console.log('excluded_templates 테이블 확인 중...');
+                    
+                    // 테이블이 없는 경우를 대비한 안내
+                    // Supabase 대시보드에서 아래 SQL을 실행하여 테이블을 생성해주세요
+                    /*
+                    CREATE TABLE IF NOT EXISTS excluded_templates (
+                        id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+                        template TEXT NOT NULL UNIQUE,
+                        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+                    );
+                    
+                    -- 기본 템플릿 추가 (선택사항)
+                    INSERT INTO excluded_templates (template) VALUES 
+                        ('아직 아니시라면 이 채팅창으로 상담 도와드려도 괜찮으실까요'),
+                        ('현재 소수의 상담원만 있어 안내가 늦은 점 죄송합니다')
+                    ON CONFLICT (template) DO NOTHING;
+                    
+                    -- RLS(Row Level Security) 활성화 및 정책 설정
+                    ALTER TABLE excluded_templates ENABLE ROW LEVEL SECURITY;
+                    
+                    -- 모든 사용자가 읽기 가능
+                    CREATE POLICY "Enable read access for all users" ON excluded_templates
+                        FOR SELECT USING (true);
+                    
+                    -- 모든 사용자가 추가/삭제 가능 (필요시 제한 가능)
+                    CREATE POLICY "Enable insert for all users" ON excluded_templates
+                        FOR INSERT WITH CHECK (true);
+                    
+                    CREATE POLICY "Enable delete for all users" ON excluded_templates
+                        FOR DELETE USING (true);
+                    */
+                    
+                } catch (error) {
+                    console.error('설정 테이블 초기화 중 오류:', error);
+                }
+            },
+            
+            // 제외 템플릿 로드
+            loadExcludedTemplates: async function() {
+                try {
+                    const { data, error } = await this.supabaseClient
+                        .from('excluded_templates')
+                        .select('*')
+                        .order('created_at', { ascending: true });
+                    
+                    if (error) {
+                        if (error.code === '42P01') {
+                            // 테이블이 없는 경우
+                            console.log('excluded_templates 테이블이 없습니다. 기본 템플릿만 사용합니다.');
+                            console.log('관리자 기능을 사용하려면 Supabase에 테이블을 생성해주세요.');
+                        } else {
+                            console.error('템플릿 로드 오류:', error);
+                        }
+                        return;
+                    }
+                    
+                    if (data && data.length > 0) {
+                        // 기본 템플릿과 DB 템플릿 병합
+                        const dbTemplates = data.map(item => item.template);
+                        const defaultTemplates = [
+                            '아직 아니시라면 이 채팅창으로 상담 도와드려도 괜찮으실까요',
+                            '현재 소수의 상담원만 있어 안내가 늦은 점 죄송합니다'
+                        ];
+                        // 기본 템플릿과 DB 템플릿을 합치고 중복 제거
+                        this.excludedTemplates = [...new Set([...defaultTemplates, ...dbTemplates])];
+                        console.log('제외 템플릿 로드 완료:', this.excludedTemplates.length + '개');
+                    }
+                    
+                    // 관리자 패널 템플릿 목록 업데이트
+                    this.updateTemplateList();
+                } catch (error) {
+                    console.error('템플릿 로드 실패:', error);
+                }
+            },
+            
+            // 템플릿 변경사항 실시간 구독
+            subscribeToTemplateChanges: function() {
+                try {
+                    this.supabaseClient
+                        .channel('template_changes')
+                        .on('postgres_changes', 
+                            { 
+                                event: '*',
+                                schema: 'public', 
+                                table: 'excluded_templates'
+                            },
+                            async (payload) => {
+                                console.log('템플릿 변경 감지:', payload.eventType);
+                                
+                                // 템플릿 목록 다시 로드
+                                await this.loadExcludedTemplates();
+                                
+                                // 데이터 다시 로드
+                                await this.loadData();
+                                
+                                if (payload.eventType === 'INSERT') {
+                                    this.showNotification('✅ 새 템플릿이 추가되었습니다');
+                                } else if (payload.eventType === 'DELETE') {
+                                    this.showNotification('🗑️ 템플릿이 삭제되었습니다');
+                                }
+                            }
+                        )
+                        .subscribe((status) => {
+                            if (status === 'SUBSCRIBED') {
+                                console.log('템플릿 변경 실시간 구독 성공');
+                            }
+                        });
+                } catch (error) {
+                    console.error('템플릿 변경 구독 실패:', error);
+                }
+            },
+            
+            // 관리자 패널 토글
+            toggleAdminPanel: function() {
+                const panel = document.getElementById('adminPanel');
+                if (panel.classList.contains('show')) {
+                    panel.classList.remove('show');
+                } else {
+                    panel.classList.add('show');
+                    this.updateTemplateList();
+                }
+            },
+            
+            // 관리자 패널 닫기
+            closeAdminPanel: function() {
+                document.getElementById('adminPanel').classList.remove('show');
+            },
+            
+            // 템플릿 목록 업데이트
+            updateTemplateList: function() {
+                const listContainer = document.getElementById('templateList');
+                if (!listContainer) return;
+                
+                listContainer.innerHTML = '';
+                
+                // 기본 템플릿 (삭제 불가)
+                const defaultTemplates = [
+                    '아직 아니시라면 이 채팅창으로 상담 도와드려도 괜찮으실까요',
+                    '현재 소수의 상담원만 있어 안내가 늦은 점 죄송합니다'
+                ];
+                
+                if (this.excludedTemplates.length === 0) {
+                    listContainer.innerHTML = '<div style="color: #666; text-align: center; padding: 20px;">제외된 템플릿이 없습니다</div>';
+                    return;
+                }
+                
+                this.excludedTemplates.forEach(template => {
+                    const isDefault = defaultTemplates.includes(template);
+                    const item = document.createElement('div');
+                    item.className = 'template-item';
+                    item.innerHTML = `
+                        <div class="template-text">${template}</div>
+                        ${!isDefault ? `<button class="template-remove" onclick="app.removeTemplate('${template.replace(/'/g, "\\'")}')">삭제</button>` : '<span style="color: #666; font-size: 12px;">기본</span>'}
+                    `;
+                    listContainer.appendChild(item);
+                });
+            },
+            
+            // 템플릿 추가
+            addTemplate: async function() {
+                const input = document.getElementById('newTemplateInput');
+                const btn = document.getElementById('addTemplateBtn');
+                const template = input.value.trim();
+                
+                if (!template) {
+                    this.showNotification('⚠️ 템플릿 텍스트를 입력해주세요', 'error');
+                    return;
+                }
+                
+                // 중복 체크
+                if (this.excludedTemplates.includes(template)) {
+                    this.showNotification('⚠️ 이미 존재하는 템플릿입니다', 'error');
+                    return;
+                }
+                
+                btn.disabled = true;
+                btn.innerHTML = '추가중...';
+                
+                try {
+                    const { data, error } = await this.supabaseClient
+                        .from('excluded_templates')
+                        .insert([{ template: template }]);
+                    
+                    if (error) {
+                        if (error.code === '42P01') {
+                            this.showNotification('⚠️ 테이블이 없습니다. Supabase 설정을 확인해주세요', 'error');
+                            console.log('excluded_templates 테이블을 먼저 생성해주세요');
+                        } else if (error.code === '23505') {
+                            this.showNotification('⚠️ 이미 존재하는 템플릿입니다', 'error');
+                        } else {
+                            throw error;
+                        }
+                        return;
+                    }
+                    
+                    // 로컬 배열에도 추가
+                    this.excludedTemplates.push(template);
+                    
+                    // UI 업데이트
+                    this.updateTemplateList();
+                    input.value = '';
+                    
+                    // 데이터 다시 로드
+                    await this.loadData();
+                    
+                    this.showNotification('✅ 템플릿이 추가되었습니다');
+                } catch (error) {
+                    console.error('템플릿 추가 실패:', error);
+                    this.showNotification('⚠️ 템플릿 추가 실패', 'error');
+                } finally {
+                    btn.disabled = false;
+                    btn.innerHTML = '추가';
+                }
+            },
+            
+            // 템플릿 삭제
+            removeTemplate: async function(template) {
+                // 기본 템플릿은 삭제 불가
+                const defaultTemplates = [
+                    '아직 아니시라면 이 채팅창으로 상담 도와드려도 괜찮으실까요',
+                    '현재 소수의 상담원만 있어 안내가 늦은 점 죄송합니다'
+                ];
+                
+                if (defaultTemplates.includes(template)) {
+                    this.showNotification('⚠️ 기본 템플릿은 삭제할 수 없습니다', 'error');
+                    return;
+                }
+                
+                if (!confirm('이 템플릿을 삭제하시겠습니까?\n삭제 후 새로고침하면 해당 메시지가 다시 집계됩니다.')) {
+                    return;
+                }
+                
+                try {
+                    const { error } = await this.supabaseClient
+                        .from('excluded_templates')
+                        .delete()
+                        .eq('template', template);
+                    
+                    if (error) {
+                        if (error.code === '42P01') {
+                            this.showNotification('⚠️ 테이블이 없습니다', 'error');
+                        } else {
+                            throw error;
+                        }
+                        return;
+                    }
+                    
+                    // 로컬 배열에서도 제거
+                    this.excludedTemplates = this.excludedTemplates.filter(t => t !== template);
+                    
+                    // UI 업데이트
+                    this.updateTemplateList();
+                    
+                    // 데이터 다시 로드
+                    await this.loadData();
+                    
+                    this.showNotification('🗑️ 템플릿이 삭제되었습니다');
+                } catch (error) {
+                    console.error('템플릿 삭제 실패:', error);
+                    this.showNotification('⚠️ 템플릿 삭제 실패', 'error');
+                }
             }
         };
         
@@ -1941,6 +2521,15 @@
             const modal = document.getElementById('managerModal');
             if (event.target === modal) {
                 app.closeModal();
+            }
+            
+            // 관리자 패널 외부 클릭 시 닫기
+            const adminPanel = document.getElementById('adminPanel');
+            const adminButton = document.querySelector('.admin-button');
+            if (adminPanel && adminPanel.classList.contains('show')) {
+                if (!adminPanel.contains(event.target) && !adminButton.contains(event.target)) {
+                    app.closeAdminPanel();
+                }
             }
         };
         
@@ -1955,6 +2544,20 @@
             
             // 앱 초기화
             app.init();
+        });
+        
+        // ESC 키로 패널 닫기
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                const adminPanel = document.getElementById('adminPanel');
+                const modal = document.getElementById('managerModal');
+                
+                if (adminPanel && adminPanel.classList.contains('show')) {
+                    app.closeAdminPanel();
+                } else if (modal && modal.classList.contains('show')) {
+                    app.closeModal();
+                }
+            }
         });
     </script>
 </body>
