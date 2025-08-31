@@ -44,10 +44,122 @@
             font-weight: 400;
         }
         
+        .period-selector {
+            display: flex;
+            gap: 10px;
+            padding: 15px 20px;
+            background: #111;
+            border: 1px solid #222;
+            margin-bottom: 15px;
+        }
+        .period-btn {
+            flex: 1;
+            padding: 12px 20px;
+            background: transparent;
+            color: #999;
+            border: 1px solid #333;
+            font-size: 14px;
+            font-weight: 500;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .period-btn:hover {
+            color: #1E6FFF;
+            border-color: #1E6FFF;
+        }
+        .period-btn.active {
+            background: #1E6FFF;
+            color: #000;
+            border-color: #1E6FFF;
+            font-weight: 600;
+        }
+        
+        .daily-stats {
+            background: #000;
+            border: 1px solid #222;
+            margin-bottom: 40px;
+            padding: 25px;
+        }
+        .daily-stats-title {
+            font-size: 18px;
+            color: #1E6FFF;
+            margin-bottom: 20px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .daily-chart {
+            display: flex;
+            align-items: flex-end;
+            gap: 10px;
+            height: 200px;
+            padding: 20px 0;
+            border-bottom: 1px solid #333;
+            margin-bottom: 20px;
+            overflow-x: auto;
+        }
+        .daily-bar {
+            flex: 1;
+            min-width: 40px;
+            background: linear-gradient(to top, #1E6FFF, #4A9EFF);
+            border-radius: 4px 4px 0 0;
+            position: relative;
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+        .daily-bar:hover {
+            background: linear-gradient(to top, #FFD700, #FFA500);
+            transform: translateY(-5px);
+        }
+        .daily-bar-label {
+            position: absolute;
+            bottom: -25px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 11px;
+            color: #999;
+            white-space: nowrap;
+        }
+        .daily-bar-value {
+            position: absolute;
+            top: -20px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 12px;
+            color: #FFD700;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+        .daily-summary {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+        .daily-summary-item {
+            padding: 15px;
+            background: #111;
+            border: 1px solid #222;
+            border-radius: 4px;
+            text-align: center;
+        }
+        .daily-summary-label {
+            font-size: 12px;
+            color: #999;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+        }
+        .daily-summary-value {
+            font-size: 24px;
+            color: #1E6FFF;
+            font-weight: 600;
+        }
+        
         .control-bar { 
             display: flex; 
             flex-direction: column;
-            gap: 20px;
+            gap: 15px;
             padding: 25px 30px; 
             background: #000; 
             border: 1px solid #222; 
@@ -523,6 +635,36 @@
                 margin-left: 5px;
             }
             
+            /* 기간 선택기 반응형 */
+            .period-selector {
+                flex-direction: row;
+            }
+            .period-btn {
+                font-size: 12px;
+                padding: 8px 12px;
+            }
+            
+            /* 일별 통계 반응형 */
+            .daily-stats {
+                padding: 15px;
+            }
+            .daily-chart {
+                height: 150px;
+                padding: 15px 0;
+            }
+            .daily-bar {
+                min-width: 30px;
+            }
+            .daily-bar-label {
+                font-size: 9px;
+            }
+            .daily-bar-value {
+                font-size: 10px;
+            }
+            .daily-summary {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
             /* 관리자 패널 반응형 */
             .admin-panel {
                 width: calc(100% - 40px);
@@ -758,10 +900,15 @@
         </div>
         
         <div class="control-bar">
+            <div class="period-selector">
+                <button class="period-btn active" onclick="app.switchPeriod('daily')" id="period-daily">일간</button>
+                <button class="period-btn" onclick="app.switchPeriod('weekly')" id="period-weekly">주간</button>
+                <button class="period-btn" onclick="app.switchPeriod('monthly')" id="period-monthly">월간</button>
+            </div>
             <div class="date-selector">
-                <button class="date-nav-btn" onclick="app.changeDate(-1)">◀ 이전날</button>
+                <button class="date-nav-btn" onclick="app.changeDate(-1)" id="prevBtn">◀ 이전</button>
                 <input type="date" class="date-input" id="dateSelector" onchange="app.selectDate(this.value)">
-                <button class="date-nav-btn" onclick="app.changeDate(1)" id="nextDayBtn">다음날 ▶</button>
+                <button class="date-nav-btn" onclick="app.changeDate(1)" id="nextDayBtn">다음 ▶</button>
                 <button class="date-nav-btn" onclick="app.goToToday()" id="todayBtn" style="margin-left: 10px;">오늘</button>
                 <span class="date-info" id="dateInfo"></span>
             </div>
@@ -782,6 +929,30 @@
             <button class="tab active" onclick="app.switchTab('score')" id="tab-score">도움 점수 랭킹</button>
             <button class="tab" onclick="app.switchTab('messages')" id="tab-messages">메시지 수 랭킹</button>
             <button class="tab" onclick="app.switchTab('chars')" id="tab-chars">글자수 랭킹</button>
+        </div>
+        
+        <!-- 일별 통계 차트 (주간/월간 모드에서만 표시) -->
+        <div class="daily-stats" id="dailyStats" style="display:none;">
+            <div class="daily-stats-title" id="dailyStatsTitle">일별 메시지 통계</div>
+            <div class="daily-chart" id="dailyChart"></div>
+            <div class="daily-summary" id="dailySummary">
+                <div class="daily-summary-item">
+                    <div class="daily-summary-label">총 메시지</div>
+                    <div class="daily-summary-value" id="totalMessages">0</div>
+                </div>
+                <div class="daily-summary-item">
+                    <div class="daily-summary-label">일 평균</div>
+                    <div class="daily-summary-value" id="avgMessages">0</div>
+                </div>
+                <div class="daily-summary-item">
+                    <div class="daily-summary-label">최고 기록</div>
+                    <div class="daily-summary-value" id="maxMessages">0</div>
+                </div>
+                <div class="daily-summary-item">
+                    <div class="daily-summary-label">최저 기록</div>
+                    <div class="daily-summary-value" id="minMessages">0</div>
+                </div>
+            </div>
         </div>
         
         <div class="ranking-table" id="ranking-score">
@@ -923,11 +1094,13 @@
             currentMessages: [],
             currentStats: [],
             currentTab: 'score',
+            currentPeriod: 'daily',  // daily, weekly, monthly
             autoRefreshInterval: null,
             isAutoRefresh: true,
             selectedDate: new Date(),
             isToday: true,
             realtimeSubscription: null,
+            dailyData: [],  // 일별 데이터 저장
             
             // 팀 정보
             teamInfo: {
@@ -1018,7 +1191,168 @@
                 }
             },
             
-            // 팀 찾기
+            // 기간 전환
+            switchPeriod: function(period) {
+                this.currentPeriod = period;
+                
+                // UI 업데이트
+                document.querySelectorAll('.period-btn').forEach(btn => btn.classList.remove('active'));
+                document.getElementById(`period-${period}`).classList.add('active');
+                
+                // 날짜 레이블 업데이트
+                const prevBtn = document.getElementById('prevBtn');
+                const nextBtn = document.getElementById('nextDayBtn');
+                
+                if (period === 'daily') {
+                    prevBtn.textContent = '◀ 이전날';
+                    nextBtn.textContent = '다음날 ▶';
+                    document.getElementById('dailyStats').style.display = 'none';
+                } else if (period === 'weekly') {
+                    prevBtn.textContent = '◀ 이전주';
+                    nextBtn.textContent = '다음주 ▶';
+                    document.getElementById('dailyStats').style.display = 'block';
+                } else if (period === 'monthly') {
+                    prevBtn.textContent = '◀ 이전달';
+                    nextBtn.textContent = '다음달 ▶';
+                    document.getElementById('dailyStats').style.display = 'block';
+                }
+                
+                // 자동 업데이트는 일간 모드에서만
+                if (period !== 'daily') {
+                    if (this.autoRefreshInterval) {
+                        clearInterval(this.autoRefreshInterval);
+                        this.autoRefreshInterval = null;
+                    }
+                    const autoBtn = document.getElementById('autoRefreshBtn');
+                    autoBtn.disabled = true;
+                    autoBtn.innerHTML = '⚡ 자동 업데이트 (일간만 가능)';
+                    autoBtn.classList.remove('primary');
+                } else {
+                    const autoBtn = document.getElementById('autoRefreshBtn');
+                    autoBtn.disabled = false;
+                    if (this.isToday && this.isAutoRefresh) {
+                        this.startAutoRefresh();
+                        autoBtn.innerHTML = '⚡ 자동 업데이트 ON';
+                        autoBtn.classList.add('primary');
+                    }
+                }
+                
+                // 데이터 다시 로드
+                this.loadData();
+            },
+            
+            // 주간/월간 날짜 범위 계산
+            getPeriodRange: function() {
+                let start, end;
+                
+                if (this.currentPeriod === 'daily') {
+                    return this.getSelectedDateRange();
+                } else if (this.currentPeriod === 'weekly') {
+                    // 주의 시작을 월요일로 설정
+                    const date = new Date(this.selectedDate);
+                    const day = date.getDay();
+                    const diff = date.getDate() - day + (day === 0 ? -6 : 1);
+                    
+                    start = new Date(date.setDate(diff));
+                    start.setHours(0, 0, 0, 0);
+                    
+                    end = new Date(start);
+                    end.setDate(end.getDate() + 6);
+                    end.setHours(23, 59, 59, 999);
+                } else if (this.currentPeriod === 'monthly') {
+                    start = new Date(this.selectedDate.getFullYear(), this.selectedDate.getMonth(), 1);
+                    start.setHours(0, 0, 0, 0);
+                    
+                    end = new Date(this.selectedDate.getFullYear(), this.selectedDate.getMonth() + 1, 0);
+                    end.setHours(23, 59, 59, 999);
+                }
+                
+                return {
+                    start: start.toISOString(),
+                    end: end.toISOString()
+                };
+            },
+            
+            // 일별 통계 차트 생성
+            generateDailyChart: async function(messages) {
+                if (this.currentPeriod === 'daily') return;
+                
+                const chartContainer = document.getElementById('dailyChart');
+                const dailyStats = {};
+                
+                // 메시지를 날짜별로 그룹화
+                messages.forEach(msg => {
+                    const date = new Date(msg.created_at);
+                    const dateKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+                    
+                    if (!dailyStats[dateKey]) {
+                        dailyStats[dateKey] = {
+                            count: 0,
+                            date: date,
+                            managers: new Set()
+                        };
+                    }
+                    
+                    dailyStats[dateKey].count++;
+                    dailyStats[dateKey].managers.add(msg.writer_manager_name);
+                });
+                
+                // 기간 내 모든 날짜 생성
+                const range = this.getPeriodRange();
+                const startDate = new Date(range.start);
+                const endDate = new Date(range.end);
+                const allDates = [];
+                
+                for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
+                    const dateKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+                    allDates.push({
+                        key: dateKey,
+                        date: new Date(d),
+                        count: dailyStats[dateKey]?.count || 0,
+                        managers: dailyStats[dateKey]?.managers.size || 0
+                    });
+                }
+                
+                // 차트 생성
+                const maxCount = Math.max(...allDates.map(d => d.count), 1);
+                
+                chartContainer.innerHTML = allDates.map(day => {
+                    const height = (day.count / maxCount) * 100;
+                    const dayName = ['일', '월', '화', '수', '목', '금', '토'][day.date.getDay()];
+                    const isWeekend = day.date.getDay() === 0 || day.date.getDay() === 6;
+                    
+                    return `
+                        <div class="daily-bar" 
+                             style="height: ${height}%; ${isWeekend ? 'opacity: 0.7;' : ''}"
+                             onclick="app.selectDate('${day.key}')"
+                             title="${day.date.toLocaleDateString('ko-KR')}: ${day.count}개 메시지">
+                            <div class="daily-bar-value">${day.count}</div>
+                            <div class="daily-bar-label">${day.date.getMonth() + 1}/${day.date.getDate()}<br>${dayName}</div>
+                        </div>
+                    `;
+                }).join('');
+                
+                // 요약 통계
+                const totalMessages = allDates.reduce((sum, d) => sum + d.count, 0);
+                const avgMessages = Math.round(totalMessages / allDates.filter(d => d.count > 0).length) || 0;
+                const maxMessages = Math.max(...allDates.map(d => d.count));
+                const minMessages = Math.min(...allDates.filter(d => d.count > 0).map(d => d.count)) || 0;
+                
+                document.getElementById('totalMessages').textContent = totalMessages.toLocaleString();
+                document.getElementById('avgMessages').textContent = avgMessages.toLocaleString();
+                document.getElementById('maxMessages').textContent = maxMessages.toLocaleString();
+                document.getElementById('minMessages').textContent = minMessages.toLocaleString();
+                
+                // 타이틀 업데이트
+                const titleElement = document.getElementById('dailyStatsTitle');
+                if (this.currentPeriod === 'weekly') {
+                    const weekStart = allDates[0].date;
+                    const weekEnd = allDates[allDates.length - 1].date;
+                    titleElement.textContent = `일별 메시지 통계 (${weekStart.getMonth() + 1}/${weekStart.getDate()} - ${weekEnd.getMonth() + 1}/${weekEnd.getDate()})`;
+                } else if (this.currentPeriod === 'monthly') {
+                    titleElement.textContent = `${this.selectedDate.getFullYear()}년 ${this.selectedDate.getMonth() + 1}월 일별 메시지 통계`;
+                }
+            },
             getTeam: function(name) {
                 for (const [team, members] of Object.entries(this.teamInfo)) {
                     if (members.includes(name)) {
@@ -1049,7 +1383,19 @@
             // 날짜 표시 업데이트
             updateDateDisplay: function() {
                 const days = ['일', '월', '화', '수', '목', '금', '토'];
-                const dateStr = `${this.selectedDate.getFullYear()}년 ${this.selectedDate.getMonth()+1}월 ${this.selectedDate.getDate()}일 ${days[this.selectedDate.getDay()]}요일`;
+                let dateStr = '';
+                
+                if (this.currentPeriod === 'daily') {
+                    dateStr = `${this.selectedDate.getFullYear()}년 ${this.selectedDate.getMonth()+1}월 ${this.selectedDate.getDate()}일 ${days[this.selectedDate.getDay()]}요일`;
+                } else if (this.currentPeriod === 'weekly') {
+                    const range = this.getPeriodRange();
+                    const startDate = new Date(range.start);
+                    const endDate = new Date(range.end);
+                    dateStr = `${startDate.getFullYear()}년 ${startDate.getMonth()+1}월 ${startDate.getDate()}일 ~ ${endDate.getMonth()+1}월 ${endDate.getDate()}일`;
+                } else if (this.currentPeriod === 'monthly') {
+                    dateStr = `${this.selectedDate.getFullYear()}년 ${this.selectedDate.getMonth()+1}월`;
+                }
+                
                 document.getElementById('dateDisplay').innerHTML = `📅 ${dateStr}`;
                 
                 // 날짜 선택기 값 설정
@@ -1058,46 +1404,66 @@
                 const day = String(this.selectedDate.getDate()).padStart(2, '0');
                 document.getElementById('dateSelector').value = `${year}-${month}-${day}`;
                 
-                // 오늘인지 체크
+                // 오늘인지 체크 (일간 모드에서만)
                 const today = new Date();
-                this.isToday = this.selectedDate.toDateString() === today.toDateString();
+                this.isToday = this.currentPeriod === 'daily' && this.selectedDate.toDateString() === today.toDateString();
                 
                 // 날짜 정보 표시
                 const dateInfo = document.getElementById('dateInfo');
                 const todayBtn = document.getElementById('todayBtn');
-                if (this.isToday) {
-                    dateInfo.innerHTML = '✨ 오늘';
-                    dateInfo.className = 'date-info today';
-                    // 오늘일 때는 오늘 버튼 숨기기
-                    if (todayBtn) todayBtn.style.display = 'none';
-                    // 실시간 업데이트 활성화
-                    if (!this.autoRefreshInterval && this.isAutoRefresh) {
-                        this.startAutoRefresh();
+                
+                if (this.currentPeriod === 'daily') {
+                    if (this.isToday) {
+                        dateInfo.innerHTML = '✨ 오늘';
+                        dateInfo.className = 'date-info today';
+                        if (todayBtn) todayBtn.style.display = 'none';
+                        if (!this.autoRefreshInterval && this.isAutoRefresh) {
+                            this.startAutoRefresh();
+                        }
+                    } else {
+                        const daysDiff = Math.floor((today - this.selectedDate) / (1000 * 60 * 60 * 24));
+                        if (daysDiff > 0) {
+                            dateInfo.innerHTML = `📆 ${daysDiff}일 전`;
+                            dateInfo.className = 'date-info past';
+                        } else {
+                            dateInfo.innerHTML = `📅 ${Math.abs(daysDiff)}일 후`;
+                            dateInfo.className = 'date-info';
+                        }
+                        if (todayBtn) todayBtn.style.display = 'inline-block';
+                        if (this.autoRefreshInterval) {
+                            clearInterval(this.autoRefreshInterval);
+                            this.autoRefreshInterval = null;
+                        }
                     }
                 } else {
-                    const daysDiff = Math.floor((today - this.selectedDate) / (1000 * 60 * 60 * 24));
-                    if (daysDiff > 0) {
-                        dateInfo.innerHTML = `📆 ${daysDiff}일 전`;
-                        dateInfo.className = 'date-info past';
+                    // 주간/월간 모드
+                    const range = this.getPeriodRange();
+                    const startDate = new Date(range.start);
+                    const endDate = new Date(range.end);
+                    
+                    if (today >= startDate && today <= endDate) {
+                        dateInfo.innerHTML = '✨ 이번 ' + (this.currentPeriod === 'weekly' ? '주' : '달');
+                        dateInfo.className = 'date-info today';
                     } else {
-                        dateInfo.innerHTML = `📅 ${Math.abs(daysDiff)}일 후`;
+                        dateInfo.innerHTML = '';
                         dateInfo.className = 'date-info';
                     }
-                    // 과거 날짜일 때는 오늘 버튼 표시
+                    
                     if (todayBtn) todayBtn.style.display = 'inline-block';
-                    // 과거 데이터는 자동 업데이트 비활성화
-                    if (this.autoRefreshInterval) {
-                        clearInterval(this.autoRefreshInterval);
-                        this.autoRefreshInterval = null;
-                    }
                 }
                 
                 // 메시지 섹션 타이틀 업데이트
                 const messagesTitle = document.getElementById('messagesTitle');
-                if (this.isToday) {
-                    messagesTitle.textContent = '최근 1시간 도움 메시지';
+                if (this.currentPeriod === 'daily') {
+                    if (this.isToday) {
+                        messagesTitle.textContent = '최근 1시간 도움 메시지';
+                    } else {
+                        messagesTitle.textContent = `${dateStr} 도움 메시지`;
+                    }
+                } else if (this.currentPeriod === 'weekly') {
+                    messagesTitle.textContent = '이번 주 전체 도움 메시지';
                 } else {
-                    messagesTitle.textContent = `${dateStr} 도움 메시지`;
+                    messagesTitle.textContent = '이번 달 전체 도움 메시지';
                 }
                 
                 // 다음날 버튼 비활성화 (미래 날짜 방지)
@@ -1105,7 +1471,10 @@
                 
                 // 자동 업데이트 버튼 상태
                 const autoBtn = document.getElementById('autoRefreshBtn');
-                if (!this.isToday) {
+                if (this.currentPeriod !== 'daily') {
+                    autoBtn.disabled = true;
+                    autoBtn.innerHTML = '⚡ 자동 업데이트 (일간만 가능)';
+                } else if (!this.isToday) {
                     autoBtn.disabled = true;
                     autoBtn.innerHTML = '⚡ 자동 업데이트 (오늘만 가능)';
                 } else {
@@ -1132,7 +1501,14 @@
             // 날짜 변경 (이전/다음)
             changeDate: function(days) {
                 const newDate = new Date(this.selectedDate);
-                newDate.setDate(newDate.getDate() + days);
+                
+                if (this.currentPeriod === 'daily') {
+                    newDate.setDate(newDate.getDate() + days);
+                } else if (this.currentPeriod === 'weekly') {
+                    newDate.setDate(newDate.getDate() + (days * 7));
+                } else if (this.currentPeriod === 'monthly') {
+                    newDate.setMonth(newDate.getMonth() + days);
+                }
                 
                 // 미래 날짜 방지
                 const today = new Date();
@@ -1147,8 +1523,8 @@
                 this.updateDateDisplay();
                 this.loadData();
                 
-                // 오늘이면 실시간 구독 재시작
-                if (this.isToday) {
+                // 오늘이면서 일간 모드일 때만 실시간 구독 재시작
+                if (this.isToday && this.currentPeriod === 'daily') {
                     this.subscribeToChanges();
                 }
             },
@@ -1156,14 +1532,26 @@
             // 오늘로 이동
             goToToday: function() {
                 // 이미 오늘이면 아무것도 하지 않음
-                if (this.isToday) {
+                if (this.currentPeriod === 'daily' && this.isToday) {
                     return;
                 }
                 
                 // 기존 실시간 구독 해제
                 this.unsubscribeFromChanges();
                 
+                // 일간 모드로 전환하고 오늘로 이동
+                this.currentPeriod = 'daily';
                 this.selectedDate = new Date();
+                
+                // UI 업데이트
+                document.querySelectorAll('.period-btn').forEach(btn => btn.classList.remove('active'));
+                document.getElementById('period-daily').classList.add('active');
+                document.getElementById('dailyStats').style.display = 'none';
+                
+                // 날짜 레이블 업데이트
+                document.getElementById('prevBtn').textContent = '◀ 이전날';
+                document.getElementById('nextDayBtn').textContent = '다음날 ▶';
+                
                 this.updateDateDisplay();
                 this.loadData();
                 
@@ -1274,10 +1662,11 @@
                 this.setStatus('loading', '📊 전체 데이터 로드 중...');
                 
                 try {
-                    const { start, end } = this.getSelectedDateRange();
+                    const { start, end } = this.currentPeriod === 'daily' ? 
+                        this.getSelectedDateRange() : this.getPeriodRange();
                     
                     console.log('=== 데이터 로드 시작 ===');
-                    console.log('선택된 날짜 (KST):', this.selectedDate.toLocaleDateString('ko-KR'));
+                    console.log('기간 모드:', this.currentPeriod);
                     console.log('조회 범위 (UTC):', start, '~', end);
                     console.log('조회 범위 (KST):', new Date(start).toLocaleString('ko-KR'), '~', new Date(end).toLocaleString('ko-KR'));
                     
@@ -1363,7 +1752,17 @@
                     this.updateAllRankings();
                     this.updateRecentMessages();
                     
-                    this.setStatus('active', this.isToday && this.isAutoRefresh ? '✅ 전체 데이터 로드 완료 | 자동 업데이트 ON' : this.isToday ? '✅ 전체 데이터 로드 완료' : '📆 과거 데이터 표시중');
+                    // 일별 통계 차트 생성 (주간/월간 모드)
+                    if (this.currentPeriod !== 'daily') {
+                        await this.generateDailyChart(this.currentMessages);
+                    }
+                    
+                    const statusText = this.currentPeriod === 'daily' ? 
+                        (this.isToday && this.isAutoRefresh ? '✅ 전체 데이터 로드 완료 | 자동 업데이트 ON' : 
+                         this.isToday ? '✅ 전체 데이터 로드 완료' : '📆 과거 데이터 표시중') :
+                        `✅ ${this.currentPeriod === 'weekly' ? '주간' : '월간'} 데이터 로드 완료`;
+                    
+                    this.setStatus('active', statusText);
                     this.updateLastTime();
                     
                 } catch (error) {
@@ -1510,22 +1909,37 @@
                 
                 let messagesToShow = [];
                 
-                if (this.isToday) {
-                    // 오늘인 경우 최근 1시간 메시지만 필터링
-                    const now = new Date();
-                    const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000);
-                    messagesToShow = this.currentMessages.filter(msg => 
-                        new Date(msg.created_at) > oneHourAgo
-                    );
-                    // 최신순으로 정렬 (최신 메시지가 위에)
-                    messagesToShow.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-                    console.log('메시지 표시: 최근 1시간', messagesToShow.length, '개 (최신순)');
+                if (this.currentPeriod === 'daily') {
+                    if (this.isToday) {
+                        // 오늘인 경우 최근 1시간 메시지만 필터링
+                        const now = new Date();
+                        const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000);
+                        messagesToShow = this.currentMessages.filter(msg => 
+                            new Date(msg.created_at) > oneHourAgo
+                        );
+                        // 최신순으로 정렬 (최신 메시지가 위에)
+                        messagesToShow.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+                        console.log('메시지 표시: 최근 1시간', messagesToShow.length, '개 (최신순)');
+                    } else {
+                        // 과거 날짜는 전체 표시 (최신순)
+                        messagesToShow = [...this.currentMessages].sort((a, b) => 
+                            new Date(b.created_at) - new Date(a.created_at)
+                        );
+                        console.log('메시지 표시: 전체', messagesToShow.length, '개 (최신순)');
+                    }
                 } else {
-                    // 과거 날짜는 전체 표시 (최신순)
-                    messagesToShow = [...this.currentMessages].sort((a, b) => 
-                        new Date(b.created_at) - new Date(a.created_at)
-                    );
-                    console.log('메시지 표시: 전체', messagesToShow.length, '개 (최신순)');
+                    // 주간/월간은 메시지 리스트 숨김 (너무 많아서)
+                    container.innerHTML = `<div style="padding:50px;text-align:center;color:#999;">
+                        ${this.currentPeriod === 'weekly' ? '주간' : '월간'} 모드에서는 개별 메시지를 표시하지 않습니다.<br>
+                        상단의 일별 통계 차트를 참고해주세요.
+                    </div>`;
+                    
+                    // 메시지 개수만 표시
+                    const messageCount = document.getElementById('messageCount');
+                    if (messageCount) {
+                        messageCount.innerHTML = `전체: ${this.currentMessages.length}개 메시지`;
+                    }
+                    return;
                 }
                 
                 if (messagesToShow.length > 0) {
@@ -1728,9 +2142,9 @@
                 // 기존 구독 해제
                 this.unsubscribeFromChanges();
                 
-                // 오늘이 아니면 구독하지 않음
-                if (!this.isToday) {
-                    console.log('과거 날짜는 실시간 구독하지 않음');
+                // 오늘이 아니거나 일간 모드가 아니면 구독하지 않음
+                if (!this.isToday || this.currentPeriod !== 'daily') {
+                    console.log('실시간 구독 조건 미충족 (오늘 + 일간 모드에서만 가능)');
                     return;
                 }
                 
@@ -2245,8 +2659,8 @@
             
             // 자동 새로고침 토글
             toggleAutoRefresh: function() {
-                if (!this.isToday) {
-                    this.showNotification('⚠️ 과거 데이터는 자동 업데이트를 사용할 수 없습니다', 'error');
+                if (!this.isToday || this.currentPeriod !== 'daily') {
+                    this.showNotification('⚠️ 자동 업데이트는 오늘 날짜의 일간 모드에서만 사용 가능합니다', 'error');
                     return;
                 }
                 
