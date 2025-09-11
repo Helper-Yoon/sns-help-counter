@@ -1,19 +1,15 @@
 {
-  "name": "my-nextjs-app",
-  "version": "0.1.0",
-  "private": true,
+  "name": "channeltalk-webhook-handler",
+  "version": "1.0.0",
+  "description": "Channel Talk Webhook Handler for Manager Messages",
+  "main": "api/track.js",
+  "scripts": {
+    "start": "node api/track.js",
+    "dev": "vercel dev",
+    "deploy": "vercel --prod"
+  },
+  "dependencies": {},
   "engines": {
     "node": "22.x"
-  },
-  "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "lint": "next lint"
-  },
-  "dependencies": {
-    "next": "14.0.0",
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0"
   }
 }
