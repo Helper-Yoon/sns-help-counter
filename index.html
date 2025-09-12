@@ -4,8 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SNS센터 도움 카운팅 프로그램</title>
-    <!-- Supabase CDN -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- Supabase 라이브러리 제거 - 프록시 사용으로 불필요 -->
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { 
@@ -42,6 +41,17 @@
             text-transform: uppercase; 
             letter-spacing: 1.5px;
             font-weight: 400;
+        }
+        
+        .security-badge {
+            display: inline-block;
+            margin-top: 10px;
+            padding: 5px 15px;
+            background: rgba(30, 111, 255, 0.1);
+            border: 1px solid #1E6FFF;
+            border-radius: 20px;
+            font-size: 12px;
+            color: #1E6FFF;
         }
         
         .period-selector {
@@ -232,6 +242,57 @@
             50% { opacity: 0.5; } 
         }
         
+        .date-selector { 
+            display: flex; 
+            align-items: center; 
+            gap: 15px; 
+            padding: 18px 24px; 
+            background: #111; 
+            border: 1px solid #222; 
+            border-radius: 0;
+        }
+        .date-input { 
+            background: #000; 
+            color: #1E6FFF; 
+            border: 1px solid #333; 
+            padding: 10px 14px; 
+            font-size: 14px; 
+            cursor: pointer;
+        }
+        .date-input:hover { 
+            border-color: #1E6FFF;
+        }
+        .date-nav-btn { 
+            padding: 10px 14px; 
+            background: transparent; 
+            color: #888; 
+            border: 1px solid #333; 
+            cursor: pointer; 
+            font-size: 13px;
+            transition: all 0.3s;
+        }
+        .date-nav-btn:hover { 
+            color: #1E6FFF; 
+            border-color: #1E6FFF;
+        }
+        .date-nav-btn:disabled { 
+            opacity: 0.3; 
+            cursor: not-allowed;
+        }
+        .date-info { 
+            color: #999; 
+            font-size: 13px; 
+            margin-left: 10px;
+            font-weight: 500;
+        }
+        .date-info.today { 
+            color: #00FF00; 
+            font-weight: 600;
+        }
+        .date-info.past { 
+            color: #FF6B6B;
+        }
+        
         .tabs { 
             display: flex; 
             gap: 2px; 
@@ -416,6 +477,11 @@
             font-weight: 600; 
             text-decoration: underline;
             padding: 0 2px;
+            animation: glow 1.5s ease-in-out infinite alternate;
+        }
+        @keyframes glow {
+            from { text-shadow: 0 0 5px #FFD700, 0 0 10px #FFD700; }
+            to { text-shadow: 0 0 10px #FFD700, 0 0 20px #FFD700, 0 0 30px #FFD700; }
         }
         
         .form-indicator {
@@ -434,58 +500,6 @@
             font-weight: 700;
         }
         
-        .date-selector { 
-            display: flex; 
-            align-items: center; 
-            gap: 15px; 
-            padding: 18px 24px; 
-            background: #111; 
-            border: 1px solid #222; 
-            border-radius: 0;
-        }
-        .date-input { 
-            background: #000; 
-            color: #1E6FFF; 
-            border: 1px solid #333; 
-            padding: 10px 14px; 
-            font-size: 14px; 
-            cursor: pointer;
-        }
-        .date-input:hover { 
-            border-color: #1E6FFF;
-        }
-        .date-nav-btn { 
-            padding: 10px 14px; 
-            background: transparent; 
-            color: #888; 
-            border: 1px solid #333; 
-            cursor: pointer; 
-            font-size: 13px;
-            transition: all 0.3s;
-        }
-        .date-nav-btn:hover { 
-            color: #1E6FFF; 
-            border-color: #1E6FFF;
-        }
-        .date-nav-btn:disabled { 
-            opacity: 0.3; 
-            cursor: not-allowed;
-        }
-        .date-info { 
-            color: #999; 
-            font-size: 13px; 
-            margin-left: 10px;
-            font-weight: 500;
-        }
-        .date-info.today { 
-            color: #00FF00; 
-            font-weight: 600;
-        }
-        .date-info.past { 
-            color: #FF6B6B;
-        }
-        
-        /* 모달 스타일 */
         .modal { 
             display: none; 
             position: fixed; 
@@ -567,11 +581,6 @@
             }
         }
         
-        .count-animation {
-            display: inline-block;
-            font-variant-numeric: tabular-nums;
-        }
-        
         .loading-screen { 
             position: fixed; 
             top: 0; 
@@ -590,7 +599,6 @@
             animation: pulse 1s infinite;
         }
         
-        /* 숫자 강조 */
         .score-number {
             font-size: 24px;
             font-weight: 600;
@@ -610,19 +618,6 @@
             font-size: 18px;
             font-weight: 500;
             color: #96CEB4;
-        }
-        
-        /* 보안 경고 */
-        .security-warning {
-            background: rgba(255, 0, 0, 0.1);
-            border: 1px solid #FF0000;
-            padding: 20px;
-            margin: 20px 0;
-            border-radius: 4px;
-        }
-        .security-warning h3 {
-            color: #FF0000;
-            margin-bottom: 10px;
         }
         
         @media (max-width: 768px) {
@@ -678,32 +673,6 @@
                 grid-template-columns: repeat(2, 1fr);
             }
         }
-        
-        .form-link { 
-            color: #FFD700; 
-            font-weight: 600; 
-            text-decoration: underline; 
-            animation: glow 1.5s ease-in-out infinite alternate;
-            padding: 0 2px;
-        }
-        @keyframes glow {
-            from { text-shadow: 0 0 5px #FFD700, 0 0 10px #FFD700; }
-            to { text-shadow: 0 0 10px #FFD700, 0 0 20px #FFD700, 0 0 30px #FFD700; }
-        }
-        
-        .loading-spinner {
-            display: inline-block;
-            width: 14px;
-            height: 14px;
-            border: 2px solid #333;
-            border-top-color: #1E6FFF;
-            border-radius: 50%;
-            animation: spin 0.8s linear infinite;
-            margin-left: 8px;
-        }
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
     </style>
 </head>
 <body>
@@ -715,17 +684,7 @@
         <div class="header">
             <h1>SNS센터 <span>도움 카운팅 프로그램</span></h1>
             <div class="date-display" id="dateDisplay">📅 날짜 로딩중...</div>
-        </div>
-        
-        <!-- 보안 경고 (개발 환경에서만 표시) -->
-        <div class="security-warning" id="securityWarning" style="display:none;">
-            <h3>⚠️ 보안 설정 필요</h3>
-            <p>API 엔드포인트가 설정되지 않았습니다. 다음 단계를 따라주세요:</p>
-            <ol>
-                <li>Vercel 환경변수에 SUPABASE_URL과 SUPABASE_KEY 설정</li>
-                <li>api/ 폴더에 프록시 엔드포인트 생성</li>
-                <li>이 HTML 파일을 public/ 폴더에 배치</li>
-            </ol>
+            <div class="security-badge">🔒 Edge Function 보안 모드</div>
         </div>
         
         <div class="control-bar">
@@ -884,14 +843,148 @@
     <div class="notification" id="notification"></div>
     
     <script>
-        // ⚠️ 중요: 아래 SUPABASE_ANON_KEY를 실제 Anon Key로 교체하세요!
-        // Supabase Dashboard → Settings → API → Project API keys → anon (public)
-        const SUPABASE_URL = 'https://bhtqjipygkawoyieidgp.supabase.co';
-        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJodHFqaXB5Z2thd295aWVpZGdwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ0ODg5NjgsImV4cCI6MjA3MDA2NDk2OH0.hu2EAj9RCq436QBtfbEVF4aGOau4WWomLMDKahN4iAA'; // ← 여기에 Anon Key 입력 (Service Role Key 아님!)
+        // ========================================
+        // 🔒 Edge Function 프록시 클라이언트
+        // Supabase 키가 전혀 노출되지 않음!
+        // ========================================
         
-        // 전역 앱 객체
+        class SecureSupabaseClient {
+            constructor(proxyUrl = '/api/supabase-proxy') {
+                this.proxyUrl = proxyUrl;
+            }
+            
+            from(table) {
+                return new QueryBuilder(this.proxyUrl, table);
+            }
+        }
+        
+        class QueryBuilder {
+            constructor(proxyUrl, table) {
+                this.proxyUrl = proxyUrl;
+                this.params = {
+                    table: table,
+                    filters: [],
+                    select: '*'
+                };
+            }
+            
+            select(columns = '*') {
+                this.params.select = columns;
+                return this;
+            }
+            
+            eq(column, value) {
+                this.params.filters.push({ column, operator: 'eq', value });
+                return this;
+            }
+            
+            neq(column, value) {
+                this.params.filters.push({ column, operator: 'neq', value });
+                return this;
+            }
+            
+            gt(column, value) {
+                this.params.filters.push({ column, operator: 'gt', value });
+                return this;
+            }
+            
+            gte(column, value) {
+                this.params.filters.push({ column, operator: 'gte', value });
+                return this;
+            }
+            
+            lt(column, value) {
+                this.params.filters.push({ column, operator: 'lt', value });
+                return this;
+            }
+            
+            lte(column, value) {
+                this.params.filters.push({ column, operator: 'lte', value });
+                return this;
+            }
+            
+            like(column, pattern) {
+                this.params.filters.push({ column, operator: 'like', value: pattern });
+                return this;
+            }
+            
+            ilike(column, pattern) {
+                this.params.filters.push({ column, operator: 'ilike', value: pattern });
+                return this;
+            }
+            
+            in(column, values) {
+                this.params.filters.push({ column, operator: 'in', value: `(${values.join(',')})` });
+                return this;
+            }
+            
+            is(column, value) {
+                this.params.filters.push({ column, operator: 'is', value });
+                return this;
+            }
+            
+            order(column, { ascending = true } = {}) {
+                this.params.order = { column, ascending };
+                return this;
+            }
+            
+            limit(count) {
+                this.params.limit = count;
+                return this;
+            }
+            
+            offset(count) {
+                this.params.offset = count;
+                return this;
+            }
+            
+            range(from, to) {
+                this.params.range = { from, to };
+                return this;
+            }
+            
+            async execute() {
+                try {
+                    const response = await fetch(this.proxyUrl, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(this.params)
+                    });
+                    
+                    const result = await response.json();
+                    
+                    if (!response.ok || result.error) {
+                        return {
+                            data: null,
+                            error: result.error || result
+                        };
+                    }
+                    
+                    return {
+                        data: result.data,
+                        error: null,
+                        count: result.count
+                    };
+                    
+                } catch (error) {
+                    console.error('Query execution error:', error);
+                    return {
+                        data: null,
+                        error: error
+                    };
+                }
+            }
+        }
+        
+        // ========================================
+        // 메인 앱 로직
+        // ========================================
+        
         window.app = {
-            supabaseClient: null,
+            // 보안 Supabase 클라이언트 (프록시 사용)
+            supabaseClient: new SecureSupabaseClient(),
             currentMessages: [],
             currentStats: [],
             currentTab: 'score',
@@ -900,8 +993,6 @@
             isAutoRefresh: true,
             selectedDate: new Date(),
             isToday: true,
-            realtimeSubscription: null,
-            dailyData: [],
             
             // 팀 정보
             teamInfo: {
@@ -928,50 +1019,20 @@
             // 초기화
             init: async function() {
                 try {
-                    console.log('=== 시스템 초기화 시작 ===');
+                    console.log('=== 🔒 보안 모드 초기화 시작 ===');
+                    console.log('✅ Edge Function 프록시 사용');
+                    console.log('✅ Supabase 키 노출 없음');
                     console.log('현재 시간 (KST):', new Date().toLocaleString('ko-KR'));
                     
-                    // Anon Key 확인
-                    if (SUPABASE_ANON_KEY === 'YOUR_ANON_KEY_HERE') {
-                        document.getElementById('securityWarning').style.display = 'block';
-                        document.getElementById('securityWarning').innerHTML = `
-                            <h3>⚠️ 설정 필요</h3>
-                            <p>Supabase Anon Key를 설정해주세요:</p>
-                            <ol>
-                                <li>Supabase Dashboard → Settings → API → Project API keys</li>
-                                <li>anon (public) 키를 복사 (service_role 아님!)</li>
-                                <li>index.html의 SUPABASE_ANON_KEY 값 교체</li>
-                                <li>RLS 정책 설정 확인</li>
-                            </ol>
-                        `;
-                        console.error('Supabase Anon Key가 설정되지 않았습니다');
+                    // 연결 테스트
+                    const testResult = await this.testConnection();
+                    if (!testResult) {
+                        alert('⚠️ 서버 연결 실패. 환경변수를 확인하세요.');
                         document.getElementById('loadingScreen').style.display = 'none';
                         return;
                     }
                     
-                    // Supabase 클라이언트 생성 (Anon Key 사용 - 안전함)
-                    this.supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-                        auth: {
-                            persistSession: false
-                        }
-                    });
-                    
-                    console.log('Supabase 클라이언트 생성 완료 (Anon Key 사용 - 읽기 전용)');
-                    
-                    // 연결 테스트
-                    const { data: testData, error: testError } = await this.supabaseClient
-                        .from('manager_messages')
-                        .select('id')
-                        .limit(1);
-                    
-                    if (testError) {
-                        console.error('Supabase 연결 실패:', testError);
-                        if (testError.message.includes('permission denied')) {
-                            alert('⚠️ RLS 정책을 확인해주세요. 읽기 권한이 필요합니다.');
-                        }
-                    } else {
-                        console.log('Supabase 연결 성공');
-                    }
+                    console.log('✅ 프록시 연결 성공');
                     
                     // 날짜 초기화
                     this.updateDateDisplay();
@@ -991,9 +1052,6 @@
                     // 데이터 로드
                     await this.loadData();
                     
-                    // 실시간 구독
-                    this.subscribeToChanges();
-                    
                     // 자동 새로고침 시작
                     this.startAutoRefresh();
                     document.getElementById('autoRefreshBtn').innerHTML = '⚡ 자동 업데이트 ON';
@@ -1008,7 +1066,23 @@
                 }
             },
             
-            // 데이터 로드 - Supabase에서 직접 가져오기 (읽기 전용)
+            // 연결 테스트
+            testConnection: async function() {
+                try {
+                    const { data, error } = await this.supabaseClient
+                        .from('manager_messages')
+                        .select('id')
+                        .limit(1)
+                        .execute();
+                    
+                    return !error;
+                } catch (error) {
+                    console.error('Connection test failed:', error);
+                    return false;
+                }
+            },
+            
+            // 데이터 로드 (프록시 사용)
             loadData: async function() {
                 const btn = document.getElementById('refreshBtn');
                 btn.disabled = true;
@@ -1018,41 +1092,37 @@
                     const dateRange = this.currentPeriod === 'daily' ? 
                         this.getSelectedDateRange() : this.getPeriodRange();
                     
-                    console.log('=== 데이터 로드 시작 ===');
-                    console.log('기간:', this.currentPeriod);
-                    console.log('조회 범위:', dateRange.start, '~', dateRange.end);
+                    console.log('데이터 로드 시작:', dateRange.start, '~', dateRange.end);
                     
-                    // Supabase에서 직접 데이터 가져오기 (RLS로 보호됨)
+                    // 프록시를 통한 데이터 조회
                     let allMessages = [];
                     const pageSize = 1000;
-                    let rangeStart = 0;
+                    let offset = 0;
                     let hasMore = true;
                     
                     while (hasMore) {
-                        const { data: messages, error, count } = await this.supabaseClient
+                        const { data, error } = await this.supabaseClient
                             .from('manager_messages')
-                            .select('*', { count: 'exact' })
+                            .select('*')
                             .gte('created_at', dateRange.start)
                             .lte('created_at', dateRange.end)
                             .order('created_at', { ascending: false })
-                            .range(rangeStart, rangeStart + pageSize - 1);
+                            .limit(pageSize)
+                            .offset(offset)
+                            .execute();
                         
                         if (error) {
                             console.error('데이터 로드 에러:', error);
-                            if (error.message.includes('permission denied')) {
-                                throw new Error('읽기 권한이 없습니다. RLS 정책을 확인하세요.');
-                            }
-                            throw error;
+                            throw new Error('데이터 로드 실패');
                         }
                         
-                        if (messages && messages.length > 0) {
-                            allMessages = allMessages.concat(messages);
-                            console.log(`${messages.length}개 메시지 로드 (총 ${allMessages.length}개)`);
+                        if (data && data.length > 0) {
+                            allMessages = allMessages.concat(data);
                             
-                            if (messages.length < pageSize) {
+                            if (data.length < pageSize) {
                                 hasMore = false;
                             } else {
-                                rangeStart += pageSize;
+                                offset += pageSize;
                             }
                         } else {
                             hasMore = false;
@@ -1061,14 +1131,12 @@
                     
                     console.log('총 메시지 수:', allMessages.length);
                     
-                    // 제외할 상담사 및 템플릿 필터링
+                    // 필터링
                     this.currentMessages = allMessages.filter(msg => {
-                        // 제외할 상담사 체크
                         if (this.excludedManagers.includes(msg.writer_manager_name)) {
                             return false;
                         }
                         
-                        // 제외할 템플릿 메시지 체크
                         if (msg.message_text) {
                             for (const template of this.excludedTemplates) {
                                 if (msg.message_text.includes(template)) {
@@ -1081,16 +1149,12 @@
                     });
                     
                     console.log('필터링 후:', this.currentMessages.length);
-                    console.log('=== 데이터 로드 완료 ===');
                     
-                    // 통계 계산
+                    // 통계 계산 및 UI 업데이트
                     this.calculateStats();
-                    
-                    // UI 업데이트
                     this.updateAllRankings();
                     this.updateRecentMessages();
                     
-                    // 일별 통계 차트 생성
                     if (this.currentPeriod !== 'daily') {
                         await this.generateDailyChart(this.currentMessages);
                     }
@@ -1107,92 +1171,7 @@
                 }
             },
             
-            // 실시간 구독 (Supabase Realtime)
-            subscribeToChanges: function() {
-                // 기존 구독 해제
-                if (this.realtimeSubscription) {
-                    this.supabaseClient.removeChannel(this.realtimeSubscription);
-                }
-                
-                // 오늘이 아니거나 일간 모드가 아니면 구독하지 않음
-                if (!this.isToday || this.currentPeriod !== 'daily') {
-                    return;
-                }
-                
-                const todayRange = this.getTodayRange();
-                
-                // Supabase 실시간 구독
-                this.realtimeSubscription = this.supabaseClient
-                    .channel('manager_messages_changes')
-                    .on('postgres_changes', 
-                        { 
-                            event: 'INSERT',
-                            schema: 'public', 
-                            table: 'manager_messages'
-                        },
-                        (payload) => {
-                            console.log('실시간 이벤트:', payload);
-                            const newMessage = payload.new;
-                            
-                            // 제외할 상담사 체크
-                            if (this.excludedManagers.includes(newMessage.writer_manager_name)) {
-                                return;
-                            }
-                            
-                            // 제외할 템플릿 체크
-                            if (newMessage.message_text) {
-                                for (const template of this.excludedTemplates) {
-                                    if (newMessage.message_text.includes(template)) {
-                                        return;
-                                    }
-                                }
-                            }
-                            
-                            // 오늘 메시지인지 확인
-                            const messageDate = new Date(newMessage.created_at);
-                            const today = new Date();
-                            if (messageDate.toDateString() !== today.toDateString()) {
-                                return;
-                            }
-                            
-                            // 중복 체크
-                            if (!this.currentMessages.find(m => m.id === newMessage.id)) {
-                                this.currentMessages.push(newMessage);
-                                this.currentMessages.sort((a, b) => 
-                                    new Date(b.created_at) - new Date(a.created_at)
-                                );
-                                
-                                // UI 업데이트
-                                this.calculateStats();
-                                this.updateAllRankings();
-                                this.addNewMessageToList(newMessage);
-                                
-                                // 알림
-                                this.showNotification(`💬 ${newMessage.writer_manager_name}님이 도움 메시지 전송`);
-                            }
-                        }
-                    )
-                    .subscribe((status) => {
-                        if (status === 'SUBSCRIBED') {
-                            console.log('실시간 구독 성공');
-                            this.setStatus('active', '🔴 실시간 모니터링 중');
-                        }
-                    });
-            },
-            
-            // 오늘 날짜 범위
-            getTodayRange: function() {
-                const today = new Date();
-                const start = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 0, 0, 0);
-                const end = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59);
-                
-                return {
-                    start: start.toISOString(),
-                    end: end.toISOString()
-                };
-            },
-            
-            // 기간 전환
+            // 기간 관련 함수들
             switchPeriod: function(period) {
                 this.currentPeriod = period;
                 
@@ -1219,7 +1198,6 @@
                 this.loadData();
             },
             
-            // 날짜 범위 계산
             getPeriodRange: function() {
                 let start, end;
                 
@@ -1250,7 +1228,6 @@
                 };
             },
             
-            // 선택된 날짜 범위
             getSelectedDateRange: function() {
                 const start = new Date(this.selectedDate);
                 start.setHours(0, 0, 0, 0);
@@ -1264,33 +1241,52 @@
                 };
             },
             
-            // 팀 관련 함수들
-            getTeam: function(name) {
-                for (const [team, members] of Object.entries(this.teamInfo)) {
-                    if (members.includes(name)) {
-                        return team;
-                    }
+            selectDate: function(dateString) {
+                this.selectedDate = new Date(dateString + 'T00:00:00');
+                this.updateDateDisplay();
+                this.loadData();
+            },
+            
+            changeDate: function(days) {
+                const newDate = new Date(this.selectedDate);
+                
+                if (this.currentPeriod === 'daily') {
+                    newDate.setDate(newDate.getDate() + days);
+                } else if (this.currentPeriod === 'weekly') {
+                    newDate.setDate(newDate.getDate() + (days * 7));
+                } else if (this.currentPeriod === 'monthly') {
+                    newDate.setMonth(newDate.getMonth() + days);
                 }
-                return '미지정';
+                
+                const today = new Date();
+                if (newDate > today) {
+                    return;
+                }
+                
+                this.selectedDate = newDate;
+                this.updateDateDisplay();
+                this.loadData();
             },
             
-            getTeamClass: function(team) {
-                const classes = {
-                    'SNS 1팀': 'team-1',
-                    'SNS 2팀': 'team-2',
-                    'SNS 3팀': 'team-3',
-                    'SNS 4팀': 'team-4',
-                    '의정부 SNS': 'team-5',
-                    '야간팀': 'team-6'
-                };
-                return classes[team] || '';
+            goToToday: function() {
+                if (this.currentPeriod === 'daily' && this.isToday) {
+                    return;
+                }
+                
+                this.currentPeriod = 'daily';
+                this.selectedDate = new Date();
+                
+                document.querySelectorAll('.period-btn').forEach(btn => btn.classList.remove('active'));
+                document.getElementById('period-daily').classList.add('active');
+                document.getElementById('dailyStats').style.display = 'none';
+                
+                document.getElementById('prevBtn').textContent = '◀ 이전날';
+                document.getElementById('nextDayBtn').textContent = '다음날 ▶';
+                
+                this.updateDateDisplay();
+                this.loadData();
             },
             
-            isPartLeader: function(name) {
-                return this.partLeaders.includes(name);
-            },
-            
-            // 날짜 표시 업데이트
             updateDateDisplay: function() {
                 const days = ['일', '월', '화', '수', '목', '금', '토'];
                 let dateStr = '';
@@ -1340,56 +1336,33 @@
                 document.getElementById('nextDayBtn').disabled = this.selectedDate >= today;
             },
             
-            // 날짜 선택
-            selectDate: function(dateString) {
-                this.selectedDate = new Date(dateString + 'T00:00:00');
-                this.updateDateDisplay();
-                this.loadData();
+            // 팀 관련 함수들
+            getTeam: function(name) {
+                for (const [team, members] of Object.entries(this.teamInfo)) {
+                    if (members.includes(name)) {
+                        return team;
+                    }
+                }
+                return '미지정';
             },
             
-            // 날짜 변경
-            changeDate: function(days) {
-                const newDate = new Date(this.selectedDate);
-                
-                if (this.currentPeriod === 'daily') {
-                    newDate.setDate(newDate.getDate() + days);
-                } else if (this.currentPeriod === 'weekly') {
-                    newDate.setDate(newDate.getDate() + (days * 7));
-                } else if (this.currentPeriod === 'monthly') {
-                    newDate.setMonth(newDate.getMonth() + days);
-                }
-                
-                const today = new Date();
-                if (newDate > today) {
-                    return;
-                }
-                
-                this.selectedDate = newDate;
-                this.updateDateDisplay();
-                this.loadData();
+            getTeamClass: function(team) {
+                const classes = {
+                    'SNS 1팀': 'team-1',
+                    'SNS 2팀': 'team-2',
+                    'SNS 3팀': 'team-3',
+                    'SNS 4팀': 'team-4',
+                    '의정부 SNS': 'team-5',
+                    '야간팀': 'team-6'
+                };
+                return classes[team] || '';
             },
             
-            // 오늘로 이동
-            goToToday: function() {
-                if (this.currentPeriod === 'daily' && this.isToday) {
-                    return;
-                }
-                
-                this.currentPeriod = 'daily';
-                this.selectedDate = new Date();
-                
-                document.querySelectorAll('.period-btn').forEach(btn => btn.classList.remove('active'));
-                document.getElementById('period-daily').classList.add('active');
-                document.getElementById('dailyStats').style.display = 'none';
-                
-                document.getElementById('prevBtn').textContent = '◀ 이전날';
-                document.getElementById('nextDayBtn').textContent = '다음날 ▶';
-                
-                this.updateDateDisplay();
-                this.loadData();
+            isPartLeader: function(name) {
+                return this.partLeaders.includes(name);
             },
             
-            // 통계 계산 및 UI 업데이트 함수들
+            // 통계 계산
             calculateStats: function() {
                 const stats = {};
                 
@@ -1406,17 +1379,15 @@
                             totalChars: 0,
                             uniqueChats: new Set(),
                             helpScore: 0,
-                            formCount: 0,
-                            messages: []
+                            formCount: 0
                         };
                     }
                     
                     stats[managerId].messageCount++;
                     stats[managerId].totalChars += msg.message_length;
                     stats[managerId].uniqueChats.add(msg.user_chat_id);
-                    stats[managerId].messages.push(new Date(msg.created_at));
                     
-                    const score = this.calculateHelpScore(msg, this.currentMessages);
+                    const score = this.calculateHelpScore(msg);
                     stats[managerId].helpScore += score;
                     
                     const formLinksCount = this.countValidFormLinks(msg.message_text);
@@ -1431,7 +1402,7 @@
                 }));
             },
             
-            calculateHelpScore: function(message, allMessages) {
+            calculateHelpScore: function(message) {
                 let score = 1;
                 
                 const formCount = this.countValidFormLinks(message.message_text);
@@ -1463,49 +1434,34 @@
                 );
             },
             
-            // 전화번호 마스킹 함수
+            // 마스킹 함수들 (모든 민감정보)
             maskPhoneNumber: function(text) {
                 if (!text) return text;
                 
-                // 다양한 전화번호 패턴 정의
                 const phonePatterns = [
-                    // 010-1234-5678, 02-123-4567, 031-123-4567 등
                     /(\d{2,3})-(\d{3,4})-(\d{4})/g,
-                    // 01012345678, 021234567, 0311234567 등
                     /(?<!\d)(0\d{1,2})(\d{3,4})(\d{4})(?!\d)/g,
-                    // 010 1234 5678 (공백 구분)
                     /(\d{2,3})\s(\d{3,4})\s(\d{4})/g,
-                    // 010.1234.5678 (점 구분)
                     /(\d{2,3})\.(\d{3,4})\.(\d{4})/g,
-                    // +82-10-1234-5678, +8210-1234-5678
                     /\+82-?(\d{1,2})-?(\d{3,4})-?(\d{4})/g,
-                    // (010) 1234-5678
                     /\((\d{2,3})\)\s?(\d{3,4})-?(\d{4})/g,
-                    // 1588-1234, 1577-1234 등 (대표번호)
                     /(1\d{3})-?(\d{4})/g
                 ];
                 
                 let maskedText = text;
                 
-                // 각 패턴에 대해 마스킹 처리
                 phonePatterns.forEach(pattern => {
                     maskedText = maskedText.replace(pattern, (match, ...groups) => {
-                        // groups에서 undefined 제거하고 숫자 그룹만 추출
                         const parts = groups.filter(g => g && typeof g === 'string' && /\d/.test(g));
                         
                         if (parts.length === 2) {
-                            // 대표번호 형식 (1588-1234)
                             return `${parts[0]}-****`;
                         } else if (parts.length === 3) {
-                            // 일반 전화번호 형식
                             const firstPart = parts[0];
                             const middlePart = parts[1];
                             const lastPart = parts[2];
-                            
-                            // 중간 부분 마스킹
                             const maskedMiddle = middlePart.replace(/\d/g, '*');
                             
-                            // 원본 형식 유지하면서 마스킹
                             if (match.includes('-')) {
                                 return `${firstPart}-${maskedMiddle}-${lastPart}`;
                             } else if (match.includes(' ')) {
@@ -1526,17 +1482,14 @@
                 return maskedText;
             },
             
-            // 이메일 마스킹 함수
             maskEmail: function(text) {
                 if (!text) return text;
                 
-                // 이메일 패턴
                 const emailPattern = /([a-zA-Z0-9][a-zA-Z0-9._%+-]*@[a-zA-Z0-9][a-zA-Z0-9.-]*\.[a-zA-Z]{2,})/g;
                 
                 return text.replace(emailPattern, (match, email) => {
                     const [localPart, domain] = email.split('@');
                     
-                    // 로컬 파트 마스킹 (처음 2글자만 보이고 나머지는 ***)
                     let maskedLocal;
                     if (localPart.length <= 3) {
                         maskedLocal = localPart[0] + '***';
@@ -1544,7 +1497,6 @@
                         maskedLocal = localPart.substring(0, 2) + '***';
                     }
                     
-                    // 도메인 마스킹 (첫 글자와 TLD만 보임)
                     const domainParts = domain.split('.');
                     const tld = domainParts[domainParts.length - 1];
                     const maskedDomain = domain[0] + '***.' + tld;
@@ -1553,15 +1505,11 @@
                 });
             },
             
-            // 주민등록번호 마스킹 함수
             maskResidentNumber: function(text) {
                 if (!text) return text;
                 
-                // 주민등록번호 패턴들
                 const patterns = [
-                    // 950101-1234567 형식
                     /(\d{2})(0[1-9]|1[0-2])(0[1-9]|[12]\d|3[01])-?([1-4]\d{6})/g,
-                    // 9501011234567 형식 (연속된 13자리)
                     /(?<!\d)(\d{2})(0[1-9]|1[0-2])(0[1-9]|[12]\d|3[01])([1-4]\d{6})(?!\d)/g
                 ];
                 
@@ -1569,7 +1517,6 @@
                 
                 patterns.forEach(pattern => {
                     maskedText = maskedText.replace(pattern, (match, year, month, day, backPart) => {
-                        // 뒷자리 전체 마스킹
                         const maskedBack = backPart[0] + '******';
                         
                         if (match.includes('-')) {
@@ -1583,22 +1530,15 @@
                 return maskedText;
             },
             
-            // 계좌번호 마스킹 함수
             maskAccountNumber: function(text) {
                 if (!text) return text;
                 
-                // 은행 이름 패턴
                 const bankNames = '(국민|우리|신한|하나|기업|농협|수협|한국산업|한국수출입|중소기업|SC제일|씨티|케이뱅크|카카오뱅크|토스뱅크|새마을금고|신협|우체국|KB|IBK|NH|KEB|DGB대구|BNK부산|전북|경남|광주|제주|KDB산업)';
                 
-                // 계좌번호 패턴들
                 const patterns = [
-                    // 은행명 뒤에 오는 계좌번호 (하이픈 포함)
                     new RegExp(`${bankNames}[\\s:]*([0-9]{2,6}-[0-9]{2,6}-[0-9]{2,6}(?:-[0-9]{1,3})?)`, 'gi'),
-                    // 은행명 뒤에 오는 계좌번호 (연속)
                     new RegExp(`${bankNames}[\\s:]*([0-9]{10,14})`, 'gi'),
-                    // 독립적인 계좌번호 패턴 (10자리 이상 숫자)
                     /(?:계좌|계좌번호|입금|송금)[\\s:]*([0-9]{10,14})/gi,
-                    // 하이픈이 있는 일반적인 계좌번호 패턴
                     /(?<!\d)(\d{3,6})-(\d{2,6})-(\d{2,6})(?:-(\d{1,3}))?(?!\d)/g
                 ];
                 
@@ -1606,13 +1546,11 @@
                 
                 patterns.forEach(pattern => {
                     maskedText = maskedText.replace(pattern, (match, ...groups) => {
-                        // 은행명이 포함된 경우
                         if (match.match(new RegExp(bankNames, 'i'))) {
                             const bankMatch = match.match(new RegExp(bankNames, 'i'))[0];
                             const accountPart = match.substring(match.indexOf(bankMatch) + bankMatch.length);
                             const accountNumbers = accountPart.match(/[\d-]+/)[0];
                             
-                            // 계좌번호 마스킹 (앞 3자리와 뒤 2자리만 표시)
                             if (accountNumbers.includes('-')) {
                                 const parts = accountNumbers.split('-');
                                 if (parts.length >= 3) {
@@ -1627,7 +1565,6 @@
                             }
                         }
                         
-                        // 일반 계좌번호 패턴
                         const numbers = groups.filter(g => g && /\d/.test(g));
                         if (numbers.length >= 3) {
                             const masked = [...numbers];
@@ -1642,19 +1579,13 @@
                 return maskedText;
             },
             
-            // 신용카드번호 마스킹 함수
             maskCreditCard: function(text) {
                 if (!text) return text;
                 
-                // 신용카드 패턴들
                 const patterns = [
-                    // 1234-5678-9012-3456 형식
                     /(\d{4})-(\d{4})-(\d{4})-(\d{4})/g,
-                    // 1234 5678 9012 3456 형식
                     /(\d{4})\s(\d{4})\s(\d{4})\s(\d{4})/g,
-                    // 1234567890123456 형식 (16자리 연속)
                     /(?<!\d)(\d{4})(\d{4})(\d{4})(\d{4})(?!\d)/g,
-                    // 카드번호 앞뒤 문맥 포함
                     /(?:카드|card|신용|체크)[\\s:]*(\d{4})[-\\s]?(\d{4})[-\\s]?(\d{4})[-\\s]?(\d{4})/gi
                 ];
                 
@@ -1662,13 +1593,11 @@
                 
                 patterns.forEach(pattern => {
                     maskedText = maskedText.replace(pattern, (match, p1, p2, p3, p4) => {
-                        // 카드번호 검증 (첫 자리로 카드사 식별)
                         const firstDigit = p1 ? p1[0] : '';
                         if (!['3', '4', '5', '6', '9'].includes(firstDigit)) {
-                            return match; // 유효한 카드번호가 아님
+                            return match;
                         }
                         
-                        // 중간 8자리 마스킹 (첫 4자리와 마지막 4자리만 표시)
                         if (match.includes('-')) {
                             return `${p1}-****-****-${p4}`;
                         } else if (match.includes(' ')) {
@@ -1682,7 +1611,6 @@
                     });
                 });
                 
-                // 15자리 아멕스 카드 패턴
                 const amexPatterns = [
                     /(\d{4})-(\d{6})-(\d{5})/g,
                     /(\d{4})\s(\d{6})\s(\d{5})/g,
@@ -1691,7 +1619,6 @@
                 
                 amexPatterns.forEach(pattern => {
                     maskedText = maskedText.replace(pattern, (match, p1, p2, p3) => {
-                        // 아멕스는 3으로 시작
                         if (!p1.startsWith('3')) {
                             return match;
                         }
@@ -1709,21 +1636,19 @@
                 return maskedText;
             },
             
-            // 모든 민감정보 마스킹 통합 함수
             maskSensitiveInfo: function(text) {
                 if (!text) return text;
                 
-                // 순서 중요: 더 구체적인 패턴부터 처리
-                text = this.maskCreditCard(text);      // 신용카드 (16자리 숫자)
-                text = this.maskResidentNumber(text);   // 주민번호 (13자리 숫자)
-                text = this.maskAccountNumber(text);    // 계좌번호 (10-14자리)
-                text = this.maskPhoneNumber(text);      // 전화번호
-                text = this.maskEmail(text);            // 이메일
+                text = this.maskCreditCard(text);
+                text = this.maskResidentNumber(text);
+                text = this.maskAccountNumber(text);
+                text = this.maskPhoneNumber(text);
+                text = this.maskEmail(text);
                 
                 return text;
             },
             
-            // 랭킹 업데이트
+            // UI 업데이트
             updateAllRankings: function() {
                 const noDataMessage = this.isToday ? '오늘 데이터가 없습니다' : '선택한 날짜에 데이터가 없습니다';
                 
@@ -1793,7 +1718,6 @@
                 }
             },
             
-            // 최근 메시지 업데이트
             updateRecentMessages: function() {
                 const container = document.getElementById('messagesContainer');
                 let messagesToShow = [];
@@ -1865,7 +1789,7 @@
                 }
             },
             
-            // 일별 통계 차트 생성
+            // 일별 통계 차트
             generateDailyChart: async function(messages) {
                 if (this.currentPeriod === 'daily') return;
                 
@@ -1942,7 +1866,7 @@
                 
                 modalTitle.innerHTML = `${managerName} <span class="team-badge ${this.getTeamClass(stats.team)}">${stats.team}</span>`;
                 
-                let html = `<h3>오늘 작성한 메시지 (${managerMessages.length}개)</h3>`;
+                let html = `<h3>작성한 메시지 (${managerMessages.length}개)</h3>`;
                 
                 managerMessages.forEach(msg => {
                     const time = new Date(msg.created_at);
@@ -1966,7 +1890,6 @@
                 modal.classList.add('show');
             },
             
-            // 모달 닫기
             closeModal: function() {
                 document.getElementById('managerModal').classList.remove('show');
             },
@@ -2021,20 +1944,18 @@
                 }
             },
             
-            // 상태 표시
+            // 유틸리티
             setStatus: function(type, text) {
                 document.getElementById('statusDot').className = 'status-dot ' + type;
                 document.getElementById('statusText').textContent = text;
             },
             
-            // 마지막 업데이트 시간
             updateLastTime: function() {
                 const now = new Date();
                 document.getElementById('lastUpdate').innerHTML = 
                     `⏰ ${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}:${now.getSeconds().toString().padStart(2,'0')}`;
             },
             
-            // 알림 표시
             showNotification: function(message, type = 'success') {
                 const notification = document.getElementById('notification');
                 notification.textContent = message;
@@ -2056,6 +1977,8 @@
         
         // 페이지 로드 완료 후 초기화
         window.addEventListener('DOMContentLoaded', () => {
+            console.log('🔒 Edge Function 보안 모드 활성화');
+            console.log('✅ Supabase 키 노출 없음');
             app.init();
         });
     </script>
