@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SNS센터 도움 카운팅 프로그램</title>
-    <!-- Supabase 라이브러리 제거 - 프록시 사용으로 불필요 -->
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { 
@@ -466,6 +465,7 @@
             font-size: 15px; 
             line-height: 1.7;
             margin-bottom: 8px;
+            word-break: break-all;
         }
         .message-meta { 
             color: #999; 
@@ -719,7 +719,6 @@
             <button class="tab" onclick="app.switchTab('chars')" id="tab-chars">글자수 랭킹</button>
         </div>
         
-        <!-- 일별 통계 차트 (주간/월간 모드에서만 표시) -->
         <div class="daily-stats" id="dailyStats" style="display:none;">
             <div class="daily-stats-title" id="dailyStatsTitle">일별 메시지 통계</div>
             <div class="daily-chart" id="dailyChart"></div>
@@ -827,7 +826,6 @@
         </div>
     </div>
     
-    <!-- 상담사 메시지 모달 -->
     <div class="modal" id="managerModal">
         <div class="modal-content">
             <div class="modal-header">
@@ -835,8 +833,7 @@
                 <span class="modal-close" onclick="app.closeModal()">&times;</span>
             </div>
             <div class="modal-body" id="modalBody">
-                <!-- 동적으로 내용 추가 -->
-            </div>
+                </div>
         </div>
     </div>
     
@@ -1429,15 +1426,20 @@
             highlightFormLinks: function(text) {
                 if (!text) return text;
                 return text.replace(
-                    /((?:https?:\/\/)?form\.ajd\.co\.kr\/r\?h=[^\s]*)/gi,
+                    /((?:https?:\/\/)?form\.ajd\.co\.kr\/r\?h=[^\s<]*)/gi,
                     '<span class="form-link">$1</span>'
                 );
             },
             
-            // 마스킹 함수들 (모든 민감정보)
+            // 마스킹 함수들
+            maskFormUrl: function(text) {
+                if (!text) return text;
+                const formPattern = /(form\.ajd\.co\.kr\/r\?h=)[^\s<]+/gi;
+                return text.replace(formPattern, '$1********');
+            },
+
             maskPhoneNumber: function(text) {
                 if (!text) return text;
-                
                 const phonePatterns = [
                     /(\d{2,3})-(\d{3,4})-(\d{4})/g,
                     /(?<!\d)(0\d{1,2})(\d{3,4})(\d{4})(?!\d)/g,
@@ -1447,205 +1449,132 @@
                     /\((\d{2,3})\)\s?(\d{3,4})-?(\d{4})/g,
                     /(1\d{3})-?(\d{4})/g
                 ];
-                
                 let maskedText = text;
-                
                 phonePatterns.forEach(pattern => {
                     maskedText = maskedText.replace(pattern, (match, ...groups) => {
                         const parts = groups.filter(g => g && typeof g === 'string' && /\d/.test(g));
-                        
                         if (parts.length === 2) {
                             return `${parts[0]}-****`;
                         } else if (parts.length === 3) {
-                            const firstPart = parts[0];
-                            const middlePart = parts[1];
-                            const lastPart = parts[2];
+                            const [firstPart, middlePart, lastPart] = parts;
                             const maskedMiddle = middlePart.replace(/\d/g, '*');
-                            
-                            if (match.includes('-')) {
-                                return `${firstPart}-${maskedMiddle}-${lastPart}`;
-                            } else if (match.includes(' ')) {
-                                return `${firstPart} ${maskedMiddle} ${lastPart}`;
-                            } else if (match.includes('.')) {
-                                return `${firstPart}.${maskedMiddle}.${lastPart}`;
-                            } else if (match.includes('(')) {
-                                return `(${firstPart}) ${maskedMiddle}-${lastPart}`;
-                            } else {
-                                return `${firstPart}${maskedMiddle}${lastPart}`;
-                            }
+                            if (match.includes('-')) return `${firstPart}-${maskedMiddle}-${lastPart}`;
+                            if (match.includes(' ')) return `${firstPart} ${maskedMiddle} ${lastPart}`;
+                            if (match.includes('.')) return `${firstPart}.${maskedMiddle}.${lastPart}`;
+                            if (match.includes('(')) return `(${firstPart}) ${maskedMiddle}-${lastPart}`;
+                            return `${firstPart}${maskedMiddle}${lastPart}`;
                         }
-                        
                         return match;
                     });
                 });
-                
                 return maskedText;
             },
             
             maskEmail: function(text) {
                 if (!text) return text;
-                
                 const emailPattern = /([a-zA-Z0-9][a-zA-Z0-9._%+-]*@[a-zA-Z0-9][a-zA-Z0-9.-]*\.[a-zA-Z]{2,})/g;
-                
-                return text.replace(emailPattern, (match, email) => {
+                return text.replace(emailPattern, (email) => {
                     const [localPart, domain] = email.split('@');
-                    
-                    let maskedLocal;
-                    if (localPart.length <= 3) {
-                        maskedLocal = localPart[0] + '***';
-                    } else {
-                        maskedLocal = localPart.substring(0, 2) + '***';
-                    }
-                    
+                    const maskedLocal = localPart.length <= 3 ? localPart[0] + '***' : localPart.substring(0, 2) + '***';
                     const domainParts = domain.split('.');
-                    const tld = domainParts[domainParts.length - 1];
-                    const maskedDomain = domain[0] + '***.' + tld;
-                    
-                    return `${maskedLocal}@${maskedDomain}`;
+                    const tld = domainParts.pop();
+                    const maskedDomainName = domainParts.join('.').charAt(0) + '***';
+                    return `${maskedLocal}@${maskedDomainName}.${tld}`;
                 });
             },
             
             maskResidentNumber: function(text) {
                 if (!text) return text;
-                
                 const patterns = [
                     /(\d{2})(0[1-9]|1[0-2])(0[1-9]|[12]\d|3[01])-?([1-4]\d{6})/g,
                     /(?<!\d)(\d{2})(0[1-9]|1[0-2])(0[1-9]|[12]\d|3[01])([1-4]\d{6})(?!\d)/g
                 ];
-                
                 let maskedText = text;
-                
                 patterns.forEach(pattern => {
                     maskedText = maskedText.replace(pattern, (match, year, month, day, backPart) => {
                         const maskedBack = backPart[0] + '******';
-                        
-                        if (match.includes('-')) {
-                            return `${year}${month}${day}-${maskedBack}`;
-                        } else {
-                            return `${year}${month}${day}${maskedBack}`;
-                        }
+                        return match.includes('-') ? `${year}${month}${day}-${maskedBack}` : `${year}${month}${day}${maskedBack}`;
                     });
                 });
-                
                 return maskedText;
             },
             
             maskAccountNumber: function(text) {
                 if (!text) return text;
-                
                 const bankNames = '(국민|우리|신한|하나|기업|농협|수협|한국산업|한국수출입|중소기업|SC제일|씨티|케이뱅크|카카오뱅크|토스뱅크|새마을금고|신협|우체국|KB|IBK|NH|KEB|DGB대구|BNK부산|전북|경남|광주|제주|KDB산업)';
-                
                 const patterns = [
                     new RegExp(`${bankNames}[\\s:]*([0-9]{2,6}-[0-9]{2,6}-[0-9]{2,6}(?:-[0-9]{1,3})?)`, 'gi'),
                     new RegExp(`${bankNames}[\\s:]*([0-9]{10,14})`, 'gi'),
                     /(?:계좌|계좌번호|입금|송금)[\\s:]*([0-9]{10,14})/gi,
                     /(?<!\d)(\d{3,6})-(\d{2,6})-(\d{2,6})(?:-(\d{1,3}))?(?!\d)/g
                 ];
-                
                 let maskedText = text;
-                
                 patterns.forEach(pattern => {
                     maskedText = maskedText.replace(pattern, (match, ...groups) => {
-                        if (match.match(new RegExp(bankNames, 'i'))) {
-                            const bankMatch = match.match(new RegExp(bankNames, 'i'))[0];
-                            const accountPart = match.substring(match.indexOf(bankMatch) + bankMatch.length);
-                            const accountNumbers = accountPart.match(/[\d-]+/)[0];
-                            
-                            if (accountNumbers.includes('-')) {
-                                const parts = accountNumbers.split('-');
-                                if (parts.length >= 3) {
-                                    parts[1] = parts[1].replace(/\d/g, '*');
-                                    return bankMatch + accountPart.replace(accountNumbers, parts.join('-'));
+                        const bankMatch = match.match(new RegExp(bankNames, 'i'));
+                        if (bankMatch) {
+                            const bankPart = bankMatch[0];
+                            const accountPart = match.substring(match.indexOf(bankPart) + bankPart.length);
+                            const accountNumbersMatch = accountPart.match(/[\d-]+/);
+                            if (accountNumbersMatch) {
+                                const accountNumbers = accountNumbersMatch[0];
+                                if (accountNumbers.includes('-')) {
+                                    const parts = accountNumbers.split('-');
+                                    if (parts.length >= 3) {
+                                        parts[1] = parts[1].replace(/\d/g, '*');
+                                        return bankPart + accountPart.replace(accountNumbers, parts.join('-'));
+                                    }
+                                } else if (accountNumbers.length >= 10) {
+                                    const masked = accountNumbers.substring(0, 3) + '*'.repeat(accountNumbers.length - 5) + accountNumbers.substring(accountNumbers.length - 2);
+                                    return bankPart + accountPart.replace(accountNumbers, masked);
                                 }
-                            } else if (accountNumbers.length >= 10) {
-                                const masked = accountNumbers.substring(0, 3) + 
-                                              '*'.repeat(accountNumbers.length - 5) + 
-                                              accountNumbers.substring(accountNumbers.length - 2);
-                                return bankMatch + accountPart.replace(accountNumbers, masked);
                             }
                         }
-                        
                         const numbers = groups.filter(g => g && /\d/.test(g));
                         if (numbers.length >= 3) {
                             const masked = [...numbers];
                             masked[1] = masked[1].replace(/\d/g, '*');
                             return match.replace(/[\d-]+/, masked.join('-'));
                         }
-                        
                         return match;
                     });
                 });
-                
                 return maskedText;
             },
             
             maskCreditCard: function(text) {
                 if (!text) return text;
-                
                 const patterns = [
-                    /(\d{4})-(\d{4})-(\d{4})-(\d{4})/g,
-                    /(\d{4})\s(\d{4})\s(\d{4})\s(\d{4})/g,
-                    /(?<!\d)(\d{4})(\d{4})(\d{4})(\d{4})(?!\d)/g,
-                    /(?:카드|card|신용|체크)[\\s:]*(\d{4})[-\\s]?(\d{4})[-\\s]?(\d{4})[-\\s]?(\d{4})/gi
+                    /(\d{4})[-\s]?(\d{4})[-\s]?(\d{4})[-\s]?(\d{4})/g,
+                    /(?:카드|card|신용|체크)[\\s:]*(\d{4})[-\s]?(\d{4})[-\s]?(\d{4})[-\s]?(\d{4})/gi
                 ];
-                
                 let maskedText = text;
-                
                 patterns.forEach(pattern => {
                     maskedText = maskedText.replace(pattern, (match, p1, p2, p3, p4) => {
-                        const firstDigit = p1 ? p1[0] : '';
-                        if (!['3', '4', '5', '6', '9'].includes(firstDigit)) {
-                            return match;
-                        }
-                        
-                        if (match.includes('-')) {
-                            return `${p1}-****-****-${p4}`;
-                        } else if (match.includes(' ')) {
-                            return `${p1} **** **** ${p4}`;
-                        } else if (match.toLowerCase().includes('카드') || match.toLowerCase().includes('card')) {
-                            const prefix = match.substring(0, match.search(/\d/));
-                            return prefix + `${p1}-****-****-${p4}`;
-                        } else {
-                            return `${p1}********${p4}`;
-                        }
+                        if (!['3', '4', '5', '6', '9'].includes(p1[0])) return match;
+                        return match.replace(p2, '****').replace(p3, '****');
                     });
                 });
-                
-                const amexPatterns = [
-                    /(\d{4})-(\d{6})-(\d{5})/g,
-                    /(\d{4})\s(\d{6})\s(\d{5})/g,
-                    /(?<!\d)(\d{4})(\d{6})(\d{5})(?!\d)/g
-                ];
-                
+                const amexPatterns = [/(\d{4})[-\s]?(\d{6})[-\s]?(\d{5})/g];
                 amexPatterns.forEach(pattern => {
                     maskedText = maskedText.replace(pattern, (match, p1, p2, p3) => {
-                        if (!p1.startsWith('3')) {
-                            return match;
-                        }
-                        
-                        if (match.includes('-')) {
-                            return `${p1}-******-${p3}`;
-                        } else if (match.includes(' ')) {
-                            return `${p1} ****** ${p3}`;
-                        } else {
-                            return `${p1}******${p3}`;
-                        }
+                        if (!p1.startsWith('3')) return match;
+                        return match.replace(p2, '******');
                     });
                 });
-                
                 return maskedText;
             },
             
             maskSensitiveInfo: function(text) {
                 if (!text) return text;
-                
-                text = this.maskCreditCard(text);
-                text = this.maskResidentNumber(text);
-                text = this.maskAccountNumber(text);
-                text = this.maskPhoneNumber(text);
-                text = this.maskEmail(text);
-                
-                return text;
+                let maskedText = text;
+                maskedText = this.maskFormUrl(maskedText);
+                maskedText = this.maskCreditCard(maskedText);
+                maskedText = this.maskResidentNumber(maskedText);
+                maskedText = this.maskAccountNumber(maskedText);
+                maskedText = this.maskPhoneNumber(maskedText);
+                maskedText = this.maskEmail(maskedText);
+                return maskedText;
             },
             
             // UI 업데이트
@@ -1655,7 +1584,6 @@
                 // 도움 점수 랭킹
                 const scoreRanking = [...this.currentStats].sort((a, b) => b.helpScore - a.helpScore);
                 const scoreBody = document.getElementById('scoreRankingBody');
-                
                 if (scoreRanking.length === 0) {
                     scoreBody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:50px;color:#999;">${noDataMessage}</td></tr>`;
                 } else {
@@ -1677,7 +1605,6 @@
                 // 메시지 수 랭킹
                 const messageRanking = [...this.currentStats].sort((a, b) => b.messageCount - a.messageCount);
                 const messageBody = document.getElementById('messageRankingBody');
-                
                 if (messageRanking.length === 0) {
                     messageBody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:50px;color:#999;">${noDataMessage}</td></tr>`;
                 } else {
@@ -1699,7 +1626,6 @@
                 // 글자수 랭킹
                 const charRanking = [...this.currentStats].sort((a, b) => b.totalChars - a.totalChars);
                 const charBody = document.getElementById('charRankingBody');
-                
                 if (charRanking.length === 0) {
                     charBody.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:50px;color:#999;">${noDataMessage}</td></tr>`;
                 } else {
@@ -1726,14 +1652,10 @@
                     if (this.isToday) {
                         const now = new Date();
                         const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000);
-                        messagesToShow = this.currentMessages.filter(msg => 
-                            new Date(msg.created_at) > oneHourAgo
-                        );
+                        messagesToShow = this.currentMessages.filter(msg => new Date(msg.created_at) > oneHourAgo);
                         messagesToShow.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
                     } else {
-                        messagesToShow = [...this.currentMessages].sort((a, b) => 
-                            new Date(b.created_at) - new Date(a.created_at)
-                        );
+                        messagesToShow = [...this.currentMessages].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
                     }
                 } else {
                     container.innerHTML = `<div style="padding:50px;text-align:center;color:#999;">
@@ -1753,19 +1675,22 @@
                 } else {
                     container.innerHTML = messagesToShow.map(msg => {
                         const time = new Date(msg.created_at);
-                        const timeStr = `${time.getHours().toString().padStart(2,'0')}:${time.getMinutes().toString().padStart(2,'0')}`;
+                        const timeStr = `${time.getHours().toString().padStart(2, '0')}:${time.getMinutes().toString().padStart(2, '0')}`;
                         const team = this.getTeam(msg.writer_manager_name);
                         
-                        let messageText = msg.message_text || '(메시지 내용 없음)';
-                        // 모든 민감정보 마스킹 처리
-                        messageText = this.maskSensitiveInfo(messageText);
-                        // 폼 링크 하이라이트
-                        messageText = this.highlightFormLinks(messageText);
-                        if (messageText.length > 500) {
-                            messageText = messageText.substring(0, 500) + '...';
+                        let originalMessageText = msg.message_text || '(메시지 내용 없음)';
+                        
+                        // 1. 모든 민감정보 마스킹 처리
+                        let maskedMessageText = this.maskSensitiveInfo(originalMessageText);
+                        
+                        // 2. 폼 링크 하이라이트 (마스킹된 텍스트에 적용)
+                        let highlightedMessageText = this.highlightFormLinks(maskedMessageText);
+                        
+                        if (highlightedMessageText.length > 500) {
+                            highlightedMessageText = highlightedMessageText.substring(0, 500) + '...';
                         }
                         
-                        const formCount = this.countValidFormLinks(msg.message_text);
+                        const formCount = this.countValidFormLinks(originalMessageText);
                         const hasForm = formCount > 0;
                         
                         return `
@@ -1778,7 +1703,7 @@
                                         ${this.isPartLeader(msg.writer_manager_name) ? '<span class="leader-badge">파트장</span>' : ''}
                                         ${hasForm ? `<span class="form-indicator${formCount > 1 ? ' multiple' : ''}">📋 신청서${formCount > 1 ? ` ×${formCount}` : ''}</span>` : ''}
                                     </div>
-                                    <div class="message-text">${messageText}</div>
+                                    <div class="message-text">${highlightedMessageText}</div>
                                     <div class="message-meta">
                                         ${msg.message_length}자 | ${msg.assigned_manager_name} 상담사 도움
                                     </div>
@@ -1789,7 +1714,6 @@
                 }
             },
             
-            // 일별 통계 차트
             generateDailyChart: async function(messages) {
                 if (this.currentPeriod === 'daily') return;
                 
@@ -1801,12 +1725,8 @@
                     const dateKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
                     
                     if (!dailyStats[dateKey]) {
-                        dailyStats[dateKey] = {
-                            count: 0,
-                            date: date
-                        };
+                        dailyStats[dateKey] = { count: 0, date: date };
                     }
-                    
                     dailyStats[dateKey].count++;
                 });
                 
@@ -1842,8 +1762,9 @@
                 }).join('');
                 
                 const totalMessages = allDates.reduce((sum, d) => sum + d.count, 0);
-                const avgMessages = Math.round(totalMessages / allDates.filter(d => d.count > 0).length) || 0;
-                const maxMessages = Math.max(...allDates.map(d => d.count));
+                const activeDays = allDates.filter(d => d.count > 0).length || 1;
+                const avgMessages = Math.round(totalMessages / activeDays);
+                const maxMessages = Math.max(0, ...allDates.map(d => d.count));
                 const minMessages = Math.min(...allDates.filter(d => d.count > 0).map(d => d.count)) || 0;
                 
                 document.getElementById('totalMessages').textContent = totalMessages.toLocaleString();
@@ -1852,16 +1773,12 @@
                 document.getElementById('minMessages').textContent = minMessages.toLocaleString();
             },
             
-            // 상담사 메시지 보기
             showManagerMessages: function(managerName) {
                 const modal = document.getElementById('managerModal');
                 const modalTitle = document.getElementById('modalTitle');
                 const modalBody = document.getElementById('modalBody');
                 
-                const managerMessages = this.currentMessages.filter(msg => 
-                    msg.writer_manager_name === managerName
-                );
-                
+                const managerMessages = this.currentMessages.filter(msg => msg.writer_manager_name === managerName);
                 const stats = this.currentStats.find(s => s.name === managerName) || {};
                 
                 modalTitle.innerHTML = `${managerName} <span class="team-badge ${this.getTeamClass(stats.team)}">${stats.team}</span>`;
@@ -1870,10 +1787,10 @@
                 
                 managerMessages.forEach(msg => {
                     const time = new Date(msg.created_at);
-                    const timeStr = `${time.getHours().toString().padStart(2,'0')}:${time.getMinutes().toString().padStart(2,'0')}`;
+                    const timeStr = `${time.getHours().toString().padStart(2, '0')}:${time.getMinutes().toString().padStart(2, '0')}`;
                     
-                    // 모든 민감정보 마스킹 적용
                     let messageText = msg.message_text || '(내용 없음)';
+                    // 모달 내부에서도 모든 민감정보 마스킹 적용
                     messageText = this.maskSensitiveInfo(messageText);
                     
                     html += `
@@ -1894,7 +1811,6 @@
                 document.getElementById('managerModal').classList.remove('show');
             },
             
-            // 탭 전환
             switchTab: function(tab) {
                 this.currentTab = tab;
                 
@@ -1906,7 +1822,6 @@
                 document.getElementById('ranking-chars').style.display = tab === 'chars' ? 'block' : 'none';
             },
             
-            // 자동 새로고침
             startAutoRefresh: function() {
                 if (this.isAutoRefresh && this.isToday) {
                     if (this.autoRefreshInterval) {
@@ -1944,7 +1859,6 @@
                 }
             },
             
-            // 유틸리티
             setStatus: function(type, text) {
                 document.getElementById('statusDot').className = 'status-dot ' + type;
                 document.getElementById('statusText').textContent = text;
@@ -1953,7 +1867,7 @@
             updateLastTime: function() {
                 const now = new Date();
                 document.getElementById('lastUpdate').innerHTML = 
-                    `⏰ ${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}:${now.getSeconds().toString().padStart(2,'0')}`;
+                    `⏰ ${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
             },
             
             showNotification: function(message, type = 'success') {
