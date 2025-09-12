@@ -1,18 +1,7 @@
 {
   "functions": {
-    "api/track.js": {
+    "api/supabase-proxy.js": {
       "maxDuration": 30
     }
-  },
-  "headers": [
-    {
-      "source": "/api/(.*)",
-      "headers": [
-        {
-          "key": "X-Robots-Tag",
-          "value": "noindex"
-        }
-      ]
-    }
-  ]
+  }
 }
