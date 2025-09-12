@@ -1,14 +1,24 @@
 // api/track.js
-// 채널톡 Webhook 수신 및 데이터 처리 - 텍스트 추출 강화 버전
+// 채널톡 Webhook 수신 및 데이터 처리 - 보안 강화 버전
+// Service Role Key는 서버 환경변수에서만 사용
 
 // Supabase 클라이언트 직접 구현 (라이브러리 없이)
 const supabaseRequest = async (table, method, data = null) => {
-  const url = `${process.env.SUPABASE_URL}/rest/v1/${table}`;
+  // Vercel 환경변수에서 Service Role Key 사용
+  const SUPABASE_URL = process.env.SUPABASE_URL || 'https://bhtqjipygkawoyieidgp.supabase.co';
+  const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY; // Service Role Key 사용
+  
+  if (!SUPABASE_KEY) {
+    console.error('❌ SUPABASE_SERVICE_ROLE_KEY 환경변수가 설정되지 않았습니다');
+    throw new Error('Database configuration error');
+  }
+  
+  const url = `${SUPABASE_URL}/rest/v1/${table}`;
   const options = {
     method,
     headers: {
-      'apikey': process.env.SUPABASE_KEY,
-      'Authorization': `Bearer ${process.env.SUPABASE_KEY}`,
+      'apikey': SUPABASE_KEY,
+      'Authorization': `Bearer ${SUPABASE_KEY}`,
       'Content-Type': 'application/json',
       'Prefer': 'return=minimal'
     }
@@ -24,10 +34,18 @@ const supabaseRequest = async (table, method, data = null) => {
 
 // 채널톡 API 요청
 const channelRequest = async (endpoint) => {
+  const CHANNEL_KEY = process.env.CHANNEL_KEY;
+  const CHANNEL_SECRET = process.env.CHANNEL_SECRET;
+  
+  if (!CHANNEL_KEY || !CHANNEL_SECRET) {
+    console.error('❌ 채널톡 API 키가 설정되지 않았습니다');
+    throw new Error('Channel.io configuration error');
+  }
+  
   const response = await fetch(`https://api.channel.io/open/v5${endpoint}`, {
     headers: {
-      'X-Access-Key': process.env.CHANNEL_KEY,
-      'X-Access-Secret': process.env.CHANNEL_SECRET,
+      'X-Access-Key': CHANNEL_KEY,
+      'X-Access-Secret': CHANNEL_SECRET,
       'Content-Type': 'application/json'
     }
   });
@@ -172,12 +190,12 @@ const isSystemMessage = (text) => {
   
   // ID 패턴들 (UUID, 채팅방 ID 등)
   const idPatterns = [
-    /^userChat-[a-f0-9]{20,}$/i,  // userChat-ID 형식
-    /^chat-[a-f0-9]{20,}$/i,       // chat-ID 형식
-    /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i,  // UUID
-    /^[a-f0-9]{24,}$/,              // MongoDB ObjectId 스타일
-    /^msg_[a-zA-Z0-9]{20,}$/,      // 메시지 ID 형식
-    /^manager-[a-f0-9]{20,}$/i,    // 매니저 ID 형식
+    /^userChat-[a-f0-9]{20,}$/i,
+    /^chat-[a-f0-9]{20,}$/i,
+    /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i,
+    /^[a-f0-9]{24,}$/,
+    /^msg_[a-zA-Z0-9]{20,}$/,
+    /^manager-[a-f0-9]{20,}$/i,
   ];
   
   // 시스템 메시지 패턴들
@@ -226,7 +244,7 @@ const isSystemMessage = (text) => {
   return false;
 };
 
-// 메시지 텍스트 추출 함수 - 모든 가능한 필드 체크
+// 메시지 텍스트 추출 함수
 const extractMessageText = (message) => {
   let text = '';
   
@@ -245,8 +263,6 @@ const extractMessageText = (message) => {
       hasText: !!message.text,
       hasContent: !!message.content,
       hasBlocks: !!message.blocks,
-      hasBody: !!message.body,
-      hasValue: !!message.value,
       allKeys: Object.keys(message)
     });
     
@@ -259,7 +275,7 @@ const extractMessageText = (message) => {
       }
     }
     
-    // 2. blocks 구조 처리 (구조화된 메시지)
+    // 2. blocks 구조 처리
     if (message.blocks && Array.isArray(message.blocks)) {
       text = parseBlocks(message.blocks);
       if (text) {
@@ -270,12 +286,9 @@ const extractMessageText = (message) => {
     
     // 3. message 필드
     if (message.message) {
-      // message가 객체인 경우
       if (typeof message.message === 'object') {
         text = findTextRecursive(message.message);
-      } 
-      // message가 문자열인 경우
-      else if (typeof message.message === 'string') {
+      } else if (typeof message.message === 'string') {
         text = stripHtml(message.message);
       }
       if (text) {
@@ -299,7 +312,6 @@ const extractMessageText = (message) => {
     
     // 5. content 필드
     if (message.content) {
-      // content가 JSON 문자열인 경우 파싱 시도
       if (typeof message.content === 'string') {
         try {
           const parsed = JSON.parse(message.content);
@@ -316,33 +328,7 @@ const extractMessageText = (message) => {
       }
     }
     
-    // 6. body 필드 (이메일 형식 등)
-    if (message.body) {
-      if (typeof message.body === 'string') {
-        text = stripHtml(message.body);
-      } else if (typeof message.body === 'object') {
-        text = findTextRecursive(message.body);
-      }
-      if (text) {
-        console.log('body 필드에서 추출:', text.substring(0, 50));
-        return text;
-      }
-    }
-    
-    // 7. value 필드
-    if (message.value) {
-      if (typeof message.value === 'string') {
-        text = stripHtml(message.value);
-      } else if (typeof message.value === 'object') {
-        text = findTextRecursive(message.value);
-      }
-      if (text) {
-        console.log('value 필드에서 추출:', text.substring(0, 50));
-        return text;
-      }
-    }
-    
-    // 8. 특수 메시지 타입 처리
+    // 6. 특수 메시지 타입 처리
     if (message.file) {
       const fileName = message.file.filename || message.file.name || '파일';
       const fileSize = message.file.size ? ` (${Math.round(message.file.size / 1024)}KB)` : '';
@@ -358,44 +344,13 @@ const extractMessageText = (message) => {
       return text;
     }
     
-    if (message.video) {
-      const videoName = message.video.filename || message.video.name || '';
-      text = videoName ? `[동영상: ${videoName}]` : '[동영상]';
-      console.log('동영상 메시지 처리:', text);
-      return text;
-    }
-    
-    if (message.sticker) {
-      text = '[스티커]';
-      return text;
-    }
-    
-    // 9. data 필드 확인 (일부 webhook에서 사용)
-    if (message.data) {
-      if (typeof message.data === 'string') {
-        try {
-          const parsed = JSON.parse(message.data);
-          text = findTextRecursive(parsed);
-        } catch {
-          text = stripHtml(message.data);
-        }
-      } else if (typeof message.data === 'object') {
-        text = findTextRecursive(message.data);
-      }
-      if (text) {
-        console.log('data 필드에서 추출:', text.substring(0, 50));
-        return text;
-      }
-    }
-    
-    // 10. 재귀적으로 전체 메시지 객체 탐색 (최후의 수단)
+    // 7. 재귀적으로 전체 메시지 객체 탐색 (최후의 수단)
     text = findTextRecursive(message);
     if (text) {
       console.log('재귀 탐색으로 추출:', text.substring(0, 50));
       return text;
     }
     
-    // 11. 정말 아무것도 못 찾은 경우
     console.error('❌ 텍스트 추출 완전 실패. 원본 메시지:', JSON.stringify(message, null, 2));
     
   } catch (error) {
@@ -419,7 +374,7 @@ const extractMessageText = (message) => {
 
 // 메인 핸들러
 export default async function handler(req, res) {
-  // CORS 설정 (대시보드 접근용)
+  // CORS 설정
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
@@ -429,155 +384,166 @@ export default async function handler(req, res) {
     return res.status(200).end();
   }
   
-  // GET: 통계 조회 API
+  // GET: 헬스체크
   if (req.method === 'GET') {
-    try {
-      const days = parseInt(req.query.days || '7');
-      const startDate = new Date();
-      startDate.setDate(startDate.getDate() - days);
-      
-      // Supabase에서 데이터 조회
-      const url = `${process.env.SUPABASE_URL}/rest/v1/manager_messages?created_at=gte.${startDate.toISOString()}&order=created_at.desc`;
-      const response = await fetch(url, {
-        headers: {
-          'apikey': process.env.SUPABASE_KEY,
-          'Authorization': `Bearer ${process.env.SUPABASE_KEY}`
-        }
-      });
-      
-      const data = await response.json();
-      
-      // 통계 집계
-      const stats = {};
-      data.forEach(msg => {
-        const id = msg.writer_manager_id;
-        if (!stats[id]) {
-          stats[id] = {
-            managerId: id,
-            managerName: msg.writer_manager_name,
-            totalMessages: 0,
-            totalCharacters: 0,
-            chats: new Set()
-          };
-        }
-        stats[id].totalMessages++;
-        stats[id].totalCharacters += msg.message_length;
-        stats[id].chats.add(msg.user_chat_id);
-      });
-      
-      // 결과 정리
-      const result = Object.values(stats).map(s => ({
-        ...s,
-        uniqueChats: s.chats.size,
-        avgLength: Math.round(s.totalCharacters / s.totalMessages)
-      }));
-      
-      return res.json({
-        success: true,
-        period: days,
-        stats: result.sort((a, b) => b.totalMessages - a.totalMessages),
-        recentMessages: data.slice(0, 20) // 최근 20개 메시지
-      });
-      
-    } catch (error) {
-      console.error('조회 오류:', error);
-      return res.status(500).json({ error: error.message });
-    }
+    return res.status(200).json({ 
+      status: 'ok',
+      message: 'Channel.io webhook endpoint is running',
+      timestamp: new Date().toISOString()
+    });
   }
   
   // POST: Webhook 처리
   if (req.method === 'POST') {
+    const startTime = Date.now();
+    const requestId = Math.random().toString(36).substring(7);
+    
     try {
       const payload = req.body;
       
-      console.log('========== Webhook 수신 ==========');
-      console.log('이벤트 정보:', {
+      console.log(`[${requestId}] ========== Webhook 수신 ==========`);
+      console.log(`[${requestId}] 이벤트:`, {
         event: payload.event,
         type: payload.type,
         personType: payload.entity?.personType
       });
       
+      // 채널톡 검증 요청 처리
+      if (payload.type === 'url_verification') {
+        console.log(`[${requestId}] URL 검증 요청`);
+        return res.status(200).json({
+          challenge: payload.challenge
+        });
+      }
+      
       // 메시지 이벤트만 처리
       if (payload.event !== 'push' || payload.type !== 'message') {
-        return res.json({ ignored: true, reason: 'Not a message event' });
+        return res.status(200).json({ 
+          success: true,
+          ignored: true, 
+          reason: 'Not a message event' 
+        });
       }
       
       // 매니저 메시지만 처리
       if (payload.entity?.personType !== 'manager') {
-        return res.json({ ignored: true, reason: 'Not a manager message' });
+        return res.status(200).json({ 
+          success: true,
+          ignored: true, 
+          reason: 'Not a manager message' 
+        });
       }
       
       const message = payload.entity;
       const manager = payload.refers?.manager;
       const user = payload.refers?.user;
       
-      // 전체 페이로드 로깅 (디버깅용)
-      console.log('전체 메시지 entity:', JSON.stringify(message, null, 2));
+      // 필수 데이터 확인
+      if (!message || !manager) {
+        console.log(`[${requestId}] 필수 데이터 누락`);
+        return res.status(200).json({ 
+          success: true,
+          ignored: true,
+          reason: 'Missing required data'
+        });
+      }
       
       // 채팅방 정보 조회
-      const chatData = await channelRequest(`/user-chats/${message.chatId}`);
-      if (!chatData) {
-        throw new Error('채팅방 조회 실패');
+      let chatData = null;
+      try {
+        chatData = await channelRequest(`/user-chats/${message.chatId}`);
+      } catch (error) {
+        console.error(`[${requestId}] 채팅방 조회 실패:`, error);
+        // 채팅방 조회 실패해도 계속 진행 (200 반환)
+        return res.status(200).json({ 
+          success: false,
+          error: 'Failed to fetch chat data',
+          processed: true
+        });
+      }
+      
+      if (!chatData || !chatData.userChat) {
+        return res.status(200).json({ 
+          success: true,
+          ignored: true,
+          reason: 'No chat data'
+        });
       }
       
       const userChat = chatData.userChat;
       
-      // 조건 검사: opened 상태이고, 담당자가 있고, 담당자 != 작성자
+      // 조건 검사
       if (userChat.state !== 'opened') {
-        return res.json({ ignored: true, reason: 'Chat not opened' });
+        return res.status(200).json({ 
+          success: true,
+          ignored: true, 
+          reason: 'Chat not opened' 
+        });
       }
       
       if (!userChat.assigneeId) {
-        return res.json({ ignored: true, reason: 'No assignee' });
+        return res.status(200).json({ 
+          success: true,
+          ignored: true, 
+          reason: 'No assignee' 
+        });
       }
       
       if (userChat.assigneeId === manager.id) {
-        return res.json({ ignored: true, reason: 'Same manager' });
+        return res.status(200).json({ 
+          success: true,
+          ignored: true, 
+          reason: 'Same manager' 
+        });
       }
       
       // 메시지 텍스트 추출
       let messageText = extractMessageText(message);
       
       // 시스템 메시지는 무시
-      if (messageText === '[시스템 메시지]') {
-        console.log('시스템 메시지 감지되어 무시함');
-        return res.json({ ignored: true, reason: 'System message' });
+      if (messageText === '[시스템 메시지]' || isSystemMessage(messageText)) {
+        console.log(`[${requestId}] 시스템 메시지 감지되어 무시함`);
+        return res.status(200).json({ 
+          success: true,
+          ignored: true, 
+          reason: 'System message' 
+        });
       }
       
-      // 텍스트가 없으면 추가 시도
+      // 빈 메시지 처리
       if (!messageText || messageText === '') {
-        console.warn('⚠️ 첫 시도에서 빈 메시지 감지! 추가 탐색 시작...');
+        console.warn(`[${requestId}] ⚠️ 빈 메시지 감지`);
         
-        // payload.refers에서도 메시지 정보 찾기
+        // payload.refers에서도 찾기
         if (payload.refers?.message) {
           messageText = extractMessageText(payload.refers.message);
         }
         
-        // 시스템 메시지 재확인
-        if (messageText === '[시스템 메시지]') {
-          console.log('추가 탐색에서 시스템 메시지 감지되어 무시함');
-          return res.json({ ignored: true, reason: 'System message' });
-        }
-        
-        // 그래도 없으면 payload 전체에서 찾기
         if (!messageText) {
           messageText = findTextRecursive(payload);
-          
-          // 찾은 텍스트가 시스템 메시지인지 확인
-          if (messageText && isSystemMessage(messageText)) {
-            console.log('재귀 탐색에서 시스템 메시지 감지되어 무시함:', messageText);
-            return res.json({ ignored: true, reason: 'System message' });
-          }
         }
         
-        if (!messageText) {
-          console.error('⚠️ 모든 시도 후에도 텍스트 추출 실패!');
-          console.error('payload 전체:', JSON.stringify(payload, null, 2));
-          messageText = '(내용 추출 실패)';
+        if (!messageText || isSystemMessage(messageText)) {
+          console.log(`[${requestId}] 최종 체크에서 시스템 메시지 또는 빈 메시지`);
+          return res.status(200).json({ 
+            success: true,
+            ignored: true,
+            reason: 'Empty or system message'
+          });
         }
       }
       
-      // 담당자 이름 조회
+      // 너무 짧은 메시지 필터링
+      if (messageText.length < 2 && !['?', '!', '.', '네', '예', 'ㅋ', 'ㅎ'].includes(messageText)) {
+        console.log(`[${requestId}] 너무 짧은 메시지 무시:`, messageText);
+        return res.status(200).json({ 
+          success: true,
+          ignored: true, 
+          reason: 'Message too short' 
+        });
+      }
+      
+      // 담당자 이름 조회 (캐싱 고려)
       let assignedManagerName = userChat.assigneeId;
       try {
         const managerData = await channelRequest(`/managers/${userChat.assigneeId}`);
@@ -585,19 +551,7 @@ export default async function handler(req, res) {
           assignedManagerName = managerData.manager.name;
         }
       } catch (e) {
-        console.log('담당자 이름 조회 실패, ID 사용');
-      }
-      
-      // 최종 시스템 메시지 체크
-      if (isSystemMessage(messageText)) {
-        console.log('최종 체크에서 시스템 메시지 감지되어 무시함:', messageText);
-        return res.json({ ignored: true, reason: 'System message detected' });
-      }
-      
-      // 너무 짧은 메시지 필터링 (선택적)
-      if (messageText.length < 2 && !['?', '!', '.', '네', '예', 'ㅋ', 'ㅎ'].includes(messageText)) {
-        console.log('너무 짧은 메시지 무시:', messageText);
-        return res.json({ ignored: true, reason: 'Message too short' });
+        console.log(`[${requestId}] 담당자 이름 조회 실패, ID 사용`);
       }
       
       // 데이터 저장
@@ -615,33 +569,51 @@ export default async function handler(req, res) {
         created_at: new Date(message.createdAt).toISOString()
       };
       
-      console.log('저장 데이터:', {
+      console.log(`[${requestId}] 저장 데이터:`, {
         messageId: saveData.message_id,
         text: saveData.message_text.substring(0, 100),
         length: saveData.message_length,
         writer: saveData.writer_manager_name
       });
       
-      await supabaseRequest('manager_messages', 'POST', saveData);
+      // Supabase에 저장
+      try {
+        await supabaseRequest('manager_messages', 'POST', saveData);
+        console.log(`[${requestId}] 데이터 저장 성공`);
+      } catch (error) {
+        console.error(`[${requestId}] 데이터 저장 실패:`, error);
+        // 저장 실패해도 200 반환 (재시도 방지)
+        return res.status(200).json({ 
+          success: false,
+          error: 'Failed to save data',
+          processed: true
+        });
+      }
       
-      console.log('========== 처리 완료 ==========\n');
+      const duration = Date.now() - startTime;
+      console.log(`[${requestId}] ========== 처리 완료 (${duration}ms) ==========\n`);
       
-      return res.json({
+      return res.status(200).json({
         success: true,
         processed: {
           messageId: message.id,
           writer: manager.name,
           helpedManager: assignedManagerName,
           messageLength: messageText.length,
-          textPreview: messageText.substring(0, 50)
+          duration: duration
         }
       });
       
     } catch (error) {
-      console.error('❌ 처리 오류:', error);
-      return res.status(500).json({ 
+      const duration = Date.now() - startTime;
+      console.error(`[${requestId}] ❌ 처리 오류 (${duration}ms):`, error);
+      
+      // 에러가 발생해도 항상 200 반환 (채널톡 재시도 방지)
+      return res.status(200).json({ 
+        success: false,
         error: error.message,
-        stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+        duration: duration,
+        processed: true
       });
     }
   }
@@ -649,3 +621,12 @@ export default async function handler(req, res) {
   // 지원하지 않는 메소드
   return res.status(405).json({ error: 'Method not allowed' });
 }
+
+// Vercel 설정
+export const config = {
+  api: {
+    bodyParser: {
+      sizeLimit: '10mb'
+    }
+  }
+};
