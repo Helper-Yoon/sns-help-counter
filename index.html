@@ -887,7 +887,7 @@
         // ⚠️ 중요: 아래 SUPABASE_ANON_KEY를 실제 Anon Key로 교체하세요!
         // Supabase Dashboard → Settings → API → Project API keys → anon (public)
         const SUPABASE_URL = 'https://bhtqjipygkawoyieidgp.supabase.co';
-        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJodHFqaXB5Z2thd295aWVpZGdwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ0ODg5NjgsImV4cCI6MjA3MDA2NDk2OH0.hu2EAj9RCq436QBtfbEVF4aGOau4WWomLMDKahN4iAA'; // ← 여기에 Anon Key 입력 (Service Role Key 아님!)
+        const SUPABASE_ANON_KEY = 'YOUR_ANON_KEY_HERE'; // ← 여기에 Anon Key 입력 (Service Role Key 아님!)
         
         // 전역 앱 객체
         window.app = {
@@ -1463,6 +1463,266 @@
                 );
             },
             
+            // 전화번호 마스킹 함수
+            maskPhoneNumber: function(text) {
+                if (!text) return text;
+                
+                // 다양한 전화번호 패턴 정의
+                const phonePatterns = [
+                    // 010-1234-5678, 02-123-4567, 031-123-4567 등
+                    /(\d{2,3})-(\d{3,4})-(\d{4})/g,
+                    // 01012345678, 021234567, 0311234567 등
+                    /(?<!\d)(0\d{1,2})(\d{3,4})(\d{4})(?!\d)/g,
+                    // 010 1234 5678 (공백 구분)
+                    /(\d{2,3})\s(\d{3,4})\s(\d{4})/g,
+                    // 010.1234.5678 (점 구분)
+                    /(\d{2,3})\.(\d{3,4})\.(\d{4})/g,
+                    // +82-10-1234-5678, +8210-1234-5678
+                    /\+82-?(\d{1,2})-?(\d{3,4})-?(\d{4})/g,
+                    // (010) 1234-5678
+                    /\((\d{2,3})\)\s?(\d{3,4})-?(\d{4})/g,
+                    // 1588-1234, 1577-1234 등 (대표번호)
+                    /(1\d{3})-?(\d{4})/g
+                ];
+                
+                let maskedText = text;
+                
+                // 각 패턴에 대해 마스킹 처리
+                phonePatterns.forEach(pattern => {
+                    maskedText = maskedText.replace(pattern, (match, ...groups) => {
+                        // groups에서 undefined 제거하고 숫자 그룹만 추출
+                        const parts = groups.filter(g => g && typeof g === 'string' && /\d/.test(g));
+                        
+                        if (parts.length === 2) {
+                            // 대표번호 형식 (1588-1234)
+                            return `${parts[0]}-****`;
+                        } else if (parts.length === 3) {
+                            // 일반 전화번호 형식
+                            const firstPart = parts[0];
+                            const middlePart = parts[1];
+                            const lastPart = parts[2];
+                            
+                            // 중간 부분 마스킹
+                            const maskedMiddle = middlePart.replace(/\d/g, '*');
+                            
+                            // 원본 형식 유지하면서 마스킹
+                            if (match.includes('-')) {
+                                return `${firstPart}-${maskedMiddle}-${lastPart}`;
+                            } else if (match.includes(' ')) {
+                                return `${firstPart} ${maskedMiddle} ${lastPart}`;
+                            } else if (match.includes('.')) {
+                                return `${firstPart}.${maskedMiddle}.${lastPart}`;
+                            } else if (match.includes('(')) {
+                                return `(${firstPart}) ${maskedMiddle}-${lastPart}`;
+                            } else {
+                                return `${firstPart}${maskedMiddle}${lastPart}`;
+                            }
+                        }
+                        
+                        return match;
+                    });
+                });
+                
+                return maskedText;
+            },
+            
+            // 이메일 마스킹 함수
+            maskEmail: function(text) {
+                if (!text) return text;
+                
+                // 이메일 패턴
+                const emailPattern = /([a-zA-Z0-9][a-zA-Z0-9._%+-]*@[a-zA-Z0-9][a-zA-Z0-9.-]*\.[a-zA-Z]{2,})/g;
+                
+                return text.replace(emailPattern, (match, email) => {
+                    const [localPart, domain] = email.split('@');
+                    
+                    // 로컬 파트 마스킹 (처음 2글자만 보이고 나머지는 ***)
+                    let maskedLocal;
+                    if (localPart.length <= 3) {
+                        maskedLocal = localPart[0] + '***';
+                    } else {
+                        maskedLocal = localPart.substring(0, 2) + '***';
+                    }
+                    
+                    // 도메인 마스킹 (첫 글자와 TLD만 보임)
+                    const domainParts = domain.split('.');
+                    const tld = domainParts[domainParts.length - 1];
+                    const maskedDomain = domain[0] + '***.' + tld;
+                    
+                    return `${maskedLocal}@${maskedDomain}`;
+                });
+            },
+            
+            // 주민등록번호 마스킹 함수
+            maskResidentNumber: function(text) {
+                if (!text) return text;
+                
+                // 주민등록번호 패턴들
+                const patterns = [
+                    // 950101-1234567 형식
+                    /(\d{2})(0[1-9]|1[0-2])(0[1-9]|[12]\d|3[01])-?([1-4]\d{6})/g,
+                    // 9501011234567 형식 (연속된 13자리)
+                    /(?<!\d)(\d{2})(0[1-9]|1[0-2])(0[1-9]|[12]\d|3[01])([1-4]\d{6})(?!\d)/g
+                ];
+                
+                let maskedText = text;
+                
+                patterns.forEach(pattern => {
+                    maskedText = maskedText.replace(pattern, (match, year, month, day, backPart) => {
+                        // 뒷자리 전체 마스킹
+                        const maskedBack = backPart[0] + '******';
+                        
+                        if (match.includes('-')) {
+                            return `${year}${month}${day}-${maskedBack}`;
+                        } else {
+                            return `${year}${month}${day}${maskedBack}`;
+                        }
+                    });
+                });
+                
+                return maskedText;
+            },
+            
+            // 계좌번호 마스킹 함수
+            maskAccountNumber: function(text) {
+                if (!text) return text;
+                
+                // 은행 이름 패턴
+                const bankNames = '(국민|우리|신한|하나|기업|농협|수협|한국산업|한국수출입|중소기업|SC제일|씨티|케이뱅크|카카오뱅크|토스뱅크|새마을금고|신협|우체국|KB|IBK|NH|KEB|DGB대구|BNK부산|전북|경남|광주|제주|KDB산업)';
+                
+                // 계좌번호 패턴들
+                const patterns = [
+                    // 은행명 뒤에 오는 계좌번호 (하이픈 포함)
+                    new RegExp(`${bankNames}[\\s:]*([0-9]{2,6}-[0-9]{2,6}-[0-9]{2,6}(?:-[0-9]{1,3})?)`, 'gi'),
+                    // 은행명 뒤에 오는 계좌번호 (연속)
+                    new RegExp(`${bankNames}[\\s:]*([0-9]{10,14})`, 'gi'),
+                    // 독립적인 계좌번호 패턴 (10자리 이상 숫자)
+                    /(?:계좌|계좌번호|입금|송금)[\\s:]*([0-9]{10,14})/gi,
+                    // 하이픈이 있는 일반적인 계좌번호 패턴
+                    /(?<!\d)(\d{3,6})-(\d{2,6})-(\d{2,6})(?:-(\d{1,3}))?(?!\d)/g
+                ];
+                
+                let maskedText = text;
+                
+                patterns.forEach(pattern => {
+                    maskedText = maskedText.replace(pattern, (match, ...groups) => {
+                        // 은행명이 포함된 경우
+                        if (match.match(new RegExp(bankNames, 'i'))) {
+                            const bankMatch = match.match(new RegExp(bankNames, 'i'))[0];
+                            const accountPart = match.substring(match.indexOf(bankMatch) + bankMatch.length);
+                            const accountNumbers = accountPart.match(/[\d-]+/)[0];
+                            
+                            // 계좌번호 마스킹 (앞 3자리와 뒤 2자리만 표시)
+                            if (accountNumbers.includes('-')) {
+                                const parts = accountNumbers.split('-');
+                                if (parts.length >= 3) {
+                                    parts[1] = parts[1].replace(/\d/g, '*');
+                                    return bankMatch + accountPart.replace(accountNumbers, parts.join('-'));
+                                }
+                            } else if (accountNumbers.length >= 10) {
+                                const masked = accountNumbers.substring(0, 3) + 
+                                              '*'.repeat(accountNumbers.length - 5) + 
+                                              accountNumbers.substring(accountNumbers.length - 2);
+                                return bankMatch + accountPart.replace(accountNumbers, masked);
+                            }
+                        }
+                        
+                        // 일반 계좌번호 패턴
+                        const numbers = groups.filter(g => g && /\d/.test(g));
+                        if (numbers.length >= 3) {
+                            const masked = [...numbers];
+                            masked[1] = masked[1].replace(/\d/g, '*');
+                            return match.replace(/[\d-]+/, masked.join('-'));
+                        }
+                        
+                        return match;
+                    });
+                });
+                
+                return maskedText;
+            },
+            
+            // 신용카드번호 마스킹 함수
+            maskCreditCard: function(text) {
+                if (!text) return text;
+                
+                // 신용카드 패턴들
+                const patterns = [
+                    // 1234-5678-9012-3456 형식
+                    /(\d{4})-(\d{4})-(\d{4})-(\d{4})/g,
+                    // 1234 5678 9012 3456 형식
+                    /(\d{4})\s(\d{4})\s(\d{4})\s(\d{4})/g,
+                    // 1234567890123456 형식 (16자리 연속)
+                    /(?<!\d)(\d{4})(\d{4})(\d{4})(\d{4})(?!\d)/g,
+                    // 카드번호 앞뒤 문맥 포함
+                    /(?:카드|card|신용|체크)[\\s:]*(\d{4})[-\\s]?(\d{4})[-\\s]?(\d{4})[-\\s]?(\d{4})/gi
+                ];
+                
+                let maskedText = text;
+                
+                patterns.forEach(pattern => {
+                    maskedText = maskedText.replace(pattern, (match, p1, p2, p3, p4) => {
+                        // 카드번호 검증 (첫 자리로 카드사 식별)
+                        const firstDigit = p1 ? p1[0] : '';
+                        if (!['3', '4', '5', '6', '9'].includes(firstDigit)) {
+                            return match; // 유효한 카드번호가 아님
+                        }
+                        
+                        // 중간 8자리 마스킹 (첫 4자리와 마지막 4자리만 표시)
+                        if (match.includes('-')) {
+                            return `${p1}-****-****-${p4}`;
+                        } else if (match.includes(' ')) {
+                            return `${p1} **** **** ${p4}`;
+                        } else if (match.toLowerCase().includes('카드') || match.toLowerCase().includes('card')) {
+                            const prefix = match.substring(0, match.search(/\d/));
+                            return prefix + `${p1}-****-****-${p4}`;
+                        } else {
+                            return `${p1}********${p4}`;
+                        }
+                    });
+                });
+                
+                // 15자리 아멕스 카드 패턴
+                const amexPatterns = [
+                    /(\d{4})-(\d{6})-(\d{5})/g,
+                    /(\d{4})\s(\d{6})\s(\d{5})/g,
+                    /(?<!\d)(\d{4})(\d{6})(\d{5})(?!\d)/g
+                ];
+                
+                amexPatterns.forEach(pattern => {
+                    maskedText = maskedText.replace(pattern, (match, p1, p2, p3) => {
+                        // 아멕스는 3으로 시작
+                        if (!p1.startsWith('3')) {
+                            return match;
+                        }
+                        
+                        if (match.includes('-')) {
+                            return `${p1}-******-${p3}`;
+                        } else if (match.includes(' ')) {
+                            return `${p1} ****** ${p3}`;
+                        } else {
+                            return `${p1}******${p3}`;
+                        }
+                    });
+                });
+                
+                return maskedText;
+            },
+            
+            // 모든 민감정보 마스킹 통합 함수
+            maskSensitiveInfo: function(text) {
+                if (!text) return text;
+                
+                // 순서 중요: 더 구체적인 패턴부터 처리
+                text = this.maskCreditCard(text);      // 신용카드 (16자리 숫자)
+                text = this.maskResidentNumber(text);   // 주민번호 (13자리 숫자)
+                text = this.maskAccountNumber(text);    // 계좌번호 (10-14자리)
+                text = this.maskPhoneNumber(text);      // 전화번호
+                text = this.maskEmail(text);            // 이메일
+                
+                return text;
+            },
+            
             // 랭킹 업데이트
             updateAllRankings: function() {
                 const noDataMessage = this.isToday ? '오늘 데이터가 없습니다' : '선택한 날짜에 데이터가 없습니다';
@@ -1573,6 +1833,9 @@
                         const team = this.getTeam(msg.writer_manager_name);
                         
                         let messageText = msg.message_text || '(메시지 내용 없음)';
+                        // 모든 민감정보 마스킹 처리
+                        messageText = this.maskSensitiveInfo(messageText);
+                        // 폼 링크 하이라이트
                         messageText = this.highlightFormLinks(messageText);
                         if (messageText.length > 500) {
                             messageText = messageText.substring(0, 500) + '...';
@@ -1685,11 +1948,15 @@
                     const time = new Date(msg.created_at);
                     const timeStr = `${time.getHours().toString().padStart(2,'0')}:${time.getMinutes().toString().padStart(2,'0')}`;
                     
+                    // 모든 민감정보 마스킹 적용
+                    let messageText = msg.message_text || '(내용 없음)';
+                    messageText = this.maskSensitiveInfo(messageText);
+                    
                     html += `
                         <div class="message-item">
                             <div class="message-time">${timeStr}</div>
                             <div class="message-content">
-                                <div class="message-text">${msg.message_text || '(내용 없음)'}</div>
+                                <div class="message-text">${messageText}</div>
                             </div>
                         </div>
                     `;
