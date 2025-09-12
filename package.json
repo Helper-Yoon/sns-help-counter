@@ -1,15 +1,18 @@
 {
-  "name": "channeltalk-webhook-handler",
+  "name": "sns-dashboard-secure",
   "version": "1.0.0",
-  "description": "Channel Talk Webhook Handler for Manager Messages",
-  "main": "api/track.js",
+  "description": "SNS센터 도움 카운팅 프로그램 - Secure Dashboard with Edge Function Proxy",
+  "main": "index.html",
   "scripts": {
-    "start": "node api/track.js",
     "dev": "vercel dev",
-    "deploy": "vercel --prod"
+    "deploy": "vercel --prod",
+    "test": "node api/supabase-proxy.js"
   },
   "dependencies": {},
+  "devDependencies": {
+    "vercel": "^32.0.0"
+  },
   "engines": {
-    "node": "22.x"
+    "node": "22.x"  ✅
   }
 }
