@@ -1090,15 +1090,41 @@
             }
             
             async updateSettings(key, value) {
-                const { data, error } = await this.from('app_settings')
-                    .upsert({ 
-                        setting_key: key, 
-                        setting_value: value,
-                        updated_at: new Date().toISOString()
-                    })
-                    .execute();
-                
-                return { data, error };
+                try {
+                    console.log('온라인 설정 저장 시도:', key, value);
+                    
+                    // SQL 함수(RPC) 호출을 위한 특별한 요청 구조
+                    const rpcPayload = {
+                        table: 'rpc/upsert_app_setting',  // RPC 호출임을 표시
+                        rpcFunction: 'upsert_app_setting',
+                        rpcParams: {
+                            p_key: key,
+                            p_value: value
+                        }
+                    };
+                    
+                    // Edge Function으로 RPC 요청 전송
+                    const response = await fetch(this.proxyUrl, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(rpcPayload)
+                    });
+                    
+                    if (!response.ok) {
+                        throw new Error('서버 응답 오류');
+                    }
+                    
+                    const result = await response.json();
+                    console.log('설정 저장 성공:', result);
+                    
+                    return { data: { success: true }, error: null };
+                    
+                } catch (error) {
+                    console.error('Settings update error:', error);
+                    return { data: null, error: error.message };
+                }
             }
         }
         
@@ -1191,6 +1217,20 @@
             upsert(data) {
                 this.params.upsert = data;
                 this.params.method = 'upsert';
+                return this;
+            }
+            
+            // UPDATE 지원 추가
+            update(data) {
+                this.params.update = data;
+                this.params.method = 'update';
+                return this;
+            }
+            
+            // INSERT 지원 추가  
+            insert(data) {
+                this.params.insert = data;
+                this.params.method = 'insert';
                 return this;
             }
             
@@ -1342,12 +1382,13 @@
                 try {
                     console.log('온라인 설정 불러오는 중...');
                     
+                    // 온라인에서 설정 불러오기
                     const templates = await this.supabaseClient.getSettings('excluded_templates');
                     const managers = await this.supabaseClient.getSettings('excluded_managers');
                     
                     if (templates) {
                         this.excludedTemplates = templates;
-                        console.log('제외 템플릿 로드:', this.excludedTemplates);
+                        console.log('온라인 제외 템플릿 로드:', this.excludedTemplates);
                     } else {
                         // 기본값 설정
                         this.excludedTemplates = [
@@ -1358,11 +1399,16 @@
                     
                     if (managers) {
                         this.excludedManagers = managers;
-                        console.log('제외 상담사 로드:', this.excludedManagers);
+                        console.log('온라인 제외 상담사 로드:', this.excludedManagers);
                     } else {
                         // 기본값 설정
                         this.excludedManagers = ['채주은'];
                     }
+                    
+                    console.log('온라인 설정 로드 완료:', {
+                        excludedTemplates: this.excludedTemplates,
+                        excludedManagers: this.excludedManagers
+                    });
                     
                 } catch (error) {
                     console.error('설정 로드 실패:', error);
@@ -1515,7 +1561,7 @@
                 }
                 
                 try {
-                    this.showNotification('⏳ 설정 저장 중...', 'info');
+                    this.showNotification('⏳ 온라인 설정 저장 중...', 'info');
                     
                     // 온라인에 설정 저장
                     const templateResult = await this.supabaseClient.updateSettings(
@@ -1529,14 +1575,14 @@
                     );
                     
                     if (templateResult.error || managerResult.error) {
-                        throw new Error('설정 저장 실패');
+                        throw new Error('온라인 저장 실패');
                     }
                     
                     // 로컬 설정 업데이트
                     this.excludedTemplates = [...this.tempExcludedTemplates];
                     this.excludedManagers = [...this.tempExcludedManagers];
                     
-                    this.showNotification('✅ 설정이 저장되었습니다. 새로고침하여 적용됩니다.', 'success');
+                    this.showNotification('✅ 설정이 온라인에 저장되었습니다. 모든 사용자에게 적용됩니다.', 'success');
                     this.closeSettingsModal();
                     
                     // 데이터 다시 로드
@@ -1544,7 +1590,7 @@
                     
                 } catch (error) {
                     console.error('설정 저장 실패:', error);
-                    this.showNotification('⚠️ 설정 저장 실패', 'error');
+                    this.showNotification('⚠️ 온라인 저장 실패. Edge Function 업데이트가 필요합니다.', 'error');
                 }
             },
             
