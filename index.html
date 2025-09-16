@@ -546,6 +546,151 @@
             overflow-y: auto;
         }
         
+        /* 설정 관련 스타일 추가 */
+        .excluded-item {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 15px;
+            background: #111;
+            border: 1px solid #333;
+            margin: 5px;
+            border-radius: 4px;
+        }
+        .excluded-item-text {
+            color: #fff;
+            font-size: 14px;
+        }
+        .excluded-item-remove {
+            color: #FF6B6B;
+            cursor: pointer;
+            font-weight: bold;
+            padding: 0 5px;
+        }
+        .excluded-item-remove:hover {
+            color: #FF0000;
+        }
+        
+        .settings-btn {
+            padding: 10px 20px;
+            background: transparent;
+            color: #FFD700;
+            border: 1px solid #FFD700;
+            font-size: 14px;
+            font-weight: 500;
+            letter-spacing: 0.5px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .settings-btn:hover {
+            background: #FFD700;
+            color: #000;
+        }
+        
+        /* 관리자 버튼 스타일 */
+        .admin-button {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: rgba(255, 215, 0, 0.1);
+            border: 2px solid rgba(255, 215, 0, 0.3);
+            color: rgba(255, 215, 0, 0.5);
+            font-size: 20px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s;
+            z-index: 999;
+        }
+        .admin-button:hover {
+            background: rgba(255, 215, 0, 0.2);
+            border-color: #FFD700;
+            color: #FFD700;
+            transform: scale(1.1);
+        }
+        
+        /* 비밀번호 입력 모달 */
+        .password-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.95);
+            z-index: 2000;
+            justify-content: center;
+            align-items: center;
+        }
+        .password-modal.show {
+            display: flex;
+        }
+        .password-box {
+            background: #000;
+            border: 1px solid #FFD700;
+            padding: 30px;
+            border-radius: 10px;
+            text-align: center;
+            max-width: 400px;
+            width: 90%;
+        }
+        .password-title {
+            color: #FFD700;
+            font-size: 20px;
+            margin-bottom: 20px;
+            font-weight: 300;
+        }
+        .password-input {
+            width: 100%;
+            padding: 12px;
+            background: #111;
+            border: 1px solid #333;
+            color: #fff;
+            font-size: 16px;
+            margin-bottom: 20px;
+            text-align: center;
+            letter-spacing: 2px;
+        }
+        .password-input:focus {
+            outline: none;
+            border-color: #FFD700;
+        }
+        .password-buttons {
+            display: flex;
+            gap: 10px;
+        }
+        .password-btn {
+            flex: 1;
+            padding: 10px 20px;
+            background: transparent;
+            color: #999;
+            border: 1px solid #333;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .password-btn:hover {
+            border-color: #FFD700;
+            color: #FFD700;
+        }
+        .password-btn.confirm {
+            color: #FFD700;
+            border-color: #FFD700;
+        }
+        .password-btn.confirm:hover {
+            background: #FFD700;
+            color: #000;
+        }
+        .password-error {
+            color: #FF6B6B;
+            font-size: 14px;
+            margin-top: 10px;
+            display: none;
+        }
+        
         .notification { 
             position: fixed; 
             top: 20px; 
@@ -579,6 +724,12 @@
                 opacity: 1;
                 transform: translateX(0);
             }
+        }
+        
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-10px); }
+            75% { transform: translateX(10px); }
         }
         
         .loading-screen { 
@@ -837,7 +988,78 @@
         </div>
     </div>
     
+    <!-- 설정 모달 -->
+    <div class="modal" id="settingsModal">
+        <div class="modal-content" style="max-width: 1000px;">
+            <div class="modal-header">
+                <div class="modal-title">⚙️ 필터 설정 <span style="color: #FFD700; font-size: 14px; margin-left: 10px;">[관리자 전용]</span></div>
+                <span class="modal-close" onclick="app.closeSettingsModal()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div style="margin-bottom: 30px;">
+                    <h3 style="color: #1E6FFF; margin-bottom: 15px;">제외할 템플릿 메시지</h3>
+                    <div style="color: #999; font-size: 14px; margin-bottom: 15px;">
+                        아래 텍스트를 포함하는 메시지는 점수와 카운팅에서 제외됩니다.
+                    </div>
+                    <div id="excludedTemplatesList" style="margin-bottom: 15px;"></div>
+                    <div style="display: flex; gap: 10px;">
+                        <input type="text" id="newTemplateInput" placeholder="제외할 문구를 입력하세요" 
+                               style="flex: 1; padding: 10px; background: #111; border: 1px solid #333; color: #fff;">
+                        <button class="btn primary" onclick="app.addExcludedTemplate()">추가</button>
+                    </div>
+                </div>
+                
+                <div style="margin-bottom: 30px;">
+                    <h3 style="color: #1E6FFF; margin-bottom: 15px;">제외할 상담사</h3>
+                    <div style="color: #999; font-size: 14px; margin-bottom: 15px;">
+                        아래 상담사의 메시지는 통계에서 제외됩니다.
+                    </div>
+                    <div id="excludedManagersList" style="margin-bottom: 15px;"></div>
+                    <div style="display: flex; gap: 10px;">
+                        <input type="text" id="newManagerInput" placeholder="제외할 상담사 이름" 
+                               style="flex: 1; padding: 10px; background: #111; border: 1px solid #333; color: #fff;">
+                        <button class="btn primary" onclick="app.addExcludedManager()">추가</button>
+                    </div>
+                </div>
+                
+                <div style="display: flex; gap: 10px; justify-content: flex-end; padding-top: 20px; border-top: 1px solid #333;">
+                    <button class="btn" onclick="app.resetSettings()">초기화</button>
+                    <button class="btn primary" onclick="app.saveSettings()">저장</button>
+                </div>
+                
+                <div style="margin-top: 20px; padding: 15px; background: #111; border: 1px solid #222;">
+                    <div style="color: #8BA5FF; font-size: 13px;">
+                        💡 설정은 온라인에 저장되어 모든 사용자가 공유합니다.<br>
+                        변경사항은 저장 후 새로고침하면 적용됩니다.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
     <div class="notification" id="notification"></div>
+    
+    <!-- 관리자 버튼 (우측 하단) -->
+    <button class="admin-button" onclick="app.showPasswordModal()" title="관리자 설정">
+        🔒
+    </button>
+    
+    <!-- 비밀번호 입력 모달 -->
+    <div class="password-modal" id="passwordModal">
+        <div class="password-box">
+            <div class="password-title">🔐 관리자 인증</div>
+            <input type="password" 
+                   class="password-input" 
+                   id="passwordInput" 
+                   placeholder="비밀번호를 입력하세요"
+                   onkeypress="if(event.key==='Enter') app.checkPassword()">
+            <div class="password-buttons">
+                <button class="password-btn" onclick="app.hidePasswordModal()">취소</button>
+                <button class="password-btn confirm" onclick="app.checkPassword()">확인</button>
+            </div>
+            <div class="password-error" id="passwordError">비밀번호가 틀렸습니다</div>
+        </div>
+    </div>
     
     <script>
         // ========================================
@@ -852,6 +1074,31 @@
             
             from(table) {
                 return new QueryBuilder(this.proxyUrl, table);
+            }
+            
+            // 설정 저장/불러오기용 메서드 추가
+            async getSettings(key) {
+                const { data, error } = await this.from('app_settings')
+                    .select('*')
+                    .eq('setting_key', key)
+                    .execute();
+                
+                if (error || !data || data.length === 0) {
+                    return null;
+                }
+                return data[0].setting_value;
+            }
+            
+            async updateSettings(key, value) {
+                const { data, error } = await this.from('app_settings')
+                    .upsert({ 
+                        setting_key: key, 
+                        setting_value: value,
+                        updated_at: new Date().toISOString()
+                    })
+                    .execute();
+                
+                return { data, error };
             }
         }
         
@@ -940,6 +1187,13 @@
                 return this;
             }
             
+            // UPSERT 지원 추가
+            upsert(data) {
+                this.params.upsert = data;
+                this.params.method = 'upsert';
+                return this;
+            }
+            
             async execute() {
                 try {
                     const response = await fetch(this.proxyUrl, {
@@ -991,6 +1245,10 @@
             selectedDate: new Date(),
             isToday: true,
             
+            // 관리자 비밀번호 (SHA256 해시값도 사용 가능하지만 간단하게 구현)
+            adminPassword: '1250',
+            isAdmin: false,
+            
             // 팀 정보
             teamInfo: {
                 'SNS 1팀': ['이종민', '정주연', '이혜영', '김국현', '정다혜', '조시현', '김시윤'],
@@ -1001,17 +1259,14 @@
                 '야간팀': ['정용욱', '한승윤']
             },
             
-            // 제외할 상담사
-            excludedManagers: ['채주은'],
+            // 온라인 설정 (초기값)
+            excludedManagers: [],
+            excludedTemplates: [],
+            tempExcludedManagers: [],
+            tempExcludedTemplates: [],
             
             // 파트장 목록
             partLeaders: ['이종민', '이민주', '윤도우리', '김진후', '차정환'],
-            
-            // 제외할 템플릿 메시지
-            excludedTemplates: [
-                '아직 아니시라면 이 채팅창으로 상담 도와드려도 괜찮으실까요',
-                '현재 소수의 상담원만 있어 안내가 늦은 점 죄송합니다'
-            ],
             
             // 초기화
             init: async function() {
@@ -1030,6 +1285,9 @@
                     }
                     
                     console.log('✅ 프록시 연결 성공');
+                    
+                    // 온라인 설정 불러오기
+                    await this.loadSettings();
                     
                     // 날짜 초기화
                     this.updateDateDisplay();
@@ -1076,6 +1334,229 @@
                 } catch (error) {
                     console.error('Connection test failed:', error);
                     return false;
+                }
+            },
+            
+            // 온라인 설정 불러오기
+            loadSettings: async function() {
+                try {
+                    console.log('온라인 설정 불러오는 중...');
+                    
+                    const templates = await this.supabaseClient.getSettings('excluded_templates');
+                    const managers = await this.supabaseClient.getSettings('excluded_managers');
+                    
+                    if (templates) {
+                        this.excludedTemplates = templates;
+                        console.log('제외 템플릿 로드:', this.excludedTemplates);
+                    } else {
+                        // 기본값 설정
+                        this.excludedTemplates = [
+                            '아직 아니시라면 이 채팅창으로 상담 도와드려도 괜찮으실까요',
+                            '현재 소수의 상담원만 있어 안내가 늦은 점 죄송합니다'
+                        ];
+                    }
+                    
+                    if (managers) {
+                        this.excludedManagers = managers;
+                        console.log('제외 상담사 로드:', this.excludedManagers);
+                    } else {
+                        // 기본값 설정
+                        this.excludedManagers = ['채주은'];
+                    }
+                    
+                } catch (error) {
+                    console.error('설정 로드 실패:', error);
+                    // 기본값 사용
+                    this.excludedTemplates = [
+                        '아직 아니시라면 이 채팅창으로 상담 도와드려도 괜찮으실까요',
+                        '현재 소수의 상담원만 있어 안내가 늦은 점 죄송합니다'
+                    ];
+                    this.excludedManagers = ['채주은'];
+                }
+            },
+            
+            // 비밀번호 모달 표시
+            showPasswordModal: function() {
+                document.getElementById('passwordModal').classList.add('show');
+                document.getElementById('passwordInput').value = '';
+                document.getElementById('passwordInput').focus();
+                document.getElementById('passwordError').style.display = 'none';
+            },
+            
+            // 비밀번호 모달 숨기기
+            hidePasswordModal: function() {
+                document.getElementById('passwordModal').classList.remove('show');
+                document.getElementById('passwordInput').value = '';
+                document.getElementById('passwordError').style.display = 'none';
+            },
+            
+            // 비밀번호 확인
+            checkPassword: function() {
+                const input = document.getElementById('passwordInput').value;
+                
+                if (input === this.adminPassword) {
+                    this.isAdmin = true;
+                    this.hidePasswordModal();
+                    this.openSettingsModal();
+                    this.showNotification('✅ 관리자 인증 성공', 'success');
+                    
+                    // 관리자 버튼 아이콘 변경
+                    document.querySelector('.admin-button').innerHTML = '⚙️';
+                    document.querySelector('.admin-button').style.borderColor = '#00FF00';
+                    document.querySelector('.admin-button').style.color = '#00FF00';
+                } else {
+                    document.getElementById('passwordError').style.display = 'block';
+                    document.getElementById('passwordInput').value = '';
+                    
+                    // 잘못된 입력 애니메이션
+                    const box = document.querySelector('.password-box');
+                    box.style.animation = 'shake 0.3s';
+                    setTimeout(() => {
+                        box.style.animation = '';
+                    }, 300);
+                }
+            },
+            
+            // 설정 모달 열기 (수정됨)
+            openSettingsModal: function() {
+                // 관리자가 아니면 비밀번호 입력 요청
+                if (!this.isAdmin) {
+                    this.showPasswordModal();
+                    return;
+                }
+                
+                // 임시 배열에 현재 설정 복사
+                this.tempExcludedTemplates = [...this.excludedTemplates];
+                this.tempExcludedManagers = [...this.excludedManagers];
+                
+                this.updateSettingsDisplay();
+                document.getElementById('settingsModal').classList.add('show');
+            },
+            
+            // 설정 모달 닫기
+            closeSettingsModal: function() {
+                document.getElementById('settingsModal').classList.remove('show');
+                // 임시 설정 초기화
+                this.tempExcludedTemplates = [];
+                this.tempExcludedManagers = [];
+            },
+            
+            // 설정 화면 업데이트
+            updateSettingsDisplay: function() {
+                // 템플릿 목록
+                const templatesList = document.getElementById('excludedTemplatesList');
+                templatesList.innerHTML = this.tempExcludedTemplates.map((template, index) => `
+                    <div class="excluded-item">
+                        <span class="excluded-item-text">${this.truncateText(template, 50)}</span>
+                        <span class="excluded-item-remove" onclick="app.removeExcludedTemplate(${index})">✖</span>
+                    </div>
+                `).join('');
+                
+                // 상담사 목록
+                const managersList = document.getElementById('excludedManagersList');
+                managersList.innerHTML = this.tempExcludedManagers.map((manager, index) => `
+                    <div class="excluded-item">
+                        <span class="excluded-item-text">${manager}</span>
+                        <span class="excluded-item-remove" onclick="app.removeExcludedManager(${index})">✖</span>
+                    </div>
+                `).join('');
+            },
+            
+            // 텍스트 자르기
+            truncateText: function(text, maxLength) {
+                if (text.length > maxLength) {
+                    return text.substring(0, maxLength) + '...';
+                }
+                return text;
+            },
+            
+            // 템플릿 추가
+            addExcludedTemplate: function() {
+                const input = document.getElementById('newTemplateInput');
+                const value = input.value.trim();
+                
+                if (value && !this.tempExcludedTemplates.includes(value)) {
+                    this.tempExcludedTemplates.push(value);
+                    input.value = '';
+                    this.updateSettingsDisplay();
+                }
+            },
+            
+            // 템플릿 제거
+            removeExcludedTemplate: function(index) {
+                this.tempExcludedTemplates.splice(index, 1);
+                this.updateSettingsDisplay();
+            },
+            
+            // 상담사 추가
+            addExcludedManager: function() {
+                const input = document.getElementById('newManagerInput');
+                const value = input.value.trim();
+                
+                if (value && !this.tempExcludedManagers.includes(value)) {
+                    this.tempExcludedManagers.push(value);
+                    input.value = '';
+                    this.updateSettingsDisplay();
+                }
+            },
+            
+            // 상담사 제거
+            removeExcludedManager: function(index) {
+                this.tempExcludedManagers.splice(index, 1);
+                this.updateSettingsDisplay();
+            },
+            
+            // 설정 저장
+            saveSettings: async function() {
+                // 관리자 권한 확인
+                if (!this.isAdmin) {
+                    this.showNotification('⚠️ 관리자 권한이 필요합니다', 'error');
+                    return;
+                }
+                
+                try {
+                    this.showNotification('⏳ 설정 저장 중...', 'info');
+                    
+                    // 온라인에 설정 저장
+                    const templateResult = await this.supabaseClient.updateSettings(
+                        'excluded_templates', 
+                        this.tempExcludedTemplates
+                    );
+                    
+                    const managerResult = await this.supabaseClient.updateSettings(
+                        'excluded_managers', 
+                        this.tempExcludedManagers
+                    );
+                    
+                    if (templateResult.error || managerResult.error) {
+                        throw new Error('설정 저장 실패');
+                    }
+                    
+                    // 로컬 설정 업데이트
+                    this.excludedTemplates = [...this.tempExcludedTemplates];
+                    this.excludedManagers = [...this.tempExcludedManagers];
+                    
+                    this.showNotification('✅ 설정이 저장되었습니다. 새로고침하여 적용됩니다.', 'success');
+                    this.closeSettingsModal();
+                    
+                    // 데이터 다시 로드
+                    setTimeout(() => this.loadData(), 500);
+                    
+                } catch (error) {
+                    console.error('설정 저장 실패:', error);
+                    this.showNotification('⚠️ 설정 저장 실패', 'error');
+                }
+            },
+            
+            // 설정 초기화
+            resetSettings: function() {
+                if (confirm('정말로 모든 설정을 초기화하시겠습니까?')) {
+                    this.tempExcludedTemplates = [
+                        '아직 아니시라면 이 채팅창으로 상담 도와드려도 괜찮으실까요',
+                        '현재 소수의 상담원만 있어 안내가 늦은 점 죄송합니다'
+                    ];
+                    this.tempExcludedManagers = ['채주은'];
+                    this.updateSettingsDisplay();
                 }
             },
             
@@ -1128,12 +1609,14 @@
                     
                     console.log('총 메시지 수:', allMessages.length);
                     
-                    // 필터링
+                    // 필터링 (온라인 설정 적용)
                     this.currentMessages = allMessages.filter(msg => {
+                        // 제외 상담사 필터링
                         if (this.excludedManagers.includes(msg.writer_manager_name)) {
                             return false;
                         }
                         
+                        // 제외 템플릿 필터링
                         if (msg.message_text) {
                             for (const template of this.excludedTemplates) {
                                 if (msg.message_text.includes(template)) {
@@ -1146,6 +1629,7 @@
                     });
                     
                     console.log('필터링 후:', this.currentMessages.length);
+                    console.log('제외된 메시지 수:', allMessages.length - this.currentMessages.length);
                     
                     // 통계 계산 및 UI 업데이트
                     this.calculateStats();
@@ -1880,8 +2364,15 @@
         // 모달 외부 클릭 시 닫기
         window.onclick = function(event) {
             const modal = document.getElementById('managerModal');
+            const settingsModal = document.getElementById('settingsModal');
+            const passwordModal = document.getElementById('passwordModal');
+            
             if (event.target === modal) {
                 app.closeModal();
+            } else if (event.target === settingsModal) {
+                app.closeSettingsModal();
+            } else if (event.target === passwordModal) {
+                app.hidePasswordModal();
             }
         };
         
@@ -1889,6 +2380,7 @@
         window.addEventListener('DOMContentLoaded', () => {
             console.log('🔒 Edge Function 보안 모드 활성화');
             console.log('✅ Supabase 키 노출 없음');
+            console.log('📋 온라인 설정 기능 활성화');
             app.init();
         });
     </script>
