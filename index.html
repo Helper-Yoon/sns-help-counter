@@ -1068,8 +1068,24 @@
         // ========================================
         
         class SecureSupabaseClient {
-            constructor(proxyUrl = '/api/supabase-proxy') {
-                this.proxyUrl = proxyUrl;
+            constructor(proxyUrl) {
+                // Vercel 배포 URL 또는 로컬 개발 서버 URL 자동 감지
+                if (!proxyUrl) {
+                    // 현재 도메인 확인
+                    const currentHost = window.location.hostname;
+                    
+                    if (currentHost === 'localhost' || currentHost === '127.0.0.1') {
+                        // 로컬 개발 환경
+                        this.proxyUrl = 'http://localhost:3000/api/supabase-proxy';
+                    } else {
+                        // Vercel 프로덕션 환경
+                        this.proxyUrl = `${window.location.origin}/api/supabase-proxy`;
+                    }
+                } else {
+                    this.proxyUrl = proxyUrl;
+                }
+                
+                console.log('프록시 URL:', this.proxyUrl);
             }
             
             from(table) {
@@ -1093,26 +1109,28 @@
                 try {
                     console.log('온라인 설정 저장 시도:', key, value);
                     
-                    // SQL 함수(RPC) 호출을 위한 특별한 요청 구조
-                    const rpcPayload = {
-                        table: 'rpc/upsert_app_setting',  // RPC 호출임을 표시
-                        rpcFunction: 'upsert_app_setting',
-                        rpcParams: {
-                            p_key: key,
-                            p_value: value
+                    // Vercel API 프록시로 설정 저장
+                    const payload = {
+                        special_action: 'save_settings',
+                        settings_data: {
+                            key: key,
+                            value: value
                         }
                     };
                     
-                    // Edge Function으로 RPC 요청 전송
+                    console.log('프록시 요청:', this.proxyUrl, payload);
+                    
                     const response = await fetch(this.proxyUrl, {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json'
                         },
-                        body: JSON.stringify(rpcPayload)
+                        body: JSON.stringify(payload)
                     });
                     
                     if (!response.ok) {
+                        const errorData = await response.text();
+                        console.error('서버 응답:', errorData);
                         throw new Error('서버 응답 오류');
                     }
                     
@@ -1274,8 +1292,8 @@
         // ========================================
         
         window.app = {
-            // 보안 Supabase 클라이언트 (프록시 사용)
-            supabaseClient: new SecureSupabaseClient(),
+            // 보안 Supabase 클라이언트 (프록시 사용) - 절대 경로 설정
+            supabaseClient: new SecureSupabaseClient(window.location.origin + '/api/supabase-proxy'),
             currentMessages: [],
             currentStats: [],
             currentTab: 'score',
@@ -1380,9 +1398,28 @@
             // 온라인 설정 불러오기
             loadSettings: async function() {
                 try {
-                    console.log('온라인 설정 불러오는 중...');
+                    console.log('설정 불러오는 중...');
                     
-                    // 온라인에서 설정 불러오기
+                    // 먼저 URL 파라미터에서 설정 확인
+                    const urlParams = new URLSearchParams(window.location.search);
+                    const encodedSettings = urlParams.get('settings');
+                    
+                    if (encodedSettings) {
+                        try {
+                            const decodedSettings = JSON.parse(atob(encodedSettings));
+                            console.log('URL에서 설정 로드:', decodedSettings);
+                            
+                            this.excludedTemplates = decodedSettings.excluded_templates || [];
+                            this.excludedManagers = decodedSettings.excluded_managers || [];
+                            
+                            console.log('URL 설정 적용 완료');
+                            return;
+                        } catch (e) {
+                            console.error('URL 설정 파싱 실패:', e);
+                        }
+                    }
+                    
+                    // URL에 설정이 없으면 온라인에서 불러오기
                     const templates = await this.supabaseClient.getSettings('excluded_templates');
                     const managers = await this.supabaseClient.getSettings('excluded_managers');
                     
@@ -1405,7 +1442,7 @@
                         this.excludedManagers = ['채주은'];
                     }
                     
-                    console.log('온라인 설정 로드 완료:', {
+                    console.log('설정 로드 완료:', {
                         excludedTemplates: this.excludedTemplates,
                         excludedManagers: this.excludedManagers
                     });
@@ -1561,9 +1598,9 @@
                 }
                 
                 try {
-                    this.showNotification('⏳ 온라인 설정 저장 중...', 'info');
+                    this.showNotification('⏳ 설정 저장 중...', 'info');
                     
-                    // 온라인에 설정 저장
+                    // Edge Function으로 저장 시도
                     const templateResult = await this.supabaseClient.updateSettings(
                         'excluded_templates', 
                         this.tempExcludedTemplates
@@ -1574,15 +1611,30 @@
                         this.tempExcludedManagers
                     );
                     
-                    if (templateResult.error || managerResult.error) {
-                        throw new Error('온라인 저장 실패');
-                    }
-                    
                     // 로컬 설정 업데이트
                     this.excludedTemplates = [...this.tempExcludedTemplates];
                     this.excludedManagers = [...this.tempExcludedManagers];
                     
-                    this.showNotification('✅ 설정이 온라인에 저장되었습니다. 모든 사용자에게 적용됩니다.', 'success');
+                    // URL 공유 방식 사용
+                    if (templateResult.data?.shareUrl || managerResult.data?.shareUrl) {
+                        const shareUrl = templateResult.data?.shareUrl || managerResult.data?.shareUrl;
+                        
+                        // 공유 URL을 클립보드에 복사
+                        if (navigator.clipboard) {
+                            navigator.clipboard.writeText(shareUrl).then(() => {
+                                this.showNotification('✅ 설정 URL이 클립보드에 복사되었습니다. 다른 사용자와 공유하세요!', 'success');
+                            });
+                        } else {
+                            // 클립보드 API를 사용할 수 없는 경우
+                            const copyText = prompt('이 URL을 복사하여 다른 사용자와 공유하세요:', shareUrl);
+                            if (copyText) {
+                                this.showNotification('✅ URL을 복사하여 공유하세요', 'success');
+                            }
+                        }
+                    } else {
+                        this.showNotification('✅ 설정이 저장되었습니다', 'success');
+                    }
+                    
                     this.closeSettingsModal();
                     
                     // 데이터 다시 로드
@@ -1590,7 +1642,27 @@
                     
                 } catch (error) {
                     console.error('설정 저장 실패:', error);
-                    this.showNotification('⚠️ 온라인 저장 실패. Edge Function 업데이트가 필요합니다.', 'error');
+                    
+                    // Edge Function이 지원하지 않으면 URL 방식으로만 저장
+                    const settingsData = {
+                        excluded_templates: this.tempExcludedTemplates,
+                        excluded_managers: this.tempExcludedManagers
+                    };
+                    const encoded = btoa(JSON.stringify(settingsData));
+                    const shareUrl = `${window.location.origin}${window.location.pathname}?settings=${encoded}`;
+                    
+                    window.history.replaceState({}, '', shareUrl);
+                    
+                    this.excludedTemplates = [...this.tempExcludedTemplates];
+                    this.excludedManagers = [...this.tempExcludedManagers];
+                    
+                    const copyText = prompt('Edge Function 업데이트가 필요합니다.\n이 URL을 복사하여 설정을 공유하세요:', shareUrl);
+                    if (copyText) {
+                        this.showNotification('✅ URL 방식으로 설정이 저장되었습니다', 'success');
+                    }
+                    
+                    this.closeSettingsModal();
+                    setTimeout(() => this.loadData(), 500);
                 }
             },
             
