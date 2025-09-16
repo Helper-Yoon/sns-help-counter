@@ -1,5 +1,5 @@
 // api/supabase-proxy.js
-// Supabase 프록시 API - IP 화이트리스트 보안 기능 포함
+// Supabase 프록시 API - 설정 저장 기능 추가
 
 export default async function handler(req, res) {
   // ===============================================
@@ -8,7 +8,6 @@ export default async function handler(req, res) {
   const allowedIps = process.env.ALLOWED_IPS?.split(',') || [];
   const incomingIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
 
-  // Vercel 환경 변수에 ALLOWED_IPS가 설정되어 있고, 요청 IP가 목록에 없다면 접근 차단
   if (allowedIps.length > 0 && !allowedIps.includes(incomingIp)) {
     console.warn(`[ACCESS DENIED] Blocked IP: ${incomingIp}`);
     return res.status(403).json({
@@ -16,7 +15,6 @@ export default async function handler(req, res) {
       message: 'Your IP address is not allowed to access this resource.'
     });
   }
-  // ===============================================
 
   // 2. CORS 설정
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -24,7 +22,6 @@ export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Range');
   res.setHeader('Access-Control-Expose-Headers', 'Content-Range');
 
-  // Preflight 요청 처리
   if (req.method === 'OPTIONS') {
     return res.status(200).end();
   }
@@ -52,9 +49,87 @@ export default async function handler(req, res) {
       limit,
       offset,
       range,
-      method = 'GET'
+      method = 'GET',
+      // 설정 저장을 위한 추가 파라미터
+      special_action,
+      settings_data
     } = requestData;
 
+    // ===============================================
+    // ✨ 설정 저장 처리 (새로 추가된 부분)
+    // ===============================================
+    if (special_action === 'save_settings' && settings_data) {
+      console.log('설정 저장 요청:', settings_data);
+      
+      const { key, value } = settings_data;
+      
+      // 먼저 기존 설정이 있는지 확인
+      const checkUrl = `${SUPABASE_URL}/rest/v1/app_settings?setting_key=eq.${key}`;
+      const checkResponse = await fetch(checkUrl, {
+        headers: {
+          'apikey': SUPABASE_ANON_KEY,
+          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+        }
+      });
+      
+      const existing = await checkResponse.json();
+      
+      let saveResponse;
+      
+      if (existing && existing.length > 0) {
+        // UPDATE
+        const updateUrl = `${SUPABASE_URL}/rest/v1/app_settings?setting_key=eq.${key}`;
+        saveResponse = await fetch(updateUrl, {
+          method: 'PATCH',
+          headers: {
+            'apikey': SUPABASE_ANON_KEY,
+            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+            'Content-Type': 'application/json',
+            'Prefer': 'return=representation'
+          },
+          body: JSON.stringify({
+            setting_value: value,
+            updated_at: new Date().toISOString()
+          })
+        });
+      } else {
+        // INSERT
+        const insertUrl = `${SUPABASE_URL}/rest/v1/app_settings`;
+        saveResponse = await fetch(insertUrl, {
+          method: 'POST',
+          headers: {
+            'apikey': SUPABASE_ANON_KEY,
+            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+            'Content-Type': 'application/json',
+            'Prefer': 'return=representation'
+          },
+          body: JSON.stringify({
+            setting_key: key,
+            setting_value: value,
+            updated_at: new Date().toISOString()
+          })
+        });
+      }
+      
+      const result = await saveResponse.json();
+      
+      if (!saveResponse.ok) {
+        console.error('설정 저장 실패:', result);
+        return res.status(saveResponse.status).json({
+          error: 'Settings save failed',
+          message: result.message || 'Failed to save settings'
+        });
+      }
+      
+      console.log('설정 저장 성공:', key);
+      return res.status(200).json({
+        data: { success: true, key: key },
+        error: null
+      });
+    }
+    // ===============================================
+
+    // 기존 로직 (SELECT 쿼리 처리)
     if (!table) {
       return res.status(400).json({
         error: 'Bad Request',
@@ -67,12 +142,10 @@ export default async function handler(req, res) {
     let url = `${SUPABASE_URL}/rest/v1/${table}`;
     const queryParams = [];
 
-    // SELECT
     if (select) {
       queryParams.push(`select=${select}`);
     }
 
-    // WHERE (필터)
     if (Array.isArray(filters) && filters.length > 0) {
       filters.forEach(filter => {
         if (filter.column && filter.operator && filter.value !== undefined) {
@@ -81,7 +154,6 @@ export default async function handler(req, res) {
       });
     }
 
-    // ORDER BY
     if (order) {
       const { column, ascending = false } = order;
       if (column) {
@@ -89,17 +161,14 @@ export default async function handler(req, res) {
       }
     }
 
-    // LIMIT
     if (limit) {
       queryParams.push(`limit=${limit}`);
     }
 
-    // OFFSET
     if (offset) {
       queryParams.push(`offset=${offset}`);
     }
 
-    // Query string 조합
     if (queryParams.length > 0) {
       url += '?' + queryParams.join('&');
     }
@@ -113,7 +182,6 @@ export default async function handler(req, res) {
       'Prefer': 'return=representation'
     };
 
-    // Range 헤더 (페이지네이션)
     if (range) {
       headers['Range'] = `${range.from}-${range.to}`;
       headers['Prefer'] += ',count=exact';
@@ -152,7 +220,6 @@ export default async function handler(req, res) {
       });
     }
 
-    // 성공 응답
     return res.status(200).json({
       data: data,
       error: null,
@@ -168,7 +235,6 @@ export default async function handler(req, res) {
   }
 }
 
-// Vercel 설정
 export const config = {
   api: {
     bodyParser: {
